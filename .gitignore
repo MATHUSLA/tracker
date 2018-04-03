@@ -20,9 +20,6 @@
 *.so
 *~
 
-.DAWN_*
-G4History*
-
 .DS_Store
 
 /.idea
