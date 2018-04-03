@@ -1,0 +1,49 @@
+#!/bin/bash
+# MATHUSLA Tracker : Build Script
+
+CONFIG_CMAKE=0
+CLEAN_BUILD=0
+RUN_BUILD=0
+OTHER_ARGS=""
+
+while [[ $# -gt 0 ]]; do
+    arg="$1"
+    case $arg in
+        --cmake | cmake) CONFIG_CMAKE=1
+            shift;;
+        --clean | clean) CLEAN_BUILD=1
+            shift;;
+        --run | run) RUN_BUILD=1
+            shift;;
+        --help | help | -h)
+            echo -e "usage: ./install [--clean] [--cmake] [--run [args]]"
+            echo -e "  clean      : rebuild all source files"
+            echo -e "  cmake      : rebuild with CMake"
+            echo -e "  run [args] : run executable after building with \"args\""
+            echo -e "  help       : open this help screen"
+            exit;;
+        *) OTHER_ARGS="$OTHER_ARGS $arg"
+            shift;;
+    esac
+done
+
+
+if [[ "$CONFIG_CMAKE" -eq 1 && "$CLEAN_BUILD" -eq 1 ]]; then
+    rm -rf build;
+    rm tracker;
+fi
+
+mkdir -p build
+cd build
+
+if [[ "$CONFIG_CMAKE" -eq 1 ]]; then cmake ..;   fi;
+if [[ "$CLEAN_BUILD"  -eq 1 ]]; then make clean; fi;
+
+make -j8
+
+if [[ ! "$?" -eq 0 ]]; then
+    echo -e "\nBuild Failed!\n"
+else
+    mv tracker ../tracker
+    if [[ "$RUN_BUILD" -eq 1 ]]; then cd ..; ./tracker $OTHER_ARGS; fi;
+fi
