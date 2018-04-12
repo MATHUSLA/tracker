@@ -3,9 +3,8 @@
 #include "Geant4/G4UIExecutive.hh"
 #include "Geant4/G4VisExecutive.hh"
 #include "Geant4/QBBC.hh"
-#include "Geant4/G4StepLimiterPhysics.hh"
 
-#include "geometry/Construction.hh"
+#include "geometry.hh"
 #include "util/CommandLineParser.hh"
 #include "util/FileIO.hh"
 
@@ -14,11 +13,12 @@ using Option = MATHUSLA::CommandLineOption;
 auto help_opt  = new Option('h', "help",     "MATHUSLA Particle Tracker", Option::NoArguments);
 auto geo_opt   = new Option('g', "geometry", "Geometry Import",           Option::RequiredArguments);
 auto root_opt  = new Option('d', "dir",      "ROOT Dir",                  Option::RequiredArguments);
+auto vis_opt   = new Option('v', "vis",      "Visualization",             Option::NoArguments);
 auto quiet_opt = new Option('q', "quiet",    "Quiet Mode",                Option::NoArguments);
 
 int main(int argc, char* argv[]) {
   MATHUSLA::CommandLineParser::parse(argv, {
-    help_opt, geo_opt, root_opt, quiet_opt});
+    help_opt, geo_opt, root_opt, vis_opt, quiet_opt});
 
   if (argc == 1 || !geo_opt->count || !root_opt->count) {
     std::cout << "[FATAL ERROR] Insufficient Arguments: "
@@ -27,13 +27,16 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  auto ui = new G4UIExecutive(argc, argv);
-
   auto runManager = new G4RunManager;
   auto uiManager = G4UImanager::GetUIpointer();
 
-  auto visManager = new G4VisExecutive("Quiet");
-  visManager->Initialize();
+  G4UIExecutive* ui = nullptr;
+  G4VisExecutive* vis = nullptr;
+  if (vis_opt->count) {
+    ui = new G4UIExecutive(argc, argv);
+    vis = new G4VisExecutive("Quiet");
+    vis->Initialize();
+  }
 
   runManager->SetUserInitialization(new QBBC);
 
@@ -44,7 +47,7 @@ int main(int argc, char* argv[]) {
   }
 
   runManager->SetUserInitialization(
-    new MATHUSLA::TRACKER::Construction(geo_opt->argument));
+    new MATHUSLA::TRACKER::Geometry(geo_opt->argument));
 
   if (!MATHUSLA::IO::path_exists(root_opt->argument)) {
     std::cout << "[FATAL ERROR] ROOT Directory Missing: "
@@ -52,21 +55,24 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  // temporary for debugging
   uiManager->ApplyCommand("/run/initialize");
-  uiManager->ApplyCommand("/vis/open OGL 700x700-0+0");
-  uiManager->ApplyCommand("/vis/drawVolume");
-  uiManager->ApplyCommand("/vis/viewer/set/viewpointThetaPhi  90. 180.");
-  uiManager->ApplyCommand("/vis/viewer/set/lightsThetaPhi    180.   0.");
-  uiManager->ApplyCommand("/vis/viewer/zoom 1.4");
-  uiManager->ApplyCommand("/vis/scene/add/axes 0 0 0 1 m");
+  uiManager->ApplyCommand("/run/verbose 0");
 
-  if (ui) {
+  // example
+  std::cout << MATHUSLA::TRACKER::Geometry::DetectorName({0, 0, -42.8*cm}) << "\n";
+
+  if (vis_opt->count) {
+    uiManager->ApplyCommand("/vis/open OGL 700x700-0+0");
+    uiManager->ApplyCommand("/vis/drawVolume");
+    uiManager->ApplyCommand("/vis/viewer/set/viewpointThetaPhi  90. 180.");
+    uiManager->ApplyCommand("/vis/viewer/set/lightsThetaPhi    180.   0.");
+    uiManager->ApplyCommand("/vis/viewer/zoom 1.4");
+    uiManager->ApplyCommand("/vis/scene/add/axes 0 0 0 1 m");
     ui->SessionStart();
     delete ui;
+    delete vis;
   }
 
-  delete visManager;
   delete runManager;
   return 0;
 }
