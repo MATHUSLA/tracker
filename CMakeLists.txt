@@ -8,6 +8,8 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 find_package(Geant4 REQUIRED gdml ui_all vis_all)
 find_package(ROOT   REQUIRED)
 
+include(${Geant4_USE_FILE})
+
 add_executable(tracker
     src/tracker.cc
 

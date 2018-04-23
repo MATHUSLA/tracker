@@ -1,78 +1,90 @@
-#include "Geant4/G4RunManager.hh"
-#include "Geant4/G4UImanager.hh"
-#include "Geant4/G4UIExecutive.hh"
-#include "Geant4/G4VisExecutive.hh"
-#include "Geant4/QBBC.hh"
-
+#include "analysis.hh"
 #include "geometry.hh"
 #include "util/CommandLineParser.hh"
-#include "util/FileIO.hh"
+#include "util.hh"
 
 using Option = MATHUSLA::CommandLineOption;
 
-auto help_opt  = new Option('h', "help",     "MATHUSLA Particle Tracker", Option::NoArguments);
-auto geo_opt   = new Option('g', "geometry", "Geometry Import",           Option::RequiredArguments);
-auto root_opt  = new Option('d', "dir",      "ROOT Dir",                  Option::RequiredArguments);
-auto vis_opt   = new Option('v', "vis",      "Visualization",             Option::NoArguments);
-auto quiet_opt = new Option('q', "quiet",    "Quiet Mode",                Option::NoArguments);
+auto help_opt   = new Option('h', "help",     "MATHUSLA Tracking Algorithm", Option::NoArguments);
+auto geo_opt    = new Option('g', "geometry", "Geometry Import",             Option::RequiredArguments);
+auto root_opt   = new Option('d', "dir",      "ROOT Directory",              Option::RequiredArguments);
+auto script_opt = new Option('s', "script",   "Tracking Script",             Option::RequiredArguments);
+auto quiet_opt  = new Option('q', "quiet",    "Quiet Mode",                  Option::NoArguments);
 
 int main(int argc, char* argv[]) {
   MATHUSLA::CommandLineParser::parse(argv, {
-    help_opt, geo_opt, root_opt, vis_opt, quiet_opt});
+    help_opt, geo_opt, root_opt, script_opt, quiet_opt});
 
-  if (argc == 1 || !geo_opt->count || !root_opt->count) {
-    std::cout << "[FATAL ERROR] Insufficient Arguments: "
-              << "Must include arguments for geometry and ROOT directory. \n"
-              << "Run \'./tracker --help\' for more details.\n";
-    exit(EXIT_FAILURE);
+  MATHUSLA::Error::exit_when(argc == 1 || !geo_opt->count || !root_opt->count,
+    "[FATAL ERROR] Insufficient Arguments: ",
+    "Must include arguments for geometry and ROOT directory. \n",
+    "              Run \'./tracker --help\' for more details.\n");
+
+  MATHUSLA::Error::exit_when(!MATHUSLA::IO::path_exists(geo_opt->argument),
+    "[FATAL ERROR] Geometry File Missing: ",
+    "The file ", geo_opt->argument, " cannot be found.\n");
+
+  MATHUSLA::Error::exit_when(!MATHUSLA::IO::path_exists(root_opt->argument),
+    "[FATAL ERROR] ROOT Directory Missing: ",
+    "The directory ", root_opt->argument, " cannot be found.\n");
+
+  MATHUSLA::Units::Define();
+
+  using namespace MATHUSLA;
+  using namespace MATHUSLA::TRACKER;
+
+  Geometry::Initialize(geo_opt->argument);
+
+  std::cout << "DEMO:\n";
+
+  auto paths = Analysis::search_directory(root_opt->argument);
+  std::cout << "File Count: " << paths.size() << "\n";
+
+  for (const auto& path : paths) {
+
+    std::cout << path << "\n";
+    auto events = Analysis::import_events(path, {{"Time", "X", "Y", "Z"}});
+    std::cout << "Processing " << events.size() << " Events\n";
+
+    for (const auto& unsorted_event : events) {
+
+      const auto& event = t_copy_sort(unsorted_event);
+      const auto& collapsed_event = Analysis::collapse(event, {1, 1, 1, 1});
+      const auto& layered_event = Analysis::partition<>(collapsed_event, 60).parts;
+
+      for (size_t i = 0; i < event.size(); ++i) {
+
+        const auto& old_point = event[i];
+        std::cout << "OLD (" << old_point.t << " "
+                             << old_point.x << " "
+                             << old_point.y << " "
+                             << old_point.z << ")    ";
+
+        if (i < collapsed_event.size()) {
+          const auto& new_point = collapsed_event[i];
+          std::cout << "NEW (" << new_point.t << " "
+                               << new_point.x << " "
+                               << new_point.y << " "
+                               << new_point.z << ")    ";
+        }
+
+        if (i < layered_event.size()) {
+          for (size_t j = 0; j < layered_event[i].size(); ++j) {
+            const auto& layer_point = layered_event[i][j];
+            std::cout << "LAYER (" << layer_point.t << " "
+                                   << layer_point.x << " "
+                                   << layer_point.y << " "
+                                   << layer_point.z << ")  ";
+          }
+        }
+
+        std::cout << "\n";
+      }
+      std::cout << "\n";
+    }
   }
 
-  auto runManager = new G4RunManager;
-  auto uiManager = G4UImanager::GetUIpointer();
+  std::cout << "Done!\n";
 
-  G4UIExecutive* ui = nullptr;
-  G4VisExecutive* vis = nullptr;
-  if (vis_opt->count) {
-    ui = new G4UIExecutive(argc, argv);
-    vis = new G4VisExecutive("Quiet");
-    vis->Initialize();
-  }
-
-  runManager->SetUserInitialization(new QBBC);
-
-  if (!MATHUSLA::IO::path_exists(geo_opt->argument)) {
-    std::cout << "[FATAL ERROR] Geometry File Missing: "
-              << "The file " << geo_opt->argument << " cannot be found.\n";
-    exit(EXIT_FAILURE);
-  }
-
-  runManager->SetUserInitialization(
-    new MATHUSLA::TRACKER::Geometry(geo_opt->argument));
-
-  if (!MATHUSLA::IO::path_exists(root_opt->argument)) {
-    std::cout << "[FATAL ERROR] ROOT Directory Missing: "
-              << "The file " << root_opt->argument << " cannot be found.\n";
-    exit(EXIT_FAILURE);
-  }
-
-  uiManager->ApplyCommand("/run/initialize");
-  uiManager->ApplyCommand("/run/verbose 0");
-
-  // example
-  std::cout << MATHUSLA::TRACKER::Geometry::DetectorName({0, 0, -42.8*cm}) << "\n";
-
-  if (vis_opt->count) {
-    uiManager->ApplyCommand("/vis/open OGL 700x700-0+0");
-    uiManager->ApplyCommand("/vis/drawVolume");
-    uiManager->ApplyCommand("/vis/viewer/set/viewpointThetaPhi  90. 180.");
-    uiManager->ApplyCommand("/vis/viewer/set/lightsThetaPhi    180.   0.");
-    uiManager->ApplyCommand("/vis/viewer/zoom 1.4");
-    uiManager->ApplyCommand("/vis/scene/add/axes 0 0 0 1 m");
-    ui->SessionStart();
-    delete ui;
-    delete vis;
-  }
-
-  delete runManager;
   return 0;
 }

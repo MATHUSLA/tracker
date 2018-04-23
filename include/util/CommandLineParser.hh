@@ -3,9 +3,50 @@
 #pragma once
 
 #include <initializer_list>
+#include <string>
+#include <type_traits>
 #include <vector>
 
+#include "util.hh"
+
 namespace MATHUSLA {
+
+namespace CLI {
+/*
+struct option {
+
+  enum class argument_type { none, optional, required };
+  enum class name_type { one_char, one_word, multi_word };
+
+  option() {}
+
+  option& short_name(const char name) {
+    _short = name;
+    return *this;
+  }
+  option& long_name(const std::string& name) {
+    _long = name;
+    return *this;
+  }
+  option& description(const std::string& desc) {
+    _desc = desc;
+    return *this;
+  }
+
+  std::size_t count() const { return _count; }
+  const std::string& argument() const { return _argument; }
+private:
+  char _short;
+  std::string _long;
+  std::string _desc;
+  std::size_t _count;
+  std::string _argument;
+};
+
+template<typename ...Options>
+size_t parse(char* const argv[], Options&... options) { return 0; }
+*/
+} /* namespace CLI */
 
 // TODO: needs work, unstable
 struct CommandLineOption {
@@ -27,8 +68,8 @@ struct CommandLineOption {
 
   CommandLineOption();
   CommandLineOption(char short_name,
-                    const char* long_name="",
-                    const char* description="",
+                    const std::string& long_name="",
+                    const std::string& description="",
                     size_t flags=Empty);
 
   inline void reset() {
@@ -51,8 +92,8 @@ struct CommandLineOption {
   }
 
   char          short_name;
-  const char*   long_name;
-  const char*   description;
+  std::string long_name;
+  const std::string description;
   size_t        flags;
   size_t        count;
   char*         argument;

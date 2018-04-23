@@ -6,12 +6,6 @@
 #include <iostream>
 #include <iomanip>
 
-#ifdef _WIN32
-#define strncasecmp _strnicmp
-#else
-#include <strings.h>
-#endif
-
 #ifdef _BSD_SOURCE
 #include <sysexits.h>
 #else
@@ -23,23 +17,23 @@ namespace MATHUSLA {
 CommandLineOption::CommandLineOption() : CommandLineOption(0) {}
 
 CommandLineOption::CommandLineOption(char short_name,
-                                     const char* long_name,
-                                     const char* description,
+                                     const std::string& long_name,
+                                     const std::string& description,
                                      size_t flags)
     : short_name(short_name), long_name(long_name), description(description),
       flags(flags), count(0), argument(nullptr) {}
 
-static CommandLineOption* _find_long_option(const char* arg,
+static CommandLineOption* _find_long_option(const std::string& arg,
                                             CommandLineOptionList options) {
   size_t count = 0,
          found = 0,
          index = 0,
-         length = strcspn(arg, "=");
+         length = std::strcspn(arg.c_str(), "=");
 
   for (const auto& option : options) {
-    if (option->long_name) {
-      size_t full = strlen(option->long_name);
-      if ((length <= full) && !strncasecmp(option->long_name, arg, length)) {
+    if (!option->long_name.empty()) {
+      size_t full = option->long_name.length();
+      if ((length <= full) && option->long_name == arg) {
         if (length == full)
           return option;
         found = index;
@@ -61,11 +55,11 @@ static CommandLineOption* _find_short_option(char arg,
   return nullptr;
 }
 
-static bool _is_long(const char* arg) {
+static bool _is_long(const std::string& arg) {
   return arg[0] == '-' && arg[1] == '-' && arg[2];
 }
 
-static bool _is_short(const char* arg) {
+static bool _is_short(const std::string& arg) {
   return arg[0] == '-' && arg[1];
 }
 
@@ -73,7 +67,7 @@ static bool _is_on(CommandLineOption* option, size_t flags) {
   return (option->flags & flags) == flags;
 }
 
-static void _print_help_message(const char* argv0,
+static void _print_help_message(const std::string& argv0,
                                 CommandLineOption* help,
                                 CommandLineOptionList options) {
   if (!help || !help->count) return;
@@ -82,11 +76,12 @@ static void _print_help_message(const char* argv0,
 
   for (const auto& option : options) {
     if (option == help) continue;
+
     std::cout << "  -" << option->short_name;
-    if (option->long_name)
+    if (!option->long_name.empty())
       std::cout << " --" << option->long_name;
-    if (option->description) {
-      std::cout << std::setw(15 - strlen(option->long_name)) << " : "
+    if (!option->description.empty()) {
+      std::cout << std::setw(15 - option->long_name.length()) << " : "
                 << option->description;
     }
     std::cout << '\n';
@@ -95,7 +90,7 @@ static void _print_help_message(const char* argv0,
   exit(EX_USAGE);
 }
 
-static void _print_error_message(const char* argv0, CommandLineOptionList options) {
+static void _print_error_message(const std::string& argv0, CommandLineOptionList options) {
   constexpr auto NoArguments            = CommandLineOption::NoArguments;
   constexpr auto RequiredArguments      = CommandLineOption::RequiredArguments;
   constexpr auto Repeatable             = CommandLineOption::Repeatable;
@@ -105,33 +100,21 @@ static void _print_error_message(const char* argv0, CommandLineOptionList option
   constexpr auto IsLongWithArgument     = CommandLineOption::IsLongWithArgument;
 
   for (auto& option : options) {
-    if (_is_on(option, IsShortWithoutArgument | RequiredArguments)) {
-      std::cout << argv0
-                << ": option -" << option->short_name
-                << " requires an argument\n";
-      exit(EX_USAGE);
-    } else if (_is_on(option, IsShortWithArgument | NoArguments)) {
-      std::cout << argv0
-                << ": option -" << option->short_name
-                << " must not have an argument\n";
-      exit(EX_USAGE);
-    } else if (_is_on(option, IsLongWithoutArgument | RequiredArguments)) {
-      std::cout << argv0
-                << ": option --" << option->long_name
-                << " requires an argument\n";
-      exit(EX_USAGE);
-    } else if (_is_on(option, IsLongWithArgument | NoArguments)) {
-      std::cout << argv0
-                << ": option --" << option->long_name
-                << " must not have an argument\n";
-      exit(EX_USAGE);
-    } else if ((option->count > 1) && !(option->flags & Repeatable)) {
-      std::cout << argv0
-                << ": option -" << option->short_name
-                << " (--" << option->long_name
-                << ") may not be repeated\n";
-      exit(EX_USAGE);
-    }
+    Error::exit_when(_is_on(option, IsShortWithoutArgument | RequiredArguments), EX_USAGE,
+      argv0, ": option -", option->short_name, " requires an argument\n");
+
+    Error::exit_when(_is_on(option, IsShortWithArgument | NoArguments), EX_USAGE,
+      argv0, ": option -", option->short_name, " must not have an argument\n");
+
+    Error::exit_when(_is_on(option, IsLongWithoutArgument | RequiredArguments), EX_USAGE,
+      argv0, ": option --", option->long_name, " requires an argument\n");
+
+    Error::exit_when(_is_on(option, IsLongWithArgument | NoArguments), EX_USAGE,
+      argv0, ": option --", option->long_name, " must not have an argument\n");
+
+    Error::exit_when((option->count > 1) && !(option->flags & Repeatable), EX_USAGE,
+      argv0, ": option -", option->short_name,
+             " (--", option->long_name, ") may not be repeated\n");
   }
 }
 
@@ -172,14 +155,14 @@ size_t CommandLineParser::parse(char* argv[],
     }
 
     if (_is_long(argv[i])) {
-      char* eq = strchr(&argv[i][2], '=');
+      char* eq = std::strchr(&argv[i][2], '=');
       current = _find_long_option(&argv[i][2], options);
       if (!current)
         current = error;
       current->count++;
 
-      if (_is_on(current, Error) && !current->long_name) {
-        current->long_name = &argv[i][2];
+      if (_is_on(current, Error) && current->long_name.empty()) {
+        current->long_name = std::string(&argv[i][2]);
       }
 
       if (eq) {
@@ -230,23 +213,19 @@ size_t CommandLineParser::parse(char* argv[],
     current->set_argument(nullptr, expecting >> 1);
   }
 
-   argv[operand_count] = nullptr;
+  argv[operand_count] = nullptr;
 
-  if (error->short_name) {
-    std::cout << argv[0] << ": unrecognised option -" << error->short_name << '\n';
-    exit(EX_USAGE);
-  }
+  Error::exit_when(error->short_name, EX_USAGE,
+    argv[0], ": unrecognised option -", error->short_name, '\n');
 
-  if (error->long_name[0]) {
-    std::cout << argv[0] << ": unrecognised option -" << error->short_name << '\n';
-    exit(EX_USAGE);
-  }
+  Error::exit_when(error->long_name[0], EX_USAGE,
+    argv[0], ": unrecognised option -", error->short_name, '\n');
 
   _print_error_message(argv[0], options);
 
   CommandLineOption* help = nullptr;
   for (const auto& option : options)
-    if (!strncmp(option->long_name, "help", 4))
+    if (option->long_name == "help")
       help = option;
 
   _print_help_message(argv[0], help, options);
