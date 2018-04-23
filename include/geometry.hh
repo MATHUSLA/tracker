@@ -2,25 +2,33 @@
 #define TRACKER__GEOMETRY_HH
 #pragma once
 
-#include "Geant4/G4VUserDetectorConstruction.hh"
-#include "Geant4/G4VPhysicalVolume.hh"
-#include "Geant4/G4SystemOfUnits.hh"
+#include "types.hh"
+#include "units.hh"
 
 namespace MATHUSLA { namespace TRACKER {
 
-class Geometry : public G4VUserDetectorConstruction {
-public:
-  Geometry(const std::string& path);
-  G4VPhysicalVolume* Construct();
+namespace Geometry { ///////////////////////////////////////////////////////////////////////////
 
-  struct V3 { double    x, y, z; };
-  struct V4 { double t, x, y, z; };
+//__Initialize Geometry Navigation System_______________________________________________________
+void Initialize(const std::string& path);
+//----------------------------------------------------------------------------------------------
 
-  static const std::string DetectorName(const V3& point);
+//__Volume Search_______________________________________________________________________________
+const std::string Volume(const r3_point& point);
+const std::string Volume(const r4_point& point);
+//----------------------------------------------------------------------------------------------
 
-private:
-  std::string _geometry;
-};
+//__Volume Hierarchy Search_____________________________________________________________________
+const std::vector<std::string> VolumeHierarchy(const r3_point& point);
+const std::vector<std::string> VolumeHierarchy(const r4_point& point);
+//----------------------------------------------------------------------------------------------
+
+//__Within Volume Check_________________________________________________________________________
+bool WithinVolume(const r3_point& point, const std::string& name);
+bool WithinVolume(const r4_point& point, const std::string& name);
+//----------------------------------------------------------------------------------------------
+
+} /* namespace Geometry */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */
 
