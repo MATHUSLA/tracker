@@ -100,19 +100,19 @@ static void _print_error_message(const std::string& argv0, CommandLineOptionList
   constexpr auto IsLongWithArgument     = CommandLineOption::IsLongWithArgument;
 
   for (auto& option : options) {
-    Error::exit_when(_is_on(option, IsShortWithoutArgument | RequiredArguments), EX_USAGE,
+    error::exit_when(_is_on(option, IsShortWithoutArgument | RequiredArguments), EX_USAGE,
       argv0, ": option -", option->short_name, " requires an argument\n");
 
-    Error::exit_when(_is_on(option, IsShortWithArgument | NoArguments), EX_USAGE,
+    error::exit_when(_is_on(option, IsShortWithArgument | NoArguments), EX_USAGE,
       argv0, ": option -", option->short_name, " must not have an argument\n");
 
-    Error::exit_when(_is_on(option, IsLongWithoutArgument | RequiredArguments), EX_USAGE,
+    error::exit_when(_is_on(option, IsLongWithoutArgument | RequiredArguments), EX_USAGE,
       argv0, ": option --", option->long_name, " requires an argument\n");
 
-    Error::exit_when(_is_on(option, IsLongWithArgument | NoArguments), EX_USAGE,
+    error::exit_when(_is_on(option, IsLongWithArgument | NoArguments), EX_USAGE,
       argv0, ": option --", option->long_name, " must not have an argument\n");
 
-    Error::exit_when((option->count > 1) && !(option->flags & Repeatable), EX_USAGE,
+    error::exit_when((option->count > 1) && !(option->flags & Repeatable), EX_USAGE,
       argv0, ": option -", option->short_name,
              " (--", option->long_name, ") may not be repeated\n");
   }
@@ -215,10 +215,10 @@ size_t CommandLineParser::parse(char* argv[],
 
   argv[operand_count] = nullptr;
 
-  Error::exit_when(error->short_name, EX_USAGE,
+  error::exit_when(error->short_name, EX_USAGE,
     argv[0], ": unrecognised option -", error->short_name, '\n');
 
-  Error::exit_when(error->long_name[0], EX_USAGE,
+  error::exit_when(error->long_name[0], EX_USAGE,
     argv[0], ": unrecognised option -", error->short_name, '\n');
 
   _print_error_message(argv[0], options);

@@ -13,8 +13,8 @@ namespace MATHUSLA {
 
 namespace CLI {
 /*
-struct option {
-
+class option {
+public:
   enum class argument_type { none, optional, required };
   enum class name_type { one_char, one_word, multi_word };
 
@@ -24,10 +24,12 @@ struct option {
     _short = name;
     return *this;
   }
+
   option& long_name(const std::string& name) {
     _long = name;
     return *this;
   }
+
   option& description(const std::string& desc) {
     _desc = desc;
     return *this;
@@ -44,7 +46,9 @@ private:
 };
 
 template<typename ...Options>
-size_t parse(char* const argv[], Options&... options) { return 0; }
+size_t parse(char* const argv[], Options&... options) {
+
+}
 */
 } /* namespace CLI */
 

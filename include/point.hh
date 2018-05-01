@@ -1,13 +1,18 @@
-#ifndef TRACKER__TYPES_HH
-#define TRACKER__TYPES_HH
+#ifndef TRACKER__POINT_HH
+#define TRACKER__POINT_HH
 #pragma once
 
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <iterator>
+#include <iostream>
 #include <string>
 #include <vector>
 
 namespace MATHUSLA {
+
+namespace type { ///////////////////////////////////////////////////////////////////////////////
 
 //__Numerical Types_____________________________________________________________________________
 using integer = long;
@@ -21,6 +26,173 @@ struct r4_point { real t, x, y, z; };
 enum class Coordinate { T, X, Y, Z };
 //----------------------------------------------------------------------------------------------
 
+//__Point-Wise Reduction of Dimension___________________________________________________________
+inline r2_point reduce_to_r2(const r3_point& point) { return { point.x, point.y          }; }
+inline r2_point reduce_to_r2(const r4_point& point) { return { point.x, point.y          }; }
+inline r3_point reduce_to_r3(const r4_point& point) { return { point.x, point.y, point.z }; }
+//----------------------------------------------------------------------------------------------
+
+//__Stream Convenience Printing_________________________________________________________________
+inline std::ostream& operator<<(std::ostream& os, const r2_point& point) {
+  return os << '(' << point.x << ", " << point.y << ')';
+}
+inline std::ostream& operator<<(std::ostream& os, const r3_point& point) {
+  return os << '(' << point.x << ", " << point.y << ", " << point.z << ')';
+}
+inline std::ostream& operator<<(std::ostream& os, const r4_point& point) {
+  return os << '(' << point.t << ", " << point.x << ", " << point.y << ", " << point.z << ')';
+}
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise Negation_________________________________________________________________
+inline r2_point operator-(const r2_point& point) { return {           -point.x, -point.y           }; }
+inline r3_point operator-(const r3_point& point) { return {           -point.x, -point.y, -point.z }; }
+inline r4_point operator-(const r4_point& point) { return { -point.t, -point.x, -point.y, -point.z }; }
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise In-Place Addition________________________________________________________
+inline r2_point& operator+=(r2_point& left, const r2_point& right) {
+  left.x += right.x;
+  left.y += right.y;
+  return left;
+}
+inline r3_point& operator+=(r3_point& left, const r3_point& right) {
+  left.x += right.x;
+  left.y += right.y;
+  left.z += right.z;
+  return left;
+}
+inline r4_point& operator+=(r4_point& left, const r4_point& right) {
+  left.t += right.t;
+  left.x += right.x;
+  left.y += right.y;
+  left.z += right.z;
+  return left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise Addition_________________________________________________________________
+inline r2_point operator+(r2_point left, const r2_point& right) { return left += right; }
+inline r3_point operator+(r3_point left, const r3_point& right) { return left += right; }
+inline r4_point operator+(r4_point left, const r4_point& right) { return left += right; }
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise In-Place Subtraction_____________________________________________________
+inline r2_point& operator-=(r2_point& left, const r2_point& right) {
+  left.x -= right.x;
+  left.y -= right.y;
+  return left;
+}
+inline r3_point& operator-=(r3_point& left, const r3_point& right) {
+  left.x -= right.x;
+  left.y -= right.y;
+  left.z -= right.z;
+  return left;
+}
+inline r4_point& operator-=(r4_point& left, const r4_point& right) {
+  left.t -= right.t;
+  left.x -= right.x;
+  left.y -= right.y;
+  left.z -= right.z;
+  return left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise Subtraction______________________________________________________________
+inline r2_point operator-(r2_point left, const r2_point& right) { return left -= right; }
+inline r3_point operator-(r3_point left, const r3_point& right) { return left -= right; }
+inline r4_point operator-(r4_point left, const r4_point& right) { return left -= right; }
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise In-Place Scalar Multiplication___________________________________________
+inline r2_point& operator*=(r2_point& left, const real right) {
+  left.x *= right;
+  left.y *= right;
+  return left;
+}
+inline r3_point& operator*=(r3_point& left, const real right) {
+  left.x *= right;
+  left.y *= right;
+  left.z *= right;
+  return left;
+}
+inline r4_point& operator*=(r4_point& left, const real right) {
+  left.t *= right;
+  left.x *= right;
+  left.y *= right;
+  left.z *= right;
+  return left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise Scalar Multiplication____________________________________________________
+inline r2_point operator*(r2_point left, const real right) { return left *= right; }
+inline r2_point operator*(const real left, r2_point right) { return right *= left; }
+inline r3_point operator*(r3_point left, const real right) { return left *= right; }
+inline r3_point operator*(const real left, r3_point right) { return right *= left; }
+inline r4_point operator*(r4_point left, const real right) { return left *= right; }
+inline r4_point operator*(const real left, r4_point right) { return right *= left; }
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise In-Place Scalar Division_________________________________________________
+inline r2_point& operator/=(r2_point& left, const real right) {
+  left.x /= right;
+  left.y /= right;
+  return left;
+}
+inline r3_point& operator/=(r3_point& left, const real right) {
+  left.x /= right;
+  left.y /= right;
+  left.z /= right;
+  return left;
+}
+inline r4_point& operator/=(r4_point& left, const real right) {
+  left.t /= right;
+  left.x /= right;
+  left.y /= right;
+  left.z /= right;
+  return left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise Scalar Division__________________________________________________________
+inline r2_point operator/(r2_point left, const real right) { return left /= right; }
+inline r2_point operator/(const real left, r2_point right) { return right /= left; }
+inline r3_point operator/(r3_point left, const real right) { return left /= right; }
+inline r3_point operator/(const real left, r3_point right) { return right /= left; }
+inline r4_point operator/(r4_point left, const real right) { return left /= right; }
+inline r4_point operator/(const real left, r4_point right) { return right /= left; }
+//----------------------------------------------------------------------------------------------
+
+//__RN Coordinate-Wise Equality_________________________________________________________________
+inline bool operator==(const r2_point& left, const r2_point& right) {
+  return left.x == right.x && left.y == right.y;
+}
+inline bool operator==(const r3_point& left, const r3_point& right) {
+  return left.x == right.x && left.y == right.y && left.z == right.z;
+}
+inline bool operator==(const r4_point& left, const r4_point& right) {
+  return left.t == right.t && left.x == right.x && left.y == right.y && left.z == right.z;
+}
+//----------------------------------------------------------------------------------------------
+
+//__R3 Interval Check___________________________________________________________________________
+inline bool within_dr(const r3_point& a, const r3_point& b, const r3_point& dr) {
+  return std::abs(a.x - b.x) <= dr.x && std::abs(a.y - b.y) <= dr.y && std::abs(a.z - b.z) <= dr.z;
+}
+inline bool within_dr(const r4_point& a, const r4_point& b, const r4_point& dr) {
+  return std::abs(a.x - b.x) <= dr.x && std::abs(a.y - b.y) <= dr.y && std::abs(a.z - b.z) <= dr.z;
+}
+//----------------------------------------------------------------------------------------------
+
+//__R4 Interval Check___________________________________________________________________________
+inline bool within_ds(const r4_point& a, const r4_point& b, const r4_point& ds) {
+  return std::abs(a.t - b.t) <= ds.t && within_dr(a, b, ds);
+}
+//----------------------------------------------------------------------------------------------
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
 //__Array Point Constructs______________________________________________________________________
 template<std::size_t N> using r2_point_array = typename std::array<r2_point, N>;
 template<std::size_t N> using r3_point_array = typename std::array<r3_point, N>;
@@ -31,9 +203,60 @@ template<std::size_t N> struct real_array3 { real_array<N>     xs, ys, zs; };
 template<std::size_t N> struct real_array4 { real_array<N> ts, xs, ys, zs; };
 //----------------------------------------------------------------------------------------------
 
+//__Array-Wise Reduction of Dimension___________________________________________________________
+template<std::size_t N> inline r2_point_array<N> reduce_to_r2(const r3_point_array<N>& arr) {
+  r2_point_array<N> out;
+  for (std::size_t i = 0; i < N; ++i) {
+    const auto& arr_i = arr[i];
+    out[i] = { arr_i.x, arr_i.y };
+  }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Array-Wise Reduction of Dimension___________________________________________________________
+template<std::size_t N> inline r2_point_array<N> reduce_to_r2(const r4_point_array<N>& arr) {
+  r2_point_array<N> out;
+  for (std::size_t i = 0; i < N; ++i) {
+    const auto& arr_i = arr[i];
+    out[i] = { arr_i.x, arr_i.y };
+  }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Array-Wise Reduction of Dimension___________________________________________________________
+template<std::size_t N> inline r3_point_array<N> reduce_to_r3(const r4_point_array<N>& arr) {
+  r3_point_array<N> out;
+  for (std::size_t i = 0; i < N; ++i) {
+    const auto& arr_i = arr[i];
+    out[i] = { arr_i.x, arr_i.y, arr_i.z };
+  }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Array-Wise Reduction of Dimension___________________________________________________________
+template<std::size_t N> inline real_array2<N> reduce_to_r2(const real_array3<N>& arr) {
+  return { arr.xs, arr.ys };
+}
+//----------------------------------------------------------------------------------------------
+
+//__Array-Wise Reduction of Dimension___________________________________________________________
+template<std::size_t N> inline real_array2<N> reduce_to_r2(const real_array4<N>& arr) {
+  return { arr.xs, arr.ys };
+}
+//----------------------------------------------------------------------------------------------
+
+//__Array-Wise Reduction of Dimension___________________________________________________________
+template<std::size_t N> inline real_array3<N> reduce_to_r3(const real_array4<N>& arr) {
+  return { arr.xs, arr.ys, arr.zs };
+}
+//----------------------------------------------------------------------------------------------
+
 //__R2-Point Array Transposition________________________________________________________________
 template<std::size_t N> inline real_array2<N> transpose(const r2_point_array<N>& arr) {
-  auto out = real_array2<N>{};
+  real_array2<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
     out.xs[i] = arr_i.x;
@@ -45,7 +268,7 @@ template<std::size_t N> inline real_array2<N> transpose(const r2_point_array<N>&
 
 //__R3-Point Array Transposition________________________________________________________________
 template<std::size_t N> inline real_array3<N> transpose(const r3_point_array<N>& arr) {
-  auto out = real_array3<N>{};
+  real_array3<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
     out.xs[i] = arr_i.x;
@@ -58,7 +281,7 @@ template<std::size_t N> inline real_array3<N> transpose(const r3_point_array<N>&
 
 //__R4-Point Array Transposition________________________________________________________________
 template<std::size_t N> inline real_array4<N> transpose(const r4_point_array<N>& arr) {
-  auto out = real_array4<N>{};
+  real_array4<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
     out.ts[i] = arr_i.t;
@@ -72,7 +295,7 @@ template<std::size_t N> inline real_array4<N> transpose(const r4_point_array<N>&
 
 //__R2-Array Point Transposition________________________________________________________________
 template<std::size_t N> inline r2_point_array<N> transpose(const real_array2<N>& arr) {
-  auto out = r2_point_array<N>{};
+  r2_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     auto& out_i = out[i];
     out_i.x = arr.xs[i];
@@ -84,7 +307,7 @@ template<std::size_t N> inline r2_point_array<N> transpose(const real_array2<N>&
 
 //__R3-Array Point Transposition________________________________________________________________
 template<std::size_t N> inline r3_point_array<N> transpose(const real_array3<N>& arr) {
-  auto out = r3_point_array<N>{};
+  r3_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     auto& out_i = out[i];
     out_i.x = arr.xs[i];
@@ -97,7 +320,7 @@ template<std::size_t N> inline r3_point_array<N> transpose(const real_array3<N>&
 
 //__R4-Array Point Transposition________________________________________________________________
 template<std::size_t N> inline r4_point_array<N> transpose(const real_array4<N>& arr) {
-  auto out = r4_point_array<N>{};
+  r4_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     auto& out_i = out[i];
     out_i.t = arr.ts[i];
@@ -109,6 +332,8 @@ template<std::size_t N> inline r4_point_array<N> transpose(const real_array4<N>&
 }
 //----------------------------------------------------------------------------------------------
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+
 //__Vector Point Constructs_____________________________________________________________________
 using r2_point_vector = typename std::vector<r2_point>;
 using r3_point_vector = typename std::vector<r3_point>;
@@ -119,10 +344,67 @@ struct real_vector3 { real_vector     xs, ys, zs; };
 struct real_vector4 { real_vector ts, xs, ys, zs; };
 //----------------------------------------------------------------------------------------------
 
+//__Vector-Wise Reduction of Dimension__________________________________________________________
+inline r2_point_vector reduce_to_r2(const r3_point_vector& vec) {
+  const auto&& size = vec.size();
+  r2_point_vector out;
+  out.reserve(size);
+  for (std::size_t i = 0; i < size; ++i) {
+    const auto& vec_i = vec[i];
+    out[i] = { vec_i.x, vec_i.y };
+  }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Vector-Wise Reduction of Dimension__________________________________________________________
+inline r2_point_vector reduce_to_r2(const r4_point_vector& vec) {
+  const auto&& size = vec.size();
+  r2_point_vector out;
+  out.reserve(size);
+  for (std::size_t i = 0; i < size; ++i) {
+    const auto& vec_i = vec[i];
+    out[i] = { vec_i.x, vec_i.y };
+  }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Vector-Wise Reduction of Dimension__________________________________________________________
+inline r3_point_vector reduce_to_r3(const r4_point_vector& vec) {
+  const auto&& size = vec.size();
+  r3_point_vector out;
+  out.reserve(size);
+  for (std::size_t i = 0; i < size; ++i) {
+    const auto& vec_i = vec[i];
+    out[i] = { vec_i.x, vec_i.y, vec_i.z };
+  }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Vector-Wise Reduction of Dimension__________________________________________________________
+inline real_vector2 reduce_to_r2(const real_vector3& vec) {
+  return { vec.xs, vec.ys };
+}
+//----------------------------------------------------------------------------------------------
+
+//__Vector-Wise Reduction of Dimension__________________________________________________________
+inline real_vector2 reduce_to_r2(const real_vector4& vec) {
+  return { vec.xs, vec.ys };
+}
+//----------------------------------------------------------------------------------------------
+
+//__Vector-Wise Reduction of Dimension__________________________________________________________
+inline real_vector3 reduce_to_r3(const real_vector4& vec) {
+  return { vec.xs, vec.ys, vec.zs };
+}
+//----------------------------------------------------------------------------------------------
+
 //__R2-Point Vector Transposition_______________________________________________________________
 inline real_vector2 transpose(const r2_point_vector& vec) {
   const auto&& size = vec.size();
-  auto out = real_vector2{};
+  real_vector2 out;
   out.xs.reserve(size);
   out.ys.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
@@ -137,7 +419,7 @@ inline real_vector2 transpose(const r2_point_vector& vec) {
 //__R3-Point Vector Transposition_______________________________________________________________
 inline real_vector3 transpose(const r3_point_vector& vec) {
   const auto&& size = vec.size();
-  auto out = real_vector3{};
+  real_vector3 out;
   out.xs.reserve(size);
   out.ys.reserve(size);
   out.zs.reserve(size);
@@ -154,7 +436,7 @@ inline real_vector3 transpose(const r3_point_vector& vec) {
 //__R4-Point Vector Transposition_______________________________________________________________
 inline real_vector4 transpose(const r4_point_vector& vec) {
   const auto&& size = vec.size();
-  auto out = real_vector4{};
+  real_vector4 out;
   out.ts.reserve(size);
   out.xs.reserve(size);
   out.ys.reserve(size);
@@ -173,7 +455,8 @@ inline real_vector4 transpose(const r4_point_vector& vec) {
 //__R2-Vector Point Transposition_______________________________________________________________
 inline r2_point_vector transpose(const real_vector2& vec) {
   const auto&& size = vec.xs.size();
-  auto out = r2_point_vector(size);
+  r2_point_vector out;
+  out.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
     auto& out_i = out[i];
     out_i.x = vec.xs[i];
@@ -186,7 +469,8 @@ inline r2_point_vector transpose(const real_vector2& vec) {
 //__R3-Vector Point Transposition_______________________________________________________________
 inline r3_point_vector transpose(const real_vector3& vec) {
   const auto&& size = vec.xs.size();
-  auto out = r3_point_vector(size);
+  r3_point_vector out;
+  out.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
     auto& out_i = out[i];
     out_i.x = vec.xs[i];
@@ -200,7 +484,8 @@ inline r3_point_vector transpose(const real_vector3& vec) {
 //__R4-Vector Point Transposition_______________________________________________________________
 inline r4_point_vector transpose(const real_vector4& vec) {
   const auto&& size = vec.xs.size();
-  auto out = r4_point_vector(size);
+  r4_point_vector out;
+  out.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
     auto& out_i = out[i];
     out_i.t = vec.ts[i];
@@ -212,36 +497,38 @@ inline r4_point_vector transpose(const real_vector4& vec) {
 }
 //----------------------------------------------------------------------------------------------
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+
 //__R2-Point Array to Vector Transformation_____________________________________________________
 template<std::size_t N> inline r2_point_vector to_vector(const r2_point_array<N>& arr) {
-  auto out = r2_point_vector(N);
-  for (std::size_t i = 0; i < N; ++i)
-    out[i] = arr[i];
+  r2_point_vector out;
+  out.reserve(N);
+  std::copy(arr.cbegin(), arr.cend(), std::back_inserter(out));
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__R3-Point Array to Vector Transformation_____________________________________________________
 template<std::size_t N> inline r3_point_vector to_vector(const r3_point_array<N>& arr) {
-  auto out = r3_point_vector(N);
-  for (std::size_t i = 0; i < N; ++i)
-    out[i] = arr[i];
+  r3_point_vector out;
+  out.reserve(N);
+  std::copy(arr.cbegin(), arr.cend(), std::back_inserter(out));
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__R4-Point Array to Vector Transformation_____________________________________________________
 template<std::size_t N> inline r4_point_vector to_vector(const r4_point_array<N>& arr) {
-  auto out = r4_point_vector(N);
-  for (std::size_t i = 0; i < N; ++i)
-    out[i] = arr[i];
+  r4_point_vector out;
+  out.reserve(N);
+  std::copy(arr.cbegin(), arr.cend(), std::back_inserter(out));
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__R2-Array Point to Vector Point Transformation_______________________________________________
 template<std::size_t N> inline real_vector2 to_vector(const real_array2<N>& arr) {
-  auto out = real_vector2{};
+  real_vector2 out;
   out.xs.reserve(N);
   out.ys.reserve(N);
   for (std::size_t i = 0; i < N; ++i) {
@@ -254,7 +541,7 @@ template<std::size_t N> inline real_vector2 to_vector(const real_array2<N>& arr)
 
 //__R3-Array Point to Vector Point Transformation_______________________________________________
 template<std::size_t N> inline real_vector3 to_vector(const real_array3<N>& arr) {
-  auto out = real_vector3{};
+  real_vector3 out;
   out.xs.reserve(N);
   out.ys.reserve(N);
   out.zs.reserve(N);
@@ -269,7 +556,7 @@ template<std::size_t N> inline real_vector3 to_vector(const real_array3<N>& arr)
 
 //__R4-Array Point to Vector Point Transformation_______________________________________________
 template<std::size_t N> inline real_vector4 to_vector(const real_array4<N>& arr) {
-  auto out = real_vector4{};
+  real_vector4 out;
   out.ts.reserve(N);
   out.xs.reserve(N);
   out.ys.reserve(N);
@@ -286,42 +573,32 @@ template<std::size_t N> inline real_vector4 to_vector(const real_array4<N>& arr)
 
 //__R2-Point Vector to Array Transformation_____________________________________________________
 template<std::size_t N> inline r2_point_array<N> to_array(const r2_point_vector& vec) {
-  const auto&& vec_size = vec.size();
-  const auto&& size = vec_size < N ? vec_size : N;
-  auto out = r2_point_array<N>{};
-  for (std::size_t i = 0; i < size; ++i)
-    out[i] = vec[i];
+  r2_point_array<N> out;
+  std::copy(vec.cbegin(), vec.cend(), out.begin());
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__R3-Point Vector to Array Transformation_____________________________________________________
 template<std::size_t N> inline r3_point_array<N> to_array(const r3_point_vector& vec) {
-  const auto&& vec_size = vec.size();
-  const auto&& size = vec_size < N ? vec_size : N;
-  auto out = r3_point_array<N>{};
-  for (std::size_t i = 0; i < size; ++i)
-    out[i] = vec[i];
+  r3_point_array<N> out;
+  std::copy(vec.cbegin(), vec.cend(), out.begin());
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__R4-Point Vector to Array Transformation_____________________________________________________
 template<std::size_t N> inline r4_point_array<N> to_array(const r4_point_vector& vec) {
-  const auto&& vec_size = vec.size();
-  const auto&& size = vec_size < N ? vec_size : N;
-  auto out = r4_point_array<N>{};
-  for (std::size_t i = 0; i < size; ++i)
-    out[i] = vec[i];
+  r4_point_array<N> out;
+  std::copy(vec.cbegin(), vec.cend(), out.begin());
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__R2-Vector Point to Array Point Transformation_______________________________________________
 template<std::size_t N> inline real_array2<N> to_array(const real_vector2& vec) {
-  const auto&& vec_size = vec.xs.size();
-  const auto&& size = vec_size < N ? vec_size : N;
-  auto out = real_array2<N>{};
+  const auto size = std::min(vec.xs.size(), N);
+  real_array2<N> out;
   for (std::size_t i = 0; i < size; ++i) {
     out.xs[i] = vec.xs[i];
     out.ys[i] = vec.ys[i];
@@ -332,9 +609,8 @@ template<std::size_t N> inline real_array2<N> to_array(const real_vector2& vec) 
 
 //__R3-Vector Point to Array Point Transformation_______________________________________________
 template<std::size_t N> inline real_array3<N> to_array(const real_vector3& vec) {
-  const auto&& vec_size = vec.xs.size();
-  const auto&& size = vec_size < N ? vec_size : N;
-  auto out = real_array3<N>{};
+  const auto size = std::min(vec.xs.size(), N);
+  real_array3<N> out;
   for (std::size_t i = 0; i < size; ++i) {
     out.xs[i] = vec.xs[i];
     out.ys[i] = vec.ys[i];
@@ -346,9 +622,8 @@ template<std::size_t N> inline real_array3<N> to_array(const real_vector3& vec) 
 
 //__R4-Vector Point to Array Point Transformation_______________________________________________
 template<std::size_t N> inline real_array4<N> to_array(const real_vector4& vec) {
-  const auto&& vec_size = vec.xs.size();
-  const auto&& size = vec_size < N ? vec_size : N;
-  auto out = real_array4<N>{};
+  const auto size = std::min(vec.xs.size(), N);
+  real_array4<N> out;
   for (std::size_t i = 0; i < size; ++i) {
     out.ts[i] = vec.ts[i];
     out.xs[i] = vec.xs[i];
@@ -358,6 +633,8 @@ template<std::size_t N> inline real_array4<N> to_array(const real_vector4& vec) 
   return out;
 }
 //----------------------------------------------------------------------------------------------
+
+////////////////////////////////////////////////////////////////////////////////////////////////
 
 //__General Range Sorting Function______________________________________________________________
 template<class Range, class Compare> inline void sort_range(Range& range, Compare comp) {
@@ -399,7 +676,7 @@ template<class Range> inline void y_sort(Range& range) {
 template<class Range> inline void z_sort(Range& range) {
   sort_range(range, z_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void coordinate_sort(Range& range, Coordinate coordinate) {
+template<class Range> inline void coordinate_sort(Range& range, const Coordinate coordinate) {
   switch (coordinate) {
     case Coordinate::T: t_sort(range); return;
     case Coordinate::X: x_sort(range); return;
@@ -422,7 +699,7 @@ template<class Range> inline void y_stable_sort(Range& range) {
 template<class Range> inline void z_stable_sort(Range& range) {
   stable_sort_range(range, z_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void coordinate_stable_sort(Range& range, Coordinate coordinate) {
+template<class Range> inline void coordinate_stable_sort(Range& range, const Coordinate coordinate) {
   switch (coordinate) {
     case Coordinate::T: t_stable_sort(range); return;
     case Coordinate::X: x_stable_sort(range); return;
@@ -445,7 +722,7 @@ template<class Range> inline Range y_copy_sort(const Range& range) {
 template<class Range> inline Range z_copy_sort(const Range& range) {
   return copy_sort_range(range, z_sorter<typename Range::value_type>{});
 }
-template<class Range> inline Range coordinate_copy_sort(const Range& range, Coordinate coordinate) {
+template<class Range> inline Range coordinate_copy_sort(const Range& range, const Coordinate coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_copy_sort(range);
     case Coordinate::X: return x_copy_sort(range);
@@ -455,6 +732,8 @@ template<class Range> inline Range coordinate_copy_sort(const Range& range, Coor
 }
 //----------------------------------------------------------------------------------------------
 
+} /* namespace type */ /////////////////////////////////////////////////////////////////////////
+
 } /* namespace MATHUSLA */
 
-#endif /* TRACKER__TYPES_HH */
+#endif /* TRACKER__POINT_HH */
