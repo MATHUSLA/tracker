@@ -6,6 +6,7 @@
 #include "ROOT/TTree.h"
 
 #include "geometry.hh"
+#include "units.hh"
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -77,7 +78,11 @@ event_vector import_events(const std::string& path,
       const auto&& size = tree->GetEntries();
       for (auto i = 0; i < size; ++i) {
         tree->GetEntry(i);
-        points.push_back({t, x, y, z});
+        points.push_back({
+          t * Units::Time,
+          x * Units::Length,
+          y * Units::Length,
+          z * Units::Length});
       }
       out.push_back(points);
     }

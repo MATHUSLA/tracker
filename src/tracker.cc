@@ -1,6 +1,7 @@
 #include "analysis.hh"
 #include "geometry.hh"
 #include "root_helper.hh"
+#include "units.hh"
 #include "util.hh"
 
 #include "util/CommandLineParser.hh"
@@ -34,9 +35,10 @@ int main(int argc, char* argv[]) {
   Units::Define();
 
   using namespace MATHUSLA::TRACKER;
-  /*
+
   std::cout << "DEMO:\n";
   geometry::open(geo_opt->argument);
+
   auto paths = root::search_directory(root_opt->argument);
   std::cout << "File Count: " << paths.size() << "\n";
 
@@ -50,11 +52,13 @@ int main(int argc, char* argv[]) {
       const auto& collapsed_event = analysis::collapse(event, {2, 2, 2, 2});
       const auto& layered_event = analysis::partition(collapsed_event, 50).parts;
 
-      for (const auto& point : event)
+      for (const auto& point : event) {
         std::cout << "OLD " << point << " " << geometry::volume(point) << "\n";
+      }
       std::cout << "\n";
-      for (const auto& point : collapsed_event)
+      for (const auto& point : collapsed_event) {
         std::cout << "NEW " << point << " " << geometry::volume(point) << "\n";
+      }
       std::cout << "\n";
 
       for (const auto& layer : layered_event) {
@@ -71,40 +75,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "Done!\n";
 
-
-  auto limits = geometry::limits_of("A11_C7");
-  std::cout << limits.center << "\n"
-            << limits.min    << "\n"
-            << limits.max    << "\n\n";
-
-  std::cout << geometry::is_inside_volume(
-    type::r3_point{limits.center.x - 208,limits.center.y - 340, -6329},
-    "A11_C7")
-    << "\n";
-
-  // -208.95,0,-346.734
-
   geometry::close();
-  */
-
-  auto sequences = type::generate_bit_sequences({
-    {2, 5}, {1, 6}, {2, 4}, {2, 3}, {3, 6}, {2, 5}
-  });
-
-  type::bit_vector_sequence out{};
-
-  uint64_t count = 0;
-
-  combinatorics::order2_permutations(4, sequences, [&](const auto& chooser) {
-    std::cout << ++count << ": ";
-    for (size_t i = 0; i < chooser.size(); ++i) {
-      if (chooser[i]) {
-        std::cout << sequences[i] << " ";
-      }
-    }
-    std::cout << "\n";
-  });
-  std::cout << count << "\n";
 
   return 0;
 }
