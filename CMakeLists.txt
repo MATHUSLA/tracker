@@ -15,6 +15,7 @@ add_executable(tracker
 
     src/analysis.cc
     src/geometry.cc
+    src/root_helper.cc
 
     src/util/CommandLineParser.cc
 )
@@ -22,6 +23,8 @@ add_executable(tracker
 target_link_libraries(tracker
     ${Geant4_LIBRARIES}
     ${ROOT_LIBRARIES})
+
+target_compile_features(tracker PUBLIC cxx_std_14)
 
 target_include_directories(tracker PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>

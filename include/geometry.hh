@@ -2,33 +2,39 @@
 #define TRACKER__GEOMETRY_HH
 #pragma once
 
-#include "types.hh"
+#include "point.hh"
 #include "units.hh"
 
 namespace MATHUSLA { namespace TRACKER {
 
-namespace Geometry { ///////////////////////////////////////////////////////////////////////////
+namespace geometry { ///////////////////////////////////////////////////////////////////////////
 
-//__Initialize Geometry Navigation System_______________________________________________________
-void Initialize(const std::string& path);
+using namespace type;
+
+//__Geometry Navigation System__________________________________________________________________
+void open(const std::string& path);
+void close();
+//----------------------------------------------------------------------------------------------
+
+struct detector_limits { r3_point center, min, max; };
+const detector_limits limits_of(const std::string name);
+
+//__Volume Containment Check____________________________________________________________________
+bool is_inside_volume(const r3_point& point, const std::string& name);
+bool is_inside_volume(const r4_point& point, const std::string& name);
 //----------------------------------------------------------------------------------------------
 
 //__Volume Search_______________________________________________________________________________
-const std::string Volume(const r3_point& point);
-const std::string Volume(const r4_point& point);
+const std::string volume(const r3_point& point);
+const std::string volume(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
 //__Volume Hierarchy Search_____________________________________________________________________
-const std::vector<std::string> VolumeHierarchy(const r3_point& point);
-const std::vector<std::string> VolumeHierarchy(const r4_point& point);
+const std::vector<std::string> volume_hierarchy(const r3_point& point);
+const std::vector<std::string> volume_hierarchy(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
-//__Within Volume Check_________________________________________________________________________
-bool WithinVolume(const r3_point& point, const std::string& name);
-bool WithinVolume(const r4_point& point, const std::string& name);
-//----------------------------------------------------------------------------------------------
-
-} /* namespace Geometry */ /////////////////////////////////////////////////////////////////////
+} /* namespace geometry */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */
 

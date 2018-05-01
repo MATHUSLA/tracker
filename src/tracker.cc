@@ -1,7 +1,9 @@
 #include "analysis.hh"
 #include "geometry.hh"
-#include "util/CommandLineParser.hh"
+#include "root_helper.hh"
 #include "util.hh"
+
+#include "util/CommandLineParser.hh"
 
 using Option = MATHUSLA::CommandLineOption;
 
@@ -12,79 +14,97 @@ auto script_opt = new Option('s', "script",   "Tracking Script",             Opt
 auto quiet_opt  = new Option('q', "quiet",    "Quiet Mode",                  Option::NoArguments);
 
 int main(int argc, char* argv[]) {
-  MATHUSLA::CommandLineParser::parse(argv, {
-    help_opt, geo_opt, root_opt, script_opt, quiet_opt});
+  using namespace MATHUSLA;
 
-  MATHUSLA::Error::exit_when(argc == 1 || !geo_opt->count || !root_opt->count,
+  CommandLineParser::parse(argv, {help_opt, geo_opt, root_opt, script_opt, quiet_opt});
+
+  error::exit_when(argc == 1 || !geo_opt->count || !root_opt->count,
     "[FATAL ERROR] Insufficient Arguments: ",
     "Must include arguments for geometry and ROOT directory. \n",
     "              Run \'./tracker --help\' for more details.\n");
 
-  MATHUSLA::Error::exit_when(!MATHUSLA::IO::path_exists(geo_opt->argument),
+  error::exit_when(!io::path_exists(geo_opt->argument),
     "[FATAL ERROR] Geometry File Missing: ",
     "The file ", geo_opt->argument, " cannot be found.\n");
 
-  MATHUSLA::Error::exit_when(!MATHUSLA::IO::path_exists(root_opt->argument),
+  error::exit_when(!io::path_exists(root_opt->argument),
     "[FATAL ERROR] ROOT Directory Missing: ",
     "The directory ", root_opt->argument, " cannot be found.\n");
 
-  MATHUSLA::Units::Define();
+  Units::Define();
 
-  using namespace MATHUSLA;
   using namespace MATHUSLA::TRACKER;
-
-  Geometry::Initialize(geo_opt->argument);
-
+  /*
   std::cout << "DEMO:\n";
-
-  auto paths = Analysis::search_directory(root_opt->argument);
+  geometry::open(geo_opt->argument);
+  auto paths = root::search_directory(root_opt->argument);
   std::cout << "File Count: " << paths.size() << "\n";
 
   for (const auto& path : paths) {
-
     std::cout << path << "\n";
-    auto events = Analysis::import_events(path, {{"Time", "X", "Y", "Z"}});
+    auto events = root::import_events(path, {{"Time", "X", "Y", "Z"}});
     std::cout << "Processing " << events.size() << " Events\n";
 
     for (const auto& unsorted_event : events) {
-
       const auto& event = t_copy_sort(unsorted_event);
-      const auto& collapsed_event = Analysis::collapse(event, {1, 1, 1, 1});
-      const auto& layered_event = Analysis::partition<>(collapsed_event, 60).parts;
+      const auto& collapsed_event = analysis::collapse(event, {2, 2, 2, 2});
+      const auto& layered_event = analysis::partition(collapsed_event, 50).parts;
 
-      for (size_t i = 0; i < event.size(); ++i) {
+      for (const auto& point : event)
+        std::cout << "OLD " << point << " " << geometry::volume(point) << "\n";
+      std::cout << "\n";
+      for (const auto& point : collapsed_event)
+        std::cout << "NEW " << point << " " << geometry::volume(point) << "\n";
+      std::cout << "\n";
 
-        const auto& old_point = event[i];
-        std::cout << "OLD (" << old_point.t << " "
-                             << old_point.x << " "
-                             << old_point.y << " "
-                             << old_point.z << ")    ";
-
-        if (i < collapsed_event.size()) {
-          const auto& new_point = collapsed_event[i];
-          std::cout << "NEW (" << new_point.t << " "
-                               << new_point.x << " "
-                               << new_point.y << " "
-                               << new_point.z << ")    ";
+      for (const auto& layer : layered_event) {
+        for (size_t j = 0; j < layer.size(); ++j) {
+          const auto& layer_point = layer[j];
+          std::cout << "LAYER " << layer_point << " " << geometry::volume(layer_point) << "\n";
         }
-
-        if (i < layered_event.size()) {
-          for (size_t j = 0; j < layered_event[i].size(); ++j) {
-            const auto& layer_point = layered_event[i][j];
-            std::cout << "LAYER (" << layer_point.t << " "
-                                   << layer_point.x << " "
-                                   << layer_point.y << " "
-                                   << layer_point.z << ")  ";
-          }
-        }
-
-        std::cout << "\n";
+        std::cout << "\n\n";
       }
+
       std::cout << "\n";
     }
   }
 
   std::cout << "Done!\n";
+
+
+  auto limits = geometry::limits_of("A11_C7");
+  std::cout << limits.center << "\n"
+            << limits.min    << "\n"
+            << limits.max    << "\n\n";
+
+  std::cout << geometry::is_inside_volume(
+    type::r3_point{limits.center.x - 208,limits.center.y - 340, -6329},
+    "A11_C7")
+    << "\n";
+
+  // -208.95,0,-346.734
+
+  geometry::close();
+  */
+
+  auto sequences = type::generate_bit_sequences({
+    {2, 5}, {1, 6}, {2, 4}, {2, 3}, {3, 6}, {2, 5}
+  });
+
+  type::bit_vector_sequence out{};
+
+  uint64_t count = 0;
+
+  combinatorics::order2_permutations(4, sequences, [&](const auto& chooser) {
+    std::cout << ++count << ": ";
+    for (size_t i = 0; i < chooser.size(); ++i) {
+      if (chooser[i]) {
+        std::cout << sequences[i] << " ";
+      }
+    }
+    std::cout << "\n";
+  });
+  std::cout << count << "\n";
 
   return 0;
 }

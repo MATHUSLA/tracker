@@ -8,7 +8,7 @@
 
 namespace MATHUSLA {
 
-//__Momentum Units______________________________________________________________________________
+//__Extention Momentum Units____________________________________________________________________
 constexpr auto GeVperC = GeV;
 constexpr auto MeVperC = MeV;
 constexpr auto keVperC = keV;

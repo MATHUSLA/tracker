@@ -1,69 +1,108 @@
 #include "analysis.hh"
 
-#include <ROOT/TFile.h>
-#include <ROOT/TSystemDirectory.h>
-#include <ROOT/TTree.h>
-#include <ROOT/TKey.h>
+#include <deque>
 
 namespace MATHUSLA { namespace TRACKER {
 
-namespace { ////////////////////////////////////////////////////////////////////////////////////
-//__Recursive TSystemFile Traversal_____________________________________________________________
-void _collect_paths(TSystemDirectory* dir,
-                    std::vector<std::string>& paths,
-                    const std::string& ext) {
-  if (!dir || !dir->GetListOfFiles()) return;
-  for (const auto&& obj : *dir->GetListOfFiles()) {
-    const auto file = static_cast<TSystemFile*>(obj);
-    const auto&& name = std::string(file->GetName());
-    if (!file->IsDirectory()) {
-      if (ext == "" || name.substr(1 + name.find_last_of(".")) == ext)
-        paths.push_back(std::string(file->GetTitle()) + "/" + name);
-    } else if (!(name == "." || name == "..")) {
-      _collect_paths(static_cast<TSystemDirectory*>(file), paths, ext);
-    }
-  }
-}
-//----------------------------------------------------------------------------------------------
-} /* annonymous namespace */ ///////////////////////////////////////////////////////////////////
+namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
-//__Search and Collect ROOT File Paths__________________________________________________________
-std::vector<std::string> Analysis::search_directory(const std::string& path) {
-  std::vector<std::string> paths{};
-  _collect_paths(new TSystemDirectory("data", path.c_str()), paths, "root");
-  return paths;
-}
-//----------------------------------------------------------------------------------------------
+//__Collapse Points by R4 Interval______________________________________________________________
+event_points collapse(const event_points& event,
+                      const r4_point& ds) {
+  if (event.empty())
+    return event;
 
-//__Import Events from ROOT File________________________________________________________________
-Analysis::event_vector Analysis::import_events(const std::string& path,
-                                               const std::array<std::string, 4>& keys) {
-  auto out = event_vector{};
-  auto file = TFile::Open(path.c_str());
-  TIter next(file->GetListOfKeys());
-  TKey* key = nullptr;
-  TTree* tree = nullptr;
-  while ((key = static_cast<TKey*>(next()))) {
-    if (std::string(key->GetClassName()) == "TTree") {
-      real t, x, y, z;
-      tree = static_cast<TTree*>(file->Get(key->GetName()));
-      tree->SetBranchAddress(keys[0].c_str(), &t);
-      tree->SetBranchAddress(keys[1].c_str(), &x);
-      tree->SetBranchAddress(keys[2].c_str(), &y);
-      tree->SetBranchAddress(keys[3].c_str(), &z);
-      auto points = r4_point_vector{};
-      const auto&& size = tree->GetEntries();
-      for (auto i = 0; i < size; ++i) {
-        tree->GetEntry(i);
-        points.push_back({t, x, y, z});
+  event_points out;
+
+  const auto& sorted_events = t_copy_sort(event);
+  const auto&& event_size = sorted_events.size();
+
+  event_points::size_type index = 0;
+  std::deque<decltype(index)> marked_indicies{};
+  while (index < event_size) {
+    event_points::size_type collected = 1, missed_index = 0;
+    const auto& point = sorted_events[index];
+    const auto&& time_interval = point.t + ds.t;
+    auto sum_t = point.t,
+        sum_x = point.x,
+        sum_y = point.y,
+        sum_z = point.z;
+
+    auto skipped = false;
+    while (++index < event_size) {
+      while (!marked_indicies.empty() && index == marked_indicies.front()) {
+        ++index;
+        marked_indicies.pop_front();
       }
-      out.push_back(points);
+
+      const auto& next = sorted_events[index];
+      if (next.t > time_interval)
+        break;
+
+      if (within_dr(point, next, ds)) {
+        ++collected;
+        sum_t += next.t;
+        sum_x += next.x;
+        sum_y += next.y;
+        sum_z += next.z;
+        if (skipped)
+          marked_indicies.push_back(index);
+      } else if (!skipped) {
+        skipped = true;
+        missed_index = index;
+      }
     }
+
+    if (skipped)
+      index = missed_index;
+
+    out.push_back({sum_t / collected, sum_x / collected, sum_y / collected, sum_z / collected});
   }
-  delete key;
-  delete tree;
+
   return out;
 }
 //----------------------------------------------------------------------------------------------
+
+//__Partition Points by Coordinate______________________________________________________________
+event_partition partition(const event_points& points,
+                          const real interval,
+                          const Coordinate coordinate) {
+  event_partition out{{}, coordinate};
+  if (points.empty())
+    return out;
+
+  auto& parts = out.parts;
+
+  const auto& sorted_points = coordinate_copy_sort(points, coordinate);
+  const auto&& size = sorted_points.size();
+
+  event_points::size_type count = 0;
+  auto point_iter = sorted_points.cbegin();
+  while (count < size) {
+    const auto& point = *point_iter;
+    event_points current_layer{point};
+    ++count;
+
+    while (count < size) {
+      const auto& next = *(++point_iter);
+      if ((coordinate == Coordinate::T && (next.t > point.t + interval)) ||
+          (coordinate == Coordinate::X && (next.x > point.x + interval)) ||
+          (coordinate == Coordinate::Y && (next.y > point.y + interval)) ||
+          (coordinate == Coordinate::Z && (next.z > point.z + interval))) {
+        break;
+      }
+      current_layer.push_back(next);
+      ++count;
+    }
+
+    t_stable_sort(current_layer);
+    parts.push_back(current_layer);
+  }
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+} /* namespace analysis */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */
