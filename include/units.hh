@@ -19,7 +19,7 @@ namespace Units { //////////////////////////////////////////////////////////////
 
 //__Standard Units______________________________________________________________________________
 constexpr auto Length   = cm;
-constexpr auto Time     = nm;
+constexpr auto Time     = ns;
 constexpr auto Energy   = MeV;
 constexpr auto Momentum = MeVperC;
 //----------------------------------------------------------------------------------------------
