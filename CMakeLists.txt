@@ -5,8 +5,8 @@ project(MATHUSLA_TRACKER)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
-find_package(Geant4 REQUIRED gdml ui_all vis_all)
-find_package(ROOT   REQUIRED)
+find_package(Geant4 REQUIRED gdml)
+find_package(ROOT   REQUIRED Minuit)
 
 include(${Geant4_USE_FILE})
 

@@ -10,14 +10,15 @@ using Option = MATHUSLA::CommandLineOption;
 
 auto help_opt   = new Option('h', "help",     "MATHUSLA Tracking Algorithm", Option::NoArguments);
 auto geo_opt    = new Option('g', "geometry", "Geometry Import",             Option::RequiredArguments);
-auto root_opt   = new Option('d', "dir",      "ROOT Directory",              Option::RequiredArguments);
+auto root_opt   = new Option('d', "dir",      "ROOT Data Directory",         Option::RequiredArguments);
+auto map_opt    = new Option('m', "map",      "Detector Map",                Option::RequiredArguments);
 auto script_opt = new Option('s', "script",   "Tracking Script",             Option::RequiredArguments);
 auto quiet_opt  = new Option('q', "quiet",    "Quiet Mode",                  Option::NoArguments);
 
 int main(int argc, char* argv[]) {
   using namespace MATHUSLA;
 
-  CommandLineParser::parse(argv, {help_opt, geo_opt, root_opt, script_opt, quiet_opt});
+  CommandLineParser::parse(argv, {help_opt, geo_opt, root_opt, map_opt, script_opt, quiet_opt});
 
   error::exit_when(argc == 1 || !geo_opt->count || !root_opt->count,
     "[FATAL ERROR] Insufficient Arguments: ",
@@ -49,32 +50,36 @@ int main(int argc, char* argv[]) {
 
     for (const auto& unsorted_event : events) {
       const auto& event = t_copy_sort(unsorted_event);
-      const auto& collapsed_event = analysis::collapse(event, {2, 2, 2, 2});
-      const auto& layered_event = analysis::partition(collapsed_event, 50).parts;
+      const auto& collapsed_event = analysis::collapse(event, {20, 20, 20, 20});
+      const auto& layered_event = analysis::partition(collapsed_event, 500).parts;
 
       for (const auto& point : event) {
-        std::cout << "OLD " << point << " " << geometry::volume(point) << "\n";
+        std::cout << "OLD " << point /* << " " << geometry::volume(point) */ << "\n";
       }
       std::cout << "\n";
       for (const auto& point : collapsed_event) {
-        std::cout << "NEW " << point << " " << geometry::volume(point) << "\n";
+        std::cout << "NEW " << point /* << " " << geometry::volume(point) */ << "\n";
       }
       std::cout << "\n";
 
       for (const auto& layer : layered_event) {
         for (size_t j = 0; j < layer.size(); ++j) {
-          const auto& layer_point = layer[j];
-          std::cout << "LAYER " << layer_point << " " << geometry::volume(layer_point) << "\n";
+          const auto& point = layer[j];
+          std::cout << "LAYER " << point /* << " " << geometry::volume(point) */ << "\n";
         }
         std::cout << "\n\n";
       }
 
       std::cout << "\n";
+
+      auto seeds = analysis::seed(3, unsorted_event, {20, 20, 20, 20}, 500, 0.8);
+
+      analysis::fit_parameter_vector temp{};
+      analysis::fit_events(seeds, temp);
     }
   }
 
   std::cout << "Done!\n";
-
   geometry::close();
 
   return 0;

@@ -176,6 +176,45 @@ inline bool operator==(const r4_point& left, const r4_point& right) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__R2/R3 Inner Product_________________________________________________________________________
+inline real operator*(const r2_point& left, const r2_point& right) {
+  return left.x * right.x + left.y * right.y;
+}
+inline real operator*(const r3_point& left, const r3_point& right) {
+  return left.x * right.x + left.y * right.y + left.z * right.z;
+}
+//----------------------------------------------------------------------------------------------
+
+//__R2/R3 Length________________________________________________________________________________
+inline real norm(const r2_point& point) {
+  return std::sqrt(point * point);
+}
+inline real norm(const r3_point& point) {
+  return std::sqrt(point * point);
+}
+//----------------------------------------------------------------------------------------------
+
+//__R2/R3 Cross Product_________________________________________________________________________
+inline r3_point cross(const r2_point& left, const r2_point& right) {
+  return { 0, 0, left.x * right.y - left.y * right.x };
+}
+inline r3_point cross(const r3_point& left, const r3_point& right) {
+  return { left.y * right.z - left.z * right.y,
+           left.z * right.x - left.x * right.z,
+           left.x * right.y - left.y * right.x };
+}
+//----------------------------------------------------------------------------------------------
+
+//__R3 Point-Line Distance______________________________________________________________________
+inline real point_line_distance(const r3_point& point, const r3_point& begin, const r3_point& end) {
+  const auto& denominator = norm(begin - end);
+  return !denominator ? -1 : norm(cross(point - begin, point - end)) / denominator;
+}
+inline real point_line_distance(const r4_point& point, const r4_point& begin, const r4_point& end) {
+  return point_line_distance(reduce_to_r3(point), reduce_to_r3(begin), reduce_to_r3(end));
+}
+//----------------------------------------------------------------------------------------------
+
 //__R3 Interval Check___________________________________________________________________________
 inline bool within_dr(const r3_point& a, const r3_point& b, const r3_point& dr) {
   return std::abs(a.x - b.x) <= dr.x && std::abs(a.y - b.y) <= dr.y && std::abs(a.z - b.z) <= dr.z;

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <iostream>
+#include <vector>
 #include <sys/types.h>
 #include <sys/stat.h>
 
