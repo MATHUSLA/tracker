@@ -7,7 +7,7 @@
 #include "ROOT/TFile.h"
 #include "ROOT/TKey.h"
 
-#include "event.hh"
+#include "analysis.hh"
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -28,11 +28,11 @@ detector_map import_detector_map(const std::string& path);
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import___________________________________________________________________________
-event_vector import_events(const std::string& path,
-                           const point_keys& keys);
-event_vector import_events(const std::string& path,
-                           const detector_keys& keys,
-                           const detector_map& map);
+analysis::event_vector import_events(const std::string& path,
+                                     const point_keys& keys);
+analysis::event_vector import_events(const std::string& path,
+                                     const detector_keys& keys,
+                                     const detector_map& map);
 //----------------------------------------------------------------------------------------------
 
 //__ROOT File Key Traversal_____________________________________________________________________

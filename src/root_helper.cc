@@ -62,19 +62,19 @@ detector_map import_detector_map(const std::string& path) {
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-event_vector import_events(const std::string& path,
-                           const point_keys& keys) {
-  event_vector out{};
+analysis::event_vector import_events(const std::string& path,
+                                     const point_keys& keys) {
+  analysis::event_vector out{};
   TTree* tree = nullptr;
   traverse_file(path, [&](const auto& file, const auto& key) {
     if (std::string(key->GetClassName()) == "TTree") {
-      real t, x, y, z;
+      type::real t, x, y, z;
       tree = static_cast<TTree*>(file->Get(key->GetName()));
       tree->SetBranchAddress(keys[0].c_str(), &t);
       tree->SetBranchAddress(keys[1].c_str(), &x);
       tree->SetBranchAddress(keys[2].c_str(), &y);
       tree->SetBranchAddress(keys[3].c_str(), &z);
-      auto points = r4_point_vector{};
+      analysis::event_points points{};
       const auto&& size = tree->GetEntries();
       for (auto i = 0; i < size; ++i) {
         tree->GetEntry(i);
@@ -93,18 +93,18 @@ event_vector import_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-event_vector import_events(const std::string& path,
-                           const detector_keys& keys,
-                           const detector_map& map) {
-  event_vector out{};
+analysis::event_vector import_events(const std::string& path,
+                                     const detector_keys& keys,
+                                     const detector_map& map) {
+  analysis::event_vector out{};
   TTree* tree = nullptr;
   traverse_file(path, [&](const auto& file, const auto& key) {
     if (std::string(key->GetClassName()) == "TTree") {
-      real t, detector;
+      type::real t, detector;
       tree = static_cast<TTree*>(file->Get(key->GetName()));
       tree->SetBranchAddress(keys[0].c_str(), &t);
       tree->SetBranchAddress(keys[1].c_str(), &detector);
-      auto points = r4_point_vector{};
+      analysis::event_points points{};
       const auto&& size = tree->GetEntries();
       for (auto i = 0; i < size; ++i) {
         tree->GetEntry(i);

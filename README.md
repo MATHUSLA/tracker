@@ -14,4 +14,3 @@ Here is a list of useful commands:
 | Clean CMake Build | `--cmake --clean` |
 | More Options | `--help` |
 
-more text...

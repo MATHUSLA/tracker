@@ -2,14 +2,22 @@
 #define TRACKER__ANALYSIS_HH
 #pragma once
 
-#include "event.hh"
-#include "util.hh"
+#include "point.hh"
 
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 using namespace type;
+
+//__Event Types_________________________________________________________________________________
+using event_points = r4_point_vector;
+using event_vector = std::vector<event_points>;
+//----------------------------------------------------------------------------------------------
+
+//__Event Partition Type________________________________________________________________________
+struct event_partition { event_vector parts; Coordinate coordinate; };
+//----------------------------------------------------------------------------------------------
 
 //__Collapse Points by R4 Interval______________________________________________________________
 event_points collapse(const event_points& event,
@@ -22,52 +30,32 @@ event_partition partition(const event_points& points,
                           const Coordinate coordinate=Coordinate::Z);
 //----------------------------------------------------------------------------------------------
 
-//__SeedN Algorithm_____________________________________________________________________________
-template<std::size_t N>
-event_tuple_vector<N> seed(const event_points& event,
-                           const r4_point& collapse_ds,
-                           const real layer_dz) {
-  const auto& points = collapse(event, collapse_ds);
-  const auto&& size = points.size();
+//__Seeding Algorithm___________________________________________________________________________
+event_vector seed(const size_t n,
+                  const event_points& event,
+                  const r4_point& collapse_ds,
+                  const real layer_dz,
+                  const real line_dr);
+//----------------------------------------------------------------------------------------------
 
-  if (size <= N)
-    return {to_array<N>(points)};
+//__Fitting Parameter Types_____________________________________________________________________
+struct fit_parameter { std::string name; real value, error, min, max; };
+using fit_parameter_vector = std::vector<fit_parameter>;
+//----------------------------------------------------------------------------------------------
 
-  event_tuple_vector<N> out;
-  out.reserve(std::pow(size, N) / std::pow(N/2.718, N));  // work on this limit
+//__Fit Settings Type with Default Values_______________________________________________________
+struct fit_settings {
+  real              error_def          = 0.5;
+  integer           max_iterations     = 500;
+  std::string       command_name       = "MIGRAD";
+  std::vector<real> command_parameters = {};
+};
+//----------------------------------------------------------------------------------------------
 
-  const auto& layers = partition(points, layer_dz).parts;
-  const auto&& layer_count = layers.size();
-
-  if (layer_count < N)  // FIXME: what to do about this? maybe recurse to a lower level? (seed<N-1>)
-    return {};
-
-  bit_vector_sequence layer_sequence;
-  for (const auto& layer : layers)
-    layer_sequence.push_back(bit_vector(1, layer.size()));
-
-  combinatorics::order2_permutations(N, layer_sequence, [&](const auto& chooser) {
-    event_tuple<N> tuple;
-    for (size_t i = 0, index = 0; i < chooser.size(); ++i) {
-      if (chooser[i]) {
-        const auto& layer_bits = layer_sequence[i];
-        const auto&& layer_size = layer_bits.size();
-        for (size_t j = 0; j < layer_size; ++j)
-          if (layer_bits[j]) tuple[index++] = layers[i][j];
-      }
-    }
-
-    /*
-    for (const auto& t : tuple)
-      std::cout << t << " ";
-    std::cout << "\n";
-    */
-
-    out.push_back(tuple);
-  });
-
-  return out;
-}
+//__Perform Gaussian Fit to Events______________________________________________________________
+void fit_events(const event_vector& events,
+                fit_parameter_vector& parameters,
+                const fit_settings& settings=fit_settings{});
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
