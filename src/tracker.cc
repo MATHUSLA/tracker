@@ -1,6 +1,6 @@
 #include "analysis.hh"
 #include "geometry.hh"
-#include "root_helper.hh"
+#include "reader.hh"
 #include "units.hh"
 #include "util.hh"
 
@@ -40,12 +40,12 @@ int main(int argc, char* argv[]) {
   std::cout << "DEMO:\n";
   geometry::open(geo_opt->argument);
 
-  auto paths = root::search_directory(root_opt->argument);
+  auto paths = reader::root::search_directory(root_opt->argument);
   std::cout << "File Count: " << paths.size() << "\n";
 
   for (const auto& path : paths) {
     std::cout << path << "\n";
-    auto events = root::import_events(path, {{"Time", "X", "Y", "Z"}});
+    auto events = reader::root::import_events(path, {{"Time", "X", "Y", "Z"}});
     std::cout << "Processing " << events.size() << " Events\n";
 
     for (const auto& unsorted_event : events) {
@@ -54,18 +54,18 @@ int main(int argc, char* argv[]) {
       const auto& layered_event = analysis::partition(collapsed_event, 500).parts;
 
       for (const auto& point : event) {
-        std::cout << "OLD " << point /* << " " << geometry::volume(point) */ << "\n";
+        std::cout << "OLD " << point  << "\n";
       }
       std::cout << "\n";
       for (const auto& point : collapsed_event) {
-        std::cout << "NEW " << point /* << " " << geometry::volume(point) */ << "\n";
+        std::cout << "NEW " << point  << "\n";
       }
       std::cout << "\n";
 
       for (const auto& layer : layered_event) {
         for (size_t j = 0; j < layer.size(); ++j) {
           const auto& point = layer[j];
-          std::cout << "LAYER " << point /* << " " << geometry::volume(point) */ << "\n";
+          std::cout << "LAYER " << point  << "\n";
         }
         std::cout << "\n\n";
       }
@@ -74,13 +74,27 @@ int main(int argc, char* argv[]) {
 
       auto seeds = analysis::seed(3, unsorted_event, {20, 20, 20, 20}, 500, 0.8);
 
-      analysis::fit_parameter_vector temp{};
-      analysis::fit_events(seeds, temp);
+      std::cout << "\n";
+
+      analysis::merge(seeds);  // not implemented!!!
+
     }
   }
 
   std::cout << "Done!\n";
   geometry::close();
 
+  /*
+  uint64_t count = 0;
+  auto sequences = combinatorics::generate_bit_sequences({
+    {6, 10}, {3, 5}, {1, 6}, {4, 5}, {1, 12}, {1, 3}});
+  combinatorics::order2_permutations(4, sequences, [&](const auto& chooser) {
+    std::cout << ++count << ": ";
+    for (size_t i = 0; i < chooser.size(); ++i)
+      if (chooser[i])
+        std::cout << sequences[i] << " ";
+    std::cout << "\n";
+  });
+  */
   return 0;
 }

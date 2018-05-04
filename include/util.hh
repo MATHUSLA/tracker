@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include <sys/types.h>
@@ -16,6 +17,17 @@
 namespace MATHUSLA {
 
 namespace io { /////////////////////////////////////////////////////////////////////////////////
+
+//__Print Range of Printable Elements___________________________________________________________
+template<class Range>
+inline std::ostream& print_range(const Range& range, const std::string& spacer=" ") {
+  std::for_each(range.cbegin(), --range.cend(),
+    [&](const auto& element) { std::cout << element << spacer; });
+  if (range.size() >= 1)
+    std::cout << range.back();
+  return std::cout;
+}
+//----------------------------------------------------------------------------------------------
 
 //__Create Directory____________________________________________________________________________
 inline int create_directory(const std::string& dir) {
@@ -31,18 +43,6 @@ inline int create_directory(const std::string& dir) {
 inline bool path_exists(const std::string& path) {
   struct stat info;
   return !stat(path.c_str(), &info);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Remove File_________________________________________________________________________________
-inline bool remove_file(const std::string& path) {
-  return !remove(path.c_str());
-}
-//----------------------------------------------------------------------------------------------
-
-//__Rename File_________________________________________________________________________________
-inline bool rename_file(const std::string& path, const std::string& new_path) {
-  return !rename(path.c_str(), new_path.c_str());
 }
 //----------------------------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ void exit_when(bool value, Args&&... msgs) {
 
 } /* namespace error */ ////////////////////////////////////////////////////////////////////////
 
-namespace type { ///////////////////////////////////////////////////////////////////////////////
+namespace combinatorics { //////////////////////////////////////////////////////////////////////
 
 namespace detail { /////////////////////////////////////////////////////////////////////////////
 //__Boolean-Like Object_________________________________________________________________________
@@ -107,16 +107,13 @@ public:
 
   std::size_t count() const { return std::count(begin(), end(), true); }
 
-  bool next_permutation() {
-    return std::next_permutation(begin(), end());
-  }
+  bool next_permutation() { return std::next_permutation(begin(), end()); }
 };
 //----------------------------------------------------------------------------------------------
 
 //__Bit Vector Printer__________________________________________________________________________
 inline std::ostream& operator<<(std::ostream& os, const bit_vector& bits) {
-  for (const auto& bit : bits)
-    os << bit;
+  for (const auto& bit : bits) os << bit;
   return os;
 }
 //----------------------------------------------------------------------------------------------
@@ -137,14 +134,10 @@ inline bit_vector_sequence generate_bit_sequences(std::vector<std::pair<std::siz
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace type */ /////////////////////////////////////////////////////////////////////////
-
-namespace combinatorics { //////////////////////////////////////////////////////////////////////
-
 //__First Order Bit Permutation Sequencer_______________________________________________________
 template<class UnaryFunction>
 inline UnaryFunction order1_permutations(std::size_t count, std::size_t total, UnaryFunction f) {
-  type::bit_vector chooser(count, total);
+  bit_vector chooser(count, total);
   do { f(chooser); } while (chooser.next_permutation());
   return std::move(f);
 }
@@ -152,17 +145,16 @@ inline UnaryFunction order1_permutations(std::size_t count, std::size_t total, U
 
 //__Second Order Bit Permutation Sequencer______________________________________________________
 template<class UnaryFunction>
-inline UnaryFunction order2_permutations(std::size_t count, type::bit_vector_sequence& vectors, UnaryFunction f) {
-  type::bit_vector chooser(count, vectors.size());
+inline UnaryFunction order2_permutations(std::size_t count, bit_vector_sequence& vectors, UnaryFunction f) {
+  const auto&& size = vectors.size();
+  bit_vector chooser(count, size);
+  std::size_t index = 0;
   do {
-    while (true) {
+    do {
       f(chooser);
-      std::size_t index = 0;
-      for (; index < chooser.size(); ++index) {
+      for (index = 0; index < size; ++index)
         if (chooser[index] && vectors[index].next_permutation()) break;
-      }
-      if (index == chooser.size()) break;
-    }
+    } while (index != size);
   } while (chooser.next_permutation());
   return std::move(f);
 }

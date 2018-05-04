@@ -137,51 +137,6 @@ void close() {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Check Volume Limits_________________________________________________________________________
-const box_volume limits_of(const std::string name) {
-  static const G4VoxelLimits _blank_voxels;
-  static const G4AffineTransform _blank_transform;
-
-  box_volume out{};
-
-  const auto& search = _geometry.find(name);
-  if (search == _geometry.end())
-    return out;
-
-  const auto& gvolume = search->second;
-  const auto& volume = gvolume.volume;
-  if (!volume)
-    return out;
-
-  const auto& transform = gvolume.transform;
-  const auto& rotation = transform.NetRotation();
-  const auto& translation = transform.NetTranslation();
-
-  const auto& center = rotation * translation;
-  out.center = _to_r3_point(center);
-
-  auto min_vector = G4ThreeVector(0, 0, 0);
-  auto max_vector = G4ThreeVector(0, 0, 0);
-
-  real min, max;
-  const auto& solid = volume->GetLogicalVolume()->GetSolid();
-  solid->CalculateExtent(kXAxis, _blank_voxels, _blank_transform, min, max);
-  min_vector.setX(min);
-  max_vector.setX(max);
-  solid->CalculateExtent(kYAxis, _blank_voxels, _blank_transform, min, max);
-  min_vector.setY(min);
-  max_vector.setY(max);
-  solid->CalculateExtent(kZAxis, _blank_voxels, _blank_transform, min, max);
-  min_vector.setZ(min);
-  max_vector.setZ(max);
-
-  out.min = _to_r3_point(rotation * (min_vector + translation));
-  out.max = _to_r3_point(rotation * (max_vector + translation));
-
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Check Volume Containment____________________________________________________________________
 bool is_inside_volume(const r3_point& point,
                       const std::string& name) {
@@ -215,6 +170,50 @@ const std::string volume(const r3_point& point) {
 }
 const std::string volume(const r4_point& point) {
   return volume(reduce_to_r3(point));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Check Volume Limits_________________________________________________________________________
+const box_volume limits_of(const std::string& name) {
+  static const G4VoxelLimits _blank_voxels;
+  static const G4AffineTransform _blank_transform;
+
+  box_volume out{};
+
+  const auto& search = _geometry.find(name);
+  if (search == _geometry.end())
+    return out;
+
+  const auto& gvolume = search->second;
+  const auto& volume = gvolume.volume;
+  if (!volume)
+    return out;
+
+  const auto& transform = gvolume.transform;
+  const auto& rotation = transform.NetRotation();
+  const auto& translation = transform.NetTranslation();
+
+  const auto& center = rotation * translation;
+  out.center = _to_r3_point(center);
+
+  G4double min, max;
+  G4ThreeVector min_vector, max_vector;
+
+  const auto& solid = volume->GetLogicalVolume()->GetSolid();
+  solid->CalculateExtent(kXAxis, _blank_voxels, _blank_transform, min, max);
+  min_vector.setX(min);
+  max_vector.setX(max);
+  solid->CalculateExtent(kYAxis, _blank_voxels, _blank_transform, min, max);
+  min_vector.setY(min);
+  max_vector.setY(max);
+  solid->CalculateExtent(kZAxis, _blank_voxels, _blank_transform, min, max);
+  min_vector.setZ(min);
+  max_vector.setZ(max);
+
+  out.min = _to_r3_point(rotation * (min_vector + translation));
+  out.max = _to_r3_point(rotation * (max_vector + translation));
+
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 

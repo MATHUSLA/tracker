@@ -15,7 +15,7 @@ add_executable(tracker
 
     src/analysis.cc
     src/geometry.cc
-    src/root_helper.cc
+    src/reader.cc
 
     src/util/CommandLineParser.cc
 )

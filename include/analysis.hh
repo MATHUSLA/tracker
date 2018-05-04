@@ -38,24 +38,47 @@ event_vector seed(const size_t n,
                   const real line_dr);
 //----------------------------------------------------------------------------------------------
 
+//__Seed Search_________________________________________________________________________________
+event_vector seeds_with(const r4_point& point,
+                        const event_vector& seeds);
+//----------------------------------------------------------------------------------------------
+
+//__Seed Search Front___________________________________________________________________________
+event_vector seeds_starting_with(const r4_point& point,
+                                 const event_vector& seeds);
+//----------------------------------------------------------------------------------------------
+
+//__Seed Search Back____________________________________________________________________________
+event_vector seeds_ending_with(const r4_point& point,
+                               const event_vector& seeds);
+//----------------------------------------------------------------------------------------------
+
+//__Seed Merge__________________________________________________________________________________
+event_vector merge(const event_vector& seeds);
+//----------------------------------------------------------------------------------------------
+
 //__Fitting Parameter Types_____________________________________________________________________
 struct fit_parameter { std::string name; real value, error, min, max; };
 using fit_parameter_vector = std::vector<fit_parameter>;
+
+struct track_parameters {
+  fit_parameter t0, x0, y0, z0, vx, vy, vz, mean, variance;
+};
 //----------------------------------------------------------------------------------------------
 
 //__Fit Settings Type with Default Values_______________________________________________________
 struct fit_settings {
-  real              error_def          = 0.5;
-  integer           max_iterations     = 500;
-  std::string       command_name       = "MIGRAD";
-  std::vector<real> command_parameters = {};
+  double              error_def          = 0.5;
+  integer             max_iterations     = 500;
+  std::string         command_name       = "MIGRAD";
+  std::vector<double> command_parameters = {};
 };
 //----------------------------------------------------------------------------------------------
 
 //__Perform Gaussian Fit to Events______________________________________________________________
-void fit_events(const event_vector& events,
-                fit_parameter_vector& parameters,
-                const fit_settings& settings=fit_settings{});
+void fit_event(const event_points& events,
+               fit_parameter_vector& parameters,
+               const fit_settings& settings=fit_settings{});
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
