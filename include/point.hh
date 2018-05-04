@@ -26,6 +26,12 @@ struct r4_point { real t, x, y, z; };
 enum class Coordinate { T, X, Y, Z };
 //----------------------------------------------------------------------------------------------
 
+//__RN Point Reference Types____________________________________________________________________
+using r2_ref = std::reference_wrapper<r2_point>;
+using r3_ref = std::reference_wrapper<r3_point>;
+using r4_ref = std::reference_wrapper<r4_point>;
+//----------------------------------------------------------------------------------------------
+
 //__Point-Wise Reduction of Dimension___________________________________________________________
 inline r2_point reduce_to_r2(const r3_point& point) { return { point.x, point.y          }; }
 inline r2_point reduce_to_r2(const r4_point& point) { return { point.x, point.y          }; }
@@ -242,6 +248,15 @@ template<std::size_t N> struct real_array3 { real_array<N>     xs, ys, zs; };
 template<std::size_t N> struct real_array4 { real_array<N> ts, xs, ys, zs; };
 //----------------------------------------------------------------------------------------------
 
+//__Array Point Constructs References___________________________________________________________
+template<std::size_t N> using r2_ref_array = typename std::array<r2_ref, N>;
+template<std::size_t N> using r3_ref_array = typename std::array<r3_ref, N>;
+template<std::size_t N> using r4_ref_array = typename std::array<r4_ref, N>;
+template<std::size_t N> using r2_point_array_ref = typename std::reference_wrapper<r2_point_array<N>>;
+template<std::size_t N> using r3_point_array_ref = typename std::reference_wrapper<r3_point_array<N>>;
+template<std::size_t N> using r4_point_array_ref = typename std::reference_wrapper<r4_point_array<N>>;
+//----------------------------------------------------------------------------------------------
+
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N> inline r2_point_array<N> reduce_to_r2(const r3_point_array<N>& arr) {
   r2_point_array<N> out;
@@ -381,6 +396,15 @@ using     real_vector = typename std::vector<real>;
 struct real_vector2 { real_vector     xs, ys;     };
 struct real_vector3 { real_vector     xs, ys, zs; };
 struct real_vector4 { real_vector ts, xs, ys, zs; };
+//----------------------------------------------------------------------------------------------
+
+//__Vector Point Constructs References__________________________________________________________
+using r2_ref_vector = typename std::vector<r2_ref>;
+using r3_ref_vector = typename std::vector<r3_ref>;
+using r4_ref_vector = typename std::vector<r4_ref>;
+using r2_point_vector_ref = typename std::reference_wrapper<r2_point_vector>;
+using r3_point_vector_ref = typename std::reference_wrapper<r3_point_vector>;
+using r4_point_vector_ref = typename std::reference_wrapper<r4_point_vector>;
 //----------------------------------------------------------------------------------------------
 
 //__Vector-Wise Reduction of Dimension__________________________________________________________
@@ -676,14 +700,16 @@ template<std::size_t N> inline real_array4<N> to_array(const real_vector4& vec) 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 //__General Range Sorting Function______________________________________________________________
-template<class Range, class Compare> inline void sort_range(Range& range, Compare comp) {
+template<class Range, class Compare> inline Range& sort_range(Range& range, Compare comp) {
   std::sort(range.begin(), range.end(), comp);
+  return range;
 }
 //----------------------------------------------------------------------------------------------
 
 //__General Range Stable Sorting Function_______________________________________________________
-template<class Range, class Compare> inline void stable_sort_range(Range& range, Compare comp) {
+template<class Range, class Compare> inline Range& stable_sort_range(Range& range, Compare comp) {
   std::stable_sort(range.begin(), range.end(), comp);
+  return range;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -703,47 +729,47 @@ template<class T> struct z_sorter { constexpr bool operator()(const T& a, const 
 //----------------------------------------------------------------------------------------------
 
 //__General Coordinate-Wise Sorting Functions___________________________________________________
-template<class Range> inline void t_sort(Range& range) {
-  sort_range(range, t_sorter<typename Range::value_type>{});
+template<class Range> inline Range& t_sort(Range& range) {
+  return sort_range(range, t_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void x_sort(Range& range) {
-  sort_range(range, x_sorter<typename Range::value_type>{});
+template<class Range> inline Range& x_sort(Range& range) {
+  return sort_range(range, x_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void y_sort(Range& range) {
-  sort_range(range, y_sorter<typename Range::value_type>{});
+template<class Range> inline Range& y_sort(Range& range) {
+  return sort_range(range, y_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void z_sort(Range& range) {
-  sort_range(range, z_sorter<typename Range::value_type>{});
+template<class Range> inline Range& z_sort(Range& range) {
+  return sort_range(range, z_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void coordinate_sort(Range& range, const Coordinate coordinate) {
+template<class Range> inline Range& coordinate_sort(Range& range, const Coordinate& coordinate) {
   switch (coordinate) {
-    case Coordinate::T: t_sort(range); return;
-    case Coordinate::X: x_sort(range); return;
-    case Coordinate::Y: y_sort(range); return;
-    case Coordinate::Z: z_sort(range); return;
+    case Coordinate::T: return t_sort(range);
+    case Coordinate::X: return x_sort(range);
+    case Coordinate::Y: return y_sort(range);
+    case Coordinate::Z: return z_sort(range);
   }
 }
 //----------------------------------------------------------------------------------------------
 
 //__General Coordinate-Wise Stable Sorting Functions____________________________________________
-template<class Range> inline void t_stable_sort(Range& range) {
-  stable_sort_range(range, t_sorter<typename Range::value_type>{});
+template<class Range> inline Range& t_stable_sort(Range& range) {
+  return stable_sort_range(range, t_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void x_stable_sort(Range& range) {
-  stable_sort_range(range, x_sorter<typename Range::value_type>{});
+template<class Range> inline Range& x_stable_sort(Range& range) {
+  return stable_sort_range(range, x_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void y_stable_sort(Range& range) {
-  stable_sort_range(range, y_sorter<typename Range::value_type>{});
+template<class Range> inline Range& y_stable_sort(Range& range) {
+  return stable_sort_range(range, y_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void z_stable_sort(Range& range) {
-  stable_sort_range(range, z_sorter<typename Range::value_type>{});
+template<class Range> inline Range& z_stable_sort(Range& range) {
+  return stable_sort_range(range, z_sorter<typename Range::value_type>{});
 }
-template<class Range> inline void coordinate_stable_sort(Range& range, const Coordinate coordinate) {
+template<class Range> inline Range& coordinate_stable_sort(Range& range, const Coordinate& coordinate) {
   switch (coordinate) {
-    case Coordinate::T: t_stable_sort(range); return;
-    case Coordinate::X: x_stable_sort(range); return;
-    case Coordinate::Y: y_stable_sort(range); return;
-    case Coordinate::Z: z_stable_sort(range); return;
+    case Coordinate::T: return t_stable_sort(range);
+    case Coordinate::X: return x_stable_sort(range);
+    case Coordinate::Y: return y_stable_sort(range);
+    case Coordinate::Z: return z_stable_sort(range);
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -761,7 +787,7 @@ template<class Range> inline Range y_copy_sort(const Range& range) {
 template<class Range> inline Range z_copy_sort(const Range& range) {
   return copy_sort_range(range, z_sorter<typename Range::value_type>{});
 }
-template<class Range> inline Range coordinate_copy_sort(const Range& range, const Coordinate coordinate) {
+template<class Range> inline Range coordinate_copy_sort(const Range& range, const Coordinate& coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_copy_sort(range);
     case Coordinate::X: return x_copy_sort(range);

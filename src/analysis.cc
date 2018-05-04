@@ -1,9 +1,11 @@
 #include "analysis.hh"
 
 #include <deque>
+#include <numeric>
 
 #include "ROOT/TMinuit.h"
 
+#include "geometry.hh"
 #include "util.hh"
 
 namespace MATHUSLA { namespace TRACKER {
@@ -18,14 +20,16 @@ event_points collapse(const event_points& event,
 
   event_points out;
 
-  const auto& sorted_events = t_copy_sort(event);
-  const auto&& event_size = sorted_events.size();
+  const auto& sorted_event = t_copy_sort(event);
+  const auto&& size = sorted_event.size();
 
-  event_points::size_type index = 0;
-  std::deque<decltype(index)> marked_indicies{};
-  while (index < event_size) {
-    event_points::size_type collected = 1, missed_index = 0;
-    const auto& point = sorted_events[index];
+  using size_type = event_points::size_type;
+
+  size_type index = 0;
+  std::deque<size_type> marked_indicies{};
+  while (index < size) {
+    size_type collected = 1, missed_index = 0;
+    const auto& point = sorted_event[index];
     const auto&& time_interval = point.t + ds.t;
     auto sum_t = point.t,
          sum_x = point.x,
@@ -33,13 +37,12 @@ event_points collapse(const event_points& event,
          sum_z = point.z;
 
     auto skipped = false;
-    while (++index < event_size) {
-      while (!marked_indicies.empty() && index == marked_indicies.front()) {
-        ++index;
-        marked_indicies.pop_front();
-      }
+    while (++index < size) {
 
-      const auto& next = sorted_events[index];
+      while (!marked_indicies.empty() && index++ == marked_indicies.front())
+        marked_indicies.pop_front();
+
+      const auto& next = sorted_event[index];
       if (next.t > time_interval)
         break;
 
@@ -99,8 +102,7 @@ event_partition partition(const event_points& points,
       ++count;
     }
 
-    t_sort(current_layer);
-    parts.push_back(current_layer);
+    parts.push_back(t_sort(current_layer));
   }
 
   return out;
@@ -127,45 +129,92 @@ event_vector seed(const size_t n,
 
   const auto& layers = partition(points, layer_dz).parts;
   const auto&& layer_count = layers.size();
-
-  if (layer_count < n)  // FIXME: what to do about this? maybe recurse to a lower level? (seed(n-1))
+  if (layer_count < n)  // FIXME: unsure what to do here
     return {};
 
-  bit_vector_sequence layer_sequence;
+  combinatorics::bit_vector_sequence layer_sequence;
   for (const auto& layer : layers)
-    layer_sequence.push_back(bit_vector(1, layer.size()));
+    layer_sequence.emplace_back(1, layer.size());
 
   combinatorics::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
     event_points tuple;
     tuple.reserve(n);
 
-    for (size_t i = 0; i < chooser.size(); ++i) {
+    for (size_t i = 0; i < layer_count; ++i) {
       if (chooser[i]) {
-        const auto& layer_bits = layer_sequence[i];
-        const auto&& layer_size = layer_bits.size();
-        for (size_t j = 0; j < layer_size; ++j)
-          if (layer_bits[j]) tuple.push_back(layers[i][j]);
+        const auto& layer = layers[i];
+        const auto& bits = layer_sequence[i];
+        size_t j = 0;
+        std::copy_if(layer.cbegin(), layer.cend(), std::back_inserter(tuple),
+          [&](const auto& _) { return bits[j++]; });
       }
     }
 
     t_sort(tuple);
 
-    if (n > 2) {
-      const auto& line_begin = tuple.front();
-      const auto& line_end = tuple.back();
-      real max = -1;
-      for (size_t i = 1; i < n - 1; ++i)
-        max = std::max(max, type::point_line_distance(tuple[i], line_begin, line_end));
-      std::cout << max << ": ";
-      if (max == -1 || max > line_dr) { std::cout << "\n"; return; }
-    }
+    const auto& line_begin = tuple.front();
+    const auto& line_end = tuple.back();
+    const auto&& max = std::accumulate(++tuple.cbegin(), --tuple.cend(), line_dr,
+      [&](const auto& max, const auto& point) {
+        return std::max(max, type::point_line_distance(point, line_begin, line_end)); });
 
-    for (const auto& t : tuple)
-      std::cout << t << " ";
-    std::cout << "\n";
-
-    out.push_back(tuple);
+    if (max <= line_dr)
+      out.push_back(tuple);
   });
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seed Search_________________________________________________________________________________
+event_vector seeds_with(const r4_point& point,
+                        const event_vector& seeds) {
+  event_vector out;
+  out.reserve(seeds.size());
+  std::copy_if(seeds.cbegin(), seeds.cend(), std::back_inserter(out), [&](const auto& seed) {
+    const auto& end = seed.cend();
+    return end != std::find(seed.cbegin(), end, point);
+  });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seed Search Front___________________________________________________________________________
+event_vector seeds_starting_with(const r4_point& point,
+                                 const event_vector& seeds) {
+  event_vector out;
+  out.reserve(seeds.size());
+  std::copy_if(seeds.cbegin(), seeds.cend(), std::back_inserter(out),
+    [&](const auto& seed) { return point == seed.front(); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seed Search Back____________________________________________________________________________
+event_vector seeds_ending_with(const r4_point& point,
+                               const event_vector& seeds) {
+  event_vector out;
+  out.reserve(seeds.size());
+  std::copy_if(seeds.cbegin(), seeds.cend(), std::back_inserter(out),
+    [&](const auto& seed) { return point == seed.back(); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seed Merge__________________________________________________________________________________
+event_vector merge(const event_vector& seeds) {
+  event_vector out{};
+  out.reserve(seeds.size());
+
+  // TODO: implement
+
+  for (const auto& seed : seeds) {
+    for (const auto& point : seed) {
+      const auto& ss = seeds_starting_with(point, seeds);
+      std::for_each(ss.cbegin(), ss.cend(),
+        [](const auto& seed) { io::print_range(seed, " :: ") << "\n"; });
+    }
+  }
 
   return out;
 }
@@ -174,19 +223,53 @@ event_vector seed(const size_t n,
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
+#define FP_FAST_FMA
+#define FP_FAST_FMAF
+#define FP_FAST_FMAL
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
-static thread_local event_vector&& _events = {};
-static void _gaussian_nll(Int_t&, Double_t*, Double_t& value, Double_t* parameters, Int_t) {
-  value = 0;
-  parameters = nullptr;
+static thread_local event_points&& _event = {};
+static void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t) {
+  static constexpr auto ln2pi = 1.837877066409345484;
+  // static constexpr auto sqrt12 = 3.464101615137754587;
+
+  const auto& t0 = parameters[0];
+  const auto& x0 = parameters[1];
+  const auto& y0 = parameters[2];
+  const auto& z0 = parameters[3];
+  const auto& vx = parameters[4];
+  const auto& vy = parameters[5];
+  const auto& vz = parameters[6];
+  const auto& mean = parameters[7];
+  const auto& variance = parameters[8];
+
+  real_vector residuals;
+  std::transform(_event.cbegin(), _event.cend(), std::back_inserter(residuals), [&](const auto& point) {
+    const auto& limits = geometry::limits_of(geometry::volume(point));
+    const auto& center = limits.center;
+    const auto& min = limits.min;
+    const auto& max = limits.max;
+    const auto&& dz = (center.z - z0) / vz;
+    const auto&& t_res = (dz + t0) / (2 /* nanoseconds */);
+    const auto&& x_res = (std::fma(vx, dz, x0) - center.x) / (max.x - min.x);
+    const auto&& y_res = (std::fma(vy, dz, y0) - center.y) / (max.y - min.y);
+    return std::sqrt(t_res*t_res + 12*x_res*x_res + 12*y_res*y_res);
+  });
+
+  out = 0.5 * std::fma(
+    residuals.size(),
+    ln2pi + std::log(variance),
+    std::accumulate(residuals.cbegin(), residuals.cend(), 0, [&](const auto& total, const auto& next) {
+      const auto&& diff = next - mean;
+      return std::fma(diff, diff, total);
+    }) / variance);
 }
 //----------------------------------------------------------------------------------------------
 } /* annonymous namespace */ ///////////////////////////////////////////////////////////////////
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
-void fit_events(const event_vector& events,
-                fit_parameter_vector& parameters,
-                const fit_settings& settings) {
+void fit_event(const event_points& event,
+               fit_parameter_vector& parameters,
+               const fit_settings& settings) {
   TMinuit minuit;
   minuit.SetPrintLevel(-1);
   minuit.SetErrorDef(settings.error_def);
@@ -198,10 +281,10 @@ void fit_events(const event_vector& events,
       param.name.c_str(), param.value, param.error, param.min, param.max);
   }
 
-  _events = events;
+  _event = event;
   minuit.SetFCN(_gaussian_nll);
 
-  int error_flag;
+  Int_t error_flag;
   auto command_parameters = settings.command_parameters;
   minuit.mnexcm(
     settings.command_name.c_str(),
@@ -210,7 +293,7 @@ void fit_events(const event_vector& events,
     error_flag);
 
   for (size_t i = 0; i < size; ++i) {
-    real value, error;
+    Double_t value, error;
     minuit.GetParameter(i, value, error);
     auto& param = parameters[i];
     param.value = value;

@@ -1,15 +1,14 @@
-#ifndef TRACKER__ROOT_HELPER_HH
-#define TRACKER__ROOT_HELPER_HH
+#ifndef TRACKER__READER_HH
+#define TRACKER__READER_HH
 #pragma once
 
 #include <unordered_map>
 
-#include "ROOT/TFile.h"
-#include "ROOT/TKey.h"
-
 #include "analysis.hh"
 
 namespace MATHUSLA { namespace TRACKER {
+
+namespace reader { /////////////////////////////////////////////////////////////////////////////
 
 namespace root { ///////////////////////////////////////////////////////////////////////////////
 
@@ -35,21 +34,18 @@ analysis::event_vector import_events(const std::string& path,
                                      const detector_map& map);
 //----------------------------------------------------------------------------------------------
 
-//__ROOT File Key Traversal_____________________________________________________________________
-template<class BinaryFunction>
-inline BinaryFunction traverse_file(const std::string& path, BinaryFunction f) {
-  auto file = TFile::Open(path.c_str());
-  TIter next(file->GetListOfKeys());
-  TKey* key = nullptr;
-  while ((key = static_cast<TKey*>(next())))
-    f(file, key);
-  delete key;
-  return std::move(f);
-}
-//----------------------------------------------------------------------------------------------
-
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace script { /////////////////////////////////////////////////////////////////////////////
+
+void read(const std::string& path);
+
+} /* namespace script */ ///////////////////////////////////////////////////////////////////////
+
+} /* namespace reader */ ///////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */
 
-#endif /* TRACKER__ROOT_HELPER_HH */
+#endif /* TRACKER__READER_HH */

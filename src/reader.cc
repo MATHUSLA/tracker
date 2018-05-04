@@ -1,7 +1,9 @@
-#include "root_helper.hh"
+#include "reader.hh"
 
 #include <fstream>
 
+#include "ROOT/TFile.h"
+#include "ROOT/TKey.h"
 #include "ROOT/TSystemDirectory.h"
 #include "ROOT/TTree.h"
 
@@ -9,6 +11,8 @@
 #include "units.hh"
 
 namespace MATHUSLA { namespace TRACKER {
+
+namespace reader { /////////////////////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 //__Recursive TSystemFile Traversal_____________________________________________________________
@@ -26,6 +30,18 @@ void _collect_paths(TSystemDirectory* dir,
       _collect_paths(static_cast<TSystemDirectory*>(file), paths, ext);
     }
   }
+}
+//----------------------------------------------------------------------------------------------
+//__ROOT File Key Traversal_____________________________________________________________________
+template<class BinaryFunction>
+inline BinaryFunction _traverse_file(const std::string& path, BinaryFunction f) {
+  auto file = TFile::Open(path.c_str());
+  TIter next(file->GetListOfKeys());
+  TKey* key = nullptr;
+  while ((key = static_cast<TKey*>(next())))
+    f(file, key);
+  delete key;
+  return std::move(f);
 }
 //----------------------------------------------------------------------------------------------
 } /* annonymous namespace */ ///////////////////////////////////////////////////////////////////
@@ -46,6 +62,7 @@ detector_map import_detector_map(const std::string& path) {
   detector_map out{};
   std::string line;
   while (std::getline(_file, line)) {
+    // TODO: how about std::isspace?
     const auto& space = line.find(" ");
     if (space == std::string::npos || line[0] == '#') {
       continue;
@@ -66,9 +83,9 @@ analysis::event_vector import_events(const std::string& path,
                                      const point_keys& keys) {
   analysis::event_vector out{};
   TTree* tree = nullptr;
-  traverse_file(path, [&](const auto& file, const auto& key) {
+  _traverse_file(path, [&](const auto& file, const auto& key) {
     if (std::string(key->GetClassName()) == "TTree") {
-      type::real t, x, y, z;
+      Double_t t, x, y, z;
       tree = static_cast<TTree*>(file->Get(key->GetName()));
       tree->SetBranchAddress(keys[0].c_str(), &t);
       tree->SetBranchAddress(keys[1].c_str(), &x);
@@ -98,9 +115,9 @@ analysis::event_vector import_events(const std::string& path,
                                      const detector_map& map) {
   analysis::event_vector out{};
   TTree* tree = nullptr;
-  traverse_file(path, [&](const auto& file, const auto& key) {
+  _traverse_file(path, [&](const auto& file, const auto& key) {
     if (std::string(key->GetClassName()) == "TTree") {
-      type::real t, detector;
+      Double_t t, detector;
       tree = static_cast<TTree*>(file->Get(key->GetName()));
       tree->SetBranchAddress(keys[0].c_str(), &t);
       tree->SetBranchAddress(keys[1].c_str(), &detector);
@@ -122,5 +139,17 @@ analysis::event_vector import_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace script { /////////////////////////////////////////////////////////////////////////////
+
+void read(const std::string& path) {
+  // TODO: implement!
+}
+
+} /* namespace script */ ///////////////////////////////////////////////////////////////////////
+
+} /* namespace reader */ ///////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */
