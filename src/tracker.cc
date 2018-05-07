@@ -2,45 +2,98 @@
 #include "geometry.hh"
 #include "reader.hh"
 #include "units.hh"
-#include "util.hh"
 
-#include "util/CommandLineParser.hh"
+#include "util/command_line_parser.hh"
+#include "util/error.hh"
+#include "util/io.hh"
+#include "util/string.hh"
 
-using Option = MATHUSLA::CommandLineOption;
+//__Missing File Exit Command___________________________________________________________________
+void exit_on_missing_file(const MATHUSLA::util::cli::option& option,
+                          const std::string& name) {
+  using namespace MATHUSLA::util;
+  error::exit_when(option.count && !io::path_exists(option.argument),
+    "[FATAL ERROR] ", name, " Missing: ",
+    "The file ", option.argument, " cannot be found.\n");
+}
+//----------------------------------------------------------------------------------------------
 
-auto help_opt   = new Option('h', "help",     "MATHUSLA Tracking Algorithm", Option::NoArguments);
-auto geo_opt    = new Option('g', "geometry", "Geometry Import",             Option::RequiredArguments);
-auto root_opt   = new Option('d', "dir",      "ROOT Data Directory",         Option::RequiredArguments);
-auto map_opt    = new Option('m', "map",      "Detector Map",                Option::RequiredArguments);
-auto script_opt = new Option('s', "script",   "Tracking Script",             Option::RequiredArguments);
-auto quiet_opt  = new Option('q', "quiet",    "Quiet Mode",                  Option::NoArguments);
+//__Find Key for Option in Tracking Option Map__________________________________________________
+void set_option_from_script_map(const MATHUSLA::TRACKER::reader::script::tracking_options& script_map,
+                                const std::string& key,
+                                MATHUSLA::util::cli::option& option) {
+  using namespace MATHUSLA::TRACKER::reader::script;
+  const auto& search = script_map.find(key);
+  if (search != script_map.cend()) {
+    option.argument = search->second.c_str();
+    option.count = 1;
+  }
+}
+//----------------------------------------------------------------------------------------------
 
+//__Main Function: Tracker______________________________________________________________________
 int main(int argc, char* argv[]) {
   using namespace MATHUSLA;
+  using namespace MATHUSLA::TRACKER;
+  using util::cli::option;
 
-  CommandLineParser::parse(argv, {help_opt, geo_opt, root_opt, map_opt, script_opt, quiet_opt});
+  option help_opt   ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
+  option geo_opt    ('g', "geometry", "Geometry Import",             option::required_arguments);
+  option root_opt   ('d', "dir",      "ROOT Data Directory",         option::required_arguments);
+  option map_opt    ('m', "map",      "Detector Map",                option::required_arguments);
+  option script_opt ('s', "script",   "Tracking Script",             option::required_arguments);
+  option quiet_opt  ('q', "quiet",    "Quiet Mode",                  option::no_arguments);
 
-  error::exit_when(argc == 1 || !geo_opt->count || !root_opt->count,
+  util::cli::parse(argv, {&help_opt, &geo_opt, &root_opt, &map_opt, &script_opt, &quiet_opt});
+
+  util::error::exit_when(argc == 1 || (!script_opt.count && !geo_opt.count && !root_opt.count),
     "[FATAL ERROR] Insufficient Arguments: ",
-    "Must include arguments for geometry and ROOT directory. \n",
+    "Must include arguments for geometry and ROOT directory or tracking script. \n",
     "              Run \'./tracker --help\' for more details.\n");
 
-  error::exit_when(!io::path_exists(geo_opt->argument),
-    "[FATAL ERROR] Geometry File Missing: ",
-    "The file ", geo_opt->argument, " cannot be found.\n");
+  exit_on_missing_file(script_opt, "Tracking Script");
 
-  error::exit_when(!io::path_exists(root_opt->argument),
-    "[FATAL ERROR] ROOT Directory Missing: ",
-    "The directory ", root_opt->argument, " cannot be found.\n");
+  type::r4_point collapse_size;
+  type::real layer_depth;
+  type::real line_width;
+  type::integer seed_size;
 
-  Units::Define();
+  if (script_opt.count) {
+    const auto& script_map = reader::script::read(script_opt.argument);
+    const auto& script_map_end = script_map.cend();
 
-  using namespace MATHUSLA::TRACKER;
+    for (const auto& entry : script_map) {
+      std::cout << entry.first << ": " << entry.second << "\n";
+    }
 
+    set_option_from_script_map(script_map, "geometry-file", geo_opt);
+    set_option_from_script_map(script_map, "root-data", root_opt);
+    set_option_from_script_map(script_map, "geometry-map", map_opt);
+
+    const auto& collapse_size_search = script_map.find("collapse-size");
+    if (collapse_size_search != script_map_end) {
+      std::vector<std::string> point;
+      util::string::split(collapse_size_search->second, point, ",");
+      point.insert(point.cend(), {"1", "1", "1", "1"});
+      collapse_size = {
+        static_cast<type::real>(std::stold(point[0])),
+        static_cast<type::real>(std::stold(point[1])),
+        static_cast<type::real>(std::stold(point[2])),
+        static_cast<type::real>(std::stold(point[3])) };
+    }
+
+  }
+
+  exit_on_missing_file(geo_opt, "Geometry File");
+  exit_on_missing_file(root_opt, "ROOT Directory");
+  exit_on_missing_file(map_opt, "Geometry Map");
+
+  units::define();
+  /*
   std::cout << "DEMO:\n";
-  geometry::open(geo_opt->argument);
+  geometry::open(geo_opt.argument);
 
-  auto paths = reader::root::search_directory(root_opt->argument);
+  auto paths = reader::root::search_directory(root_opt.argument);
   std::cout << "File Count: " << paths.size() << "\n";
 
   for (const auto& path : paths) {
@@ -83,18 +136,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "Done!\n";
   geometry::close();
-
-  /*
-  uint64_t count = 0;
-  auto sequences = combinatorics::generate_bit_sequences({
-    {6, 10}, {3, 5}, {1, 6}, {4, 5}, {1, 12}, {1, 3}});
-  combinatorics::order2_permutations(4, sequences, [&](const auto& chooser) {
-    std::cout << ++count << ": ";
-    for (size_t i = 0; i < chooser.size(); ++i)
-      if (chooser[i])
-        std::cout << sequences[i] << " ";
-    std::cout << "\n";
-  });
   */
   return 0;
 }
+//----------------------------------------------------------------------------------------------

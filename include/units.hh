@@ -15,17 +15,17 @@ constexpr auto keVperC = keV;
 constexpr auto  eVperC =  eV;
 //----------------------------------------------------------------------------------------------
 
-namespace Units { //////////////////////////////////////////////////////////////////////////////
+namespace units { //////////////////////////////////////////////////////////////////////////////
 
 //__Standard Units______________________________________________________________________________
-constexpr auto Length   = cm;
-constexpr auto Time     = ns;
-constexpr auto Energy   = MeV;
-constexpr auto Momentum = MeVperC;
+constexpr auto length   = cm;
+constexpr auto time     = ns;
+constexpr auto energy   = MeV;
+constexpr auto momentum = MeVperC;
 //----------------------------------------------------------------------------------------------
 
 //__Install Momentum Units into Geant4__________________________________________________________
-inline void Define() {
+inline void define() {
   new G4UnitDefinition("GeV/c", "GeV/c", "Momentum", GeVperC);
   new G4UnitDefinition("MeV/c", "MeV/c", "Momentum", MeVperC);
   new G4UnitDefinition("keV/c", "keV/c", "Momentum", keVperC);
@@ -33,7 +33,7 @@ inline void Define() {
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace Units */ ////////////////////////////////////////////////////////////////////////
+} /* namespace units */ ////////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 

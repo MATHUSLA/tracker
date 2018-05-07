@@ -11,31 +11,33 @@
 
 namespace MATHUSLA { namespace TRACKER {
 
+namespace geometry { ///////////////////////////////////////////////////////////////////////////
+
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 struct _geometric_volume { G4VPhysicalVolume* volume; G4AffineTransform transform; };
 
 //__Convert From G4ThreeVector to R3_Point______________________________________________________
-type::r3_point _to_r3_point(const G4ThreeVector& vector) {
+r3_point _to_r3_point(const G4ThreeVector& vector) {
   return { vector.x(), vector.y(), vector.z() };
 }
 //----------------------------------------------------------------------------------------------
 
 //__Convert From R3_Point to G4ThreeVector______________________________________________________
-G4ThreeVector _to_G4ThreeVector(const type::r3_point& point) {
+G4ThreeVector _to_G4ThreeVector(const r3_point& point) {
   return G4ThreeVector(point.x, point.y, point.z);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Static Variables____________________________________________________________________________
-static G4ThreadLocal G4RunManager* _manager;
-static G4ThreadLocal G4VPhysicalVolume* _world;
-static G4ThreadLocal std::unordered_map<std::string, _geometric_volume> _geometry;
-static G4ThreadLocal std::vector<std::string> _geometry_insertion_order;
+thread_local G4RunManager* _manager;
+thread_local G4VPhysicalVolume* _world;
+thread_local std::unordered_map<std::string, _geometric_volume> _geometry;
+thread_local std::vector<std::string> _geometry_insertion_order;
 //----------------------------------------------------------------------------------------------
 
 //__Load Geometry from GDML File________________________________________________________________
-static G4VPhysicalVolume* _load_geometry(const std::string& path) {
+G4VPhysicalVolume* _load_geometry(const std::string& path) {
   static G4ThreadLocal G4GDMLParser _parser;
   _parser.Clear();
   _parser.Read(path, false);
@@ -50,7 +52,7 @@ class _empty_construction : public G4VUserDetectorConstruction {
 //----------------------------------------------------------------------------------------------
 
 //__Build Geometry Tree and Insertion-Order List________________________________________________
-static void _setup_geometry(const _geometric_volume& top) {
+void _setup_geometry(const _geometric_volume& top) {
   const auto& volume = top.volume->GetLogicalVolume();
   const auto&& size = volume->GetNoDaughters();
   for (auto i = 0; i < size; ++i) {
@@ -72,7 +74,7 @@ static void _setup_geometry(const _geometric_volume& top) {
 
 //__Geometry Traversal Helper Function__________________________________________________________
 template<class BinaryFunction>
-static BinaryFunction _traverse_geometry(BinaryFunction f) {
+BinaryFunction _traverse_geometry(BinaryFunction f) {
   for (const auto& name : _geometry_insertion_order) {
     const auto& search = _geometry.find(name);
     if (search != _geometry.end())
@@ -83,7 +85,7 @@ static BinaryFunction _traverse_geometry(BinaryFunction f) {
 //----------------------------------------------------------------------------------------------
 
 //__Volume Containment Check____________________________________________________________________
-static inline bool _in_volume(const type::r3_point& point, const _geometric_volume& gvolume) {
+bool _in_volume(const r3_point& point, const _geometric_volume& gvolume) {
   const auto& volume = gvolume.volume;
   const auto& transform = gvolume.transform;
   const auto& translation = transform.NetTranslation();
@@ -94,7 +96,7 @@ static inline bool _in_volume(const type::r3_point& point, const _geometric_volu
 //----------------------------------------------------------------------------------------------
 
 //__Find Volume Hierarchy_______________________________________________________________________
-static std::vector<_geometric_volume> _get_volume_hierarchy(const type::r3_point& point) {
+std::vector<_geometric_volume> _get_volume_hierarchy(const r3_point& point) {
   std::vector<_geometric_volume> out{};
   _traverse_geometry([&](const auto& name, const auto& gvolume) {
     if (_in_volume(point, gvolume)) out.push_back(gvolume);
@@ -104,7 +106,7 @@ static std::vector<_geometric_volume> _get_volume_hierarchy(const type::r3_point
 //----------------------------------------------------------------------------------------------
 
 //__Find Volume_________________________________________________________________________________
-static _geometric_volume _get_volume(const type::r3_point& point) {
+_geometric_volume _get_volume(const r3_point& point) {
   _geometric_volume out{};
   _traverse_geometry([&](const auto& name, const auto& gvolume) {
     if (_in_volume(point, gvolume)) out = gvolume;
@@ -114,8 +116,6 @@ static _geometric_volume _get_volume(const type::r3_point& point) {
 //----------------------------------------------------------------------------------------------
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
-
-namespace geometry { ///////////////////////////////////////////////////////////////////////////
 
 //__Initialize Geant4 Geometry Manager__________________________________________________________
 void open(const std::string& path) {

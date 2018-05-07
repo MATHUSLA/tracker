@@ -17,7 +17,7 @@ add_executable(tracker
     src/geometry.cc
     src/reader.cc
 
-    src/util/CommandLineParser.cc
+    src/util/command_line_parser.cc
 )
 
 target_link_libraries(tracker

@@ -1,5 +1,6 @@
 #include "reader.hh"
 
+#include <array>
 #include <fstream>
 
 #include "ROOT/TFile.h"
@@ -34,7 +35,7 @@ void _collect_paths(TSystemDirectory* dir,
 //----------------------------------------------------------------------------------------------
 //__ROOT File Key Traversal_____________________________________________________________________
 template<class BinaryFunction>
-inline BinaryFunction _traverse_file(const std::string& path, BinaryFunction f) {
+BinaryFunction _traverse_file(const std::string& path, BinaryFunction f) {
   auto file = TFile::Open(path.c_str());
   TIter next(file->GetListOfKeys());
   TKey* key = nullptr;
@@ -44,7 +45,7 @@ inline BinaryFunction _traverse_file(const std::string& path, BinaryFunction f) 
   return std::move(f);
 }
 //----------------------------------------------------------------------------------------------
-} /* annonymous namespace */ ///////////////////////////////////////////////////////////////////
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 namespace root { ///////////////////////////////////////////////////////////////////////////////
 
@@ -58,10 +59,10 @@ std::vector<std::string> search_directory(const std::string& path) {
 
 //__Import Detector Map from File_______________________________________________________________
 detector_map import_detector_map(const std::string& path) {
-  std::ifstream _file(path);
+  std::ifstream file(path);
   detector_map out{};
   std::string line;
-  while (std::getline(_file, line)) {
+  while (std::getline(file, line)) {
     // TODO: how about std::isspace?
     const auto& space = line.find(" ");
     if (space == std::string::npos || line[0] == '#') {
@@ -96,10 +97,10 @@ analysis::event_vector import_events(const std::string& path,
       for (auto i = 0; i < size; ++i) {
         tree->GetEntry(i);
         points.push_back({
-          t * Units::Time,
-          x * Units::Length,
-          y * Units::Length,
-          z * Units::Length});
+          t * units::time,
+          x * units::length,
+          y * units::length,
+          z * units::length});
       }
       out.push_back(points);
     }
@@ -140,13 +141,50 @@ analysis::event_vector import_events(const std::string& path,
 
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////////////////////
-
 namespace script { /////////////////////////////////////////////////////////////////////////////
 
-void read(const std::string& path) {
-  // TODO: implement!
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+//__Tracking Script Allowed Keys Iterators______________________________________________________
+const auto& _allowed_keys_begin = allowed_keys.cbegin();
+const auto& _allowed_keys_end = allowed_keys.cend();
+//----------------------------------------------------------------------------------------------
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Tracking Script Key Check___________________________________________________________________
+bool is_key_allowed(const std::string& key) {
+  return _allowed_keys_end != std::find(_allowed_keys_begin, _allowed_keys_end, key);
 }
+//----------------------------------------------------------------------------------------------
+
+//__Tracking Script Options Parser______________________________________________________________
+const tracking_options read(const std::string& path) {
+  std::ifstream file(path);
+  tracking_options out{};
+  std::string line;
+  while (std::getline(file, line)) {
+    if (line.empty()) continue;
+
+    std::string key;
+    std::string value;
+    bool on_key = true;
+    for (const auto& ch : line) {
+      if (ch == '#') break;
+      if (ch == ' ') continue;
+      if (ch == ':') {
+        on_key = false;
+        continue;
+      }
+      if (on_key) key.push_back(ch);
+      else value.push_back(ch);
+    }
+
+    if (!value.empty() && is_key_allowed(key))
+      out[key] = value;
+  }
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
 
 } /* namespace script */ ///////////////////////////////////////////////////////////////////////
 

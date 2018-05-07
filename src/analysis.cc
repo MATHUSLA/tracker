@@ -6,7 +6,9 @@
 #include "ROOT/TMinuit.h"
 
 #include "geometry.hh"
-#include "util.hh"
+#include "util/combinatorics.hh"
+
+#include "util/io.hh" // TODO: REMOVE
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -132,11 +134,11 @@ event_vector seed(const size_t n,
   if (layer_count < n)  // FIXME: unsure what to do here
     return {};
 
-  combinatorics::bit_vector_sequence layer_sequence;
+  util::combinatorics::bit_vector_sequence layer_sequence;
   for (const auto& layer : layers)
     layer_sequence.emplace_back(1, layer.size());
 
-  combinatorics::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
+  util::combinatorics::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
     event_points tuple;
     tuple.reserve(n);
 
@@ -212,7 +214,7 @@ event_vector merge(const event_vector& seeds) {
     for (const auto& point : seed) {
       const auto& ss = seeds_starting_with(point, seeds);
       std::for_each(ss.cbegin(), ss.cend(),
-        [](const auto& seed) { io::print_range(seed, " :: ") << "\n"; });
+        [](const auto& seed) { util::io::print_range(seed, " :: ") << "\n"; });
     }
   }
 
@@ -220,15 +222,13 @@ event_vector merge(const event_vector& seeds) {
 }
 //----------------------------------------------------------------------------------------------
 
-////////////////////////////////////////////////////////////////////////////////////////////////
-
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 #define FP_FAST_FMA
 #define FP_FAST_FMAF
 #define FP_FAST_FMAL
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
-static thread_local event_points&& _event = {};
-static void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t) {
+thread_local event_points&& _event = {};
+void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t) {
   static constexpr auto ln2pi = 1.837877066409345484;
   // static constexpr auto sqrt12 = 3.464101615137754587;
 
