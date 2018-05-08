@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
   option help_opt   ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
   option geo_opt    ('g', "geometry", "Geometry Import",             option::required_arguments);
   option map_opt    ('m', "map",      "Detector Map",                option::required_arguments);
-  option root_opt   ('d', "dir",      "ROOT Data Directory",         option::required_arguments);
+  option root_opt   ('d', "data",     "ROOT Data Directory",         option::required_arguments);
   option script_opt ('s', "script",   "Tracking Script",             option::required_arguments);
   option quiet_opt  ('q', "quiet",    "Quiet Mode",                  option::no_arguments);
 
