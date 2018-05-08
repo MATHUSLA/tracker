@@ -35,8 +35,16 @@ void splitlines(const std::string& string,
 //----------------------------------------------------------------------------------------------
 
 //__Remove Leading and Trailing Spaces__________________________________________________________
-inline void strip(std::string& string) {
-  // TODO: implement!
+inline std::string& strip(std::string& string) {
+  const auto& end = string.end();
+
+  auto forward = string.cbegin();
+  while (std::isspace(*forward) && forward != end) ++forward;
+
+  auto reverse = string.crbegin();
+  while (std::isspace(*reverse) && reverse.base() != forward) ++reverse;
+
+  return string = std::string(forward, reverse.base());
 }
 //----------------------------------------------------------------------------------------------
 

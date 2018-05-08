@@ -8,26 +8,12 @@
 #include "util/io.hh"
 #include "util/string.hh"
 
-//__Missing File Exit Command___________________________________________________________________
-void exit_on_missing_file(const MATHUSLA::util::cli::option& option,
+//__Missing Path Exit Command___________________________________________________________________
+void exit_on_missing_path(const std::string& path,
                           const std::string& name) {
   using namespace MATHUSLA::util;
-  error::exit_when(option.count && !io::path_exists(option.argument),
-    "[FATAL ERROR] ", name, " Missing: ",
-    "The file ", option.argument, " cannot be found.\n");
-}
-//----------------------------------------------------------------------------------------------
-
-//__Find Key for Option in Tracking Option Map__________________________________________________
-void set_option_from_script_map(const MATHUSLA::TRACKER::reader::script::tracking_options& script_map,
-                                const std::string& key,
-                                MATHUSLA::util::cli::option& option) {
-  using namespace MATHUSLA::TRACKER::reader::script;
-  const auto& search = script_map.find(key);
-  if (search != script_map.cend()) {
-    option.argument = search->second.c_str();
-    option.count = 1;
-  }
+  error::exit_when(!io::path_exists(path),
+    "[FATAL ERROR] ", name, " Missing: The file ", path, " cannot be found.\n");
 }
 //----------------------------------------------------------------------------------------------
 
@@ -39,72 +25,59 @@ int main(int argc, char* argv[]) {
 
   option help_opt   ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
   option geo_opt    ('g', "geometry", "Geometry Import",             option::required_arguments);
-  option root_opt   ('d', "dir",      "ROOT Data Directory",         option::required_arguments);
   option map_opt    ('m', "map",      "Detector Map",                option::required_arguments);
+  option root_opt   ('d', "dir",      "ROOT Data Directory",         option::required_arguments);
   option script_opt ('s', "script",   "Tracking Script",             option::required_arguments);
   option quiet_opt  ('q', "quiet",    "Quiet Mode",                  option::no_arguments);
 
   util::cli::parse(argv, {&help_opt, &geo_opt, &root_opt, &map_opt, &script_opt, &quiet_opt});
 
-  util::error::exit_when(argc == 1 || (!script_opt.count && !geo_opt.count && !root_opt.count),
+  util::error::exit_when(argc == 1 || !(script_opt.count || geo_opt.count || root_opt.count),
     "[FATAL ERROR] Insufficient Arguments: ",
-    "Must include arguments for geometry and ROOT directory or tracking script. \n",
+    "Must include arguments for geometry and ROOT directory or for a tracking script. \n",
     "              Run \'./tracker --help\' for more details.\n");
 
-  exit_on_missing_file(script_opt, "Tracking Script");
+  if (script_opt.count) exit_on_missing_path(script_opt.argument, "Tracking Script");
 
-  type::r4_point collapse_size;
-  type::real layer_depth;
-  type::real line_width;
-  type::integer seed_size;
+  auto options = reader::script::default_options;
 
   if (script_opt.count) {
-    const auto& script_map = reader::script::read(script_opt.argument);
-    const auto& script_map_end = script_map.cend();
-
-    for (const auto& entry : script_map) {
-      std::cout << entry.first << ": " << entry.second << "\n";
-    }
-
-    set_option_from_script_map(script_map, "geometry-file", geo_opt);
-    set_option_from_script_map(script_map, "root-data", root_opt);
-    set_option_from_script_map(script_map, "geometry-map", map_opt);
-
-    const auto& collapse_size_search = script_map.find("collapse-size");
-    if (collapse_size_search != script_map_end) {
-      std::vector<std::string> point;
-      util::string::split(collapse_size_search->second, point, ",");
-      point.insert(point.cend(), {"1", "1", "1", "1"});
-      collapse_size = {
-        static_cast<type::real>(std::stold(point[0])),
-        static_cast<type::real>(std::stold(point[1])),
-        static_cast<type::real>(std::stold(point[2])),
-        static_cast<type::real>(std::stold(point[3])) };
-    }
-
+    options = reader::script::read(script_opt.argument);
+  } else {
+    options.geometry_file = geo_opt.count ? geo_opt.argument : "";
+    options.geometry_map_file = map_opt.count ? map_opt.argument : "";
+    options.root_directory = root_opt.count ? root_opt.argument : "";
   }
 
-  exit_on_missing_file(geo_opt, "Geometry File");
-  exit_on_missing_file(root_opt, "ROOT Directory");
-  exit_on_missing_file(map_opt, "Geometry Map");
+  if (geo_opt.count) exit_on_missing_path(options.geometry_file, "Geometry File");
+  if (map_opt.count) exit_on_missing_path(options.geometry_map_file, "Geometry Map");
+  if (root_opt.count) exit_on_missing_path(options.root_directory, "ROOT Directory");
 
   units::define();
-  /*
-  std::cout << "DEMO:\n";
-  geometry::open(geo_opt.argument);
 
-  auto paths = reader::root::search_directory(root_opt.argument);
+  std::cout << "DEMO:\n";
+  geometry::open(options.geometry_file);
+
+  auto paths = reader::root::search_directory(options.root_directory);
   std::cout << "File Count: " << paths.size() << "\n";
+
+  const auto& detector_map = reader::root::import_detector_map(options.geometry_map_file);
 
   for (const auto& path : paths) {
     std::cout << path << "\n";
-    auto events = reader::root::import_events(path, {{"Time", "X", "Y", "Z"}});
+
+    auto events = map_opt.count
+      ? reader::root::import_events(path,
+          options.root_time_key, options.root_detector_key, detector_map)
+      : reader::root::import_events(path,
+          options.root_time_key, options.root_x_key, options.root_y_key, options.root_z_key);
+
     std::cout << "Processing " << events.size() << " Events\n";
 
     for (const auto& unsorted_event : events) {
       const auto& event = t_copy_sort(unsorted_event);
-      const auto& collapsed_event = analysis::collapse(event, {20, 20, 20, 20});
-      const auto& layered_event = analysis::partition(collapsed_event, 500).parts;
+      const auto& collapsed_event = analysis::collapse(event, options.collapse_size);
+      const auto& layered_event = analysis::partition(collapsed_event, options.layer_depth).parts;
 
       for (const auto& point : event) {
         std::cout << "OLD " << point  << "\n";
@@ -125,7 +98,7 @@ int main(int argc, char* argv[]) {
 
       std::cout << "\n";
 
-      auto seeds = analysis::seed(3, unsorted_event, {20, 20, 20, 20}, 500, 0.8);
+      auto seeds = analysis::seed(3, unsorted_event, options.collapse_size, options.layer_depth, options.line_width);
 
       std::cout << "\n";
 
@@ -136,7 +109,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "Done!\n";
   geometry::close();
-  */
+
   return 0;
 }
 //----------------------------------------------------------------------------------------------
