@@ -6,7 +6,9 @@
 #include "ROOT/TMinuit.h"
 
 #include "geometry.hh"
-#include "util.hh"
+#include "util/combinatorics.hh"
+
+#include "util/io.hh" // TODO: REMOVE
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -132,11 +134,11 @@ event_vector seed(const size_t n,
   if (layer_count < n)  // FIXME: unsure what to do here
     return {};
 
-  combinatorics::bit_vector_sequence layer_sequence;
+  util::combinatorics::bit_vector_sequence layer_sequence;
   for (const auto& layer : layers)
     layer_sequence.emplace_back(1, layer.size());
 
-  combinatorics::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
+  util::combinatorics::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
     event_points tuple;
     tuple.reserve(n);
 
@@ -212,7 +214,7 @@ event_vector merge(const event_vector& seeds) {
     for (const auto& point : seed) {
       const auto& ss = seeds_starting_with(point, seeds);
       std::for_each(ss.cbegin(), ss.cend(),
-        [](const auto& seed) { io::print_range(seed, " :: ") << "\n"; });
+        [](const auto& seed) { util::io::print_range(seed, " :: ") << "\n"; });
     }
   }
 
@@ -220,18 +222,13 @@ event_vector merge(const event_vector& seeds) {
 }
 //----------------------------------------------------------------------------------------------
 
-////////////////////////////////////////////////////////////////////////////////////////////////
-
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 #define FP_FAST_FMA
 #define FP_FAST_FMAF
 #define FP_FAST_FMAL
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
-static thread_local event_points&& _event = {};
-static void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t) {
-  static constexpr auto ln2pi = 1.837877066409345484;
-  // static constexpr auto sqrt12 = 3.464101615137754587;
-
+thread_local event_points&& _event = {};
+void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t) {
   const auto& t0 = parameters[0];
   const auto& x0 = parameters[1];
   const auto& y0 = parameters[2];
@@ -239,11 +236,8 @@ static void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters
   const auto& vx = parameters[4];
   const auto& vy = parameters[5];
   const auto& vz = parameters[6];
-  const auto& mean = parameters[7];
-  const auto& variance = parameters[8];
 
-  real_vector residuals;
-  std::transform(_event.cbegin(), _event.cend(), std::back_inserter(residuals), [&](const auto& point) {
+  out = 0.5 * std::accumulate(_event.cbegin(), _event.cend(), 0, [&](const auto& sum, const auto& point) {
     const auto& limits = geometry::limits_of(geometry::volume(point));
     const auto& center = limits.center;
     const auto& min = limits.min;
@@ -252,16 +246,8 @@ static void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters
     const auto&& t_res = (dz + t0) / (2 /* nanoseconds */);
     const auto&& x_res = (std::fma(vx, dz, x0) - center.x) / (max.x - min.x);
     const auto&& y_res = (std::fma(vy, dz, y0) - center.y) / (max.y - min.y);
-    return std::sqrt(t_res*t_res + 12*x_res*x_res + 12*y_res*y_res);
+    return sum + (t_res*t_res + 12*x_res*x_res + 12*y_res*y_res);
   });
-
-  out = 0.5 * std::fma(
-    residuals.size(),
-    ln2pi + std::log(variance),
-    std::accumulate(residuals.cbegin(), residuals.cend(), 0, [&](const auto& total, const auto& next) {
-      const auto&& diff = next - mean;
-      return std::fma(diff, diff, total);
-    }) / variance);
 }
 //----------------------------------------------------------------------------------------------
 } /* annonymous namespace */ ///////////////////////////////////////////////////////////////////

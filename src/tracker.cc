@@ -2,56 +2,82 @@
 #include "geometry.hh"
 #include "reader.hh"
 #include "units.hh"
-#include "util.hh"
 
-#include "util/CommandLineParser.hh"
+#include "util/command_line_parser.hh"
+#include "util/error.hh"
+#include "util/io.hh"
+#include "util/string.hh"
 
-using Option = MATHUSLA::CommandLineOption;
+//__Missing Path Exit Command___________________________________________________________________
+void exit_on_missing_path(const std::string& path,
+                          const std::string& name) {
+  using namespace MATHUSLA::util;
+  error::exit_when(!io::path_exists(path),
+    "[FATAL ERROR] ", name, " Missing: The file ", path, " cannot be found.\n");
+}
+//----------------------------------------------------------------------------------------------
 
-auto help_opt   = new Option('h', "help",     "MATHUSLA Tracking Algorithm", Option::NoArguments);
-auto geo_opt    = new Option('g', "geometry", "Geometry Import",             Option::RequiredArguments);
-auto root_opt   = new Option('d', "dir",      "ROOT Data Directory",         Option::RequiredArguments);
-auto map_opt    = new Option('m', "map",      "Detector Map",                Option::RequiredArguments);
-auto script_opt = new Option('s', "script",   "Tracking Script",             Option::RequiredArguments);
-auto quiet_opt  = new Option('q', "quiet",    "Quiet Mode",                  Option::NoArguments);
-
+//__Main Function: Tracker______________________________________________________________________
 int main(int argc, char* argv[]) {
   using namespace MATHUSLA;
+  using namespace MATHUSLA::TRACKER;
+  using util::cli::option;
 
-  CommandLineParser::parse(argv, {help_opt, geo_opt, root_opt, map_opt, script_opt, quiet_opt});
+  option help_opt   ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
+  option geo_opt    ('g', "geometry", "Geometry Import",             option::required_arguments);
+  option map_opt    ('m', "map",      "Detector Map",                option::required_arguments);
+  option root_opt   ('d', "dir",      "ROOT Data Directory",         option::required_arguments);
+  option script_opt ('s', "script",   "Tracking Script",             option::required_arguments);
+  option quiet_opt  ('q', "quiet",    "Quiet Mode",                  option::no_arguments);
 
-  error::exit_when(argc == 1 || !geo_opt->count || !root_opt->count,
+  util::cli::parse(argv, {&help_opt, &geo_opt, &root_opt, &map_opt, &script_opt, &quiet_opt});
+
+  util::error::exit_when(argc == 1 || !(script_opt.count || geo_opt.count || root_opt.count),
     "[FATAL ERROR] Insufficient Arguments: ",
-    "Must include arguments for geometry and ROOT directory. \n",
+    "Must include arguments for geometry and ROOT directory or for a tracking script. \n",
     "              Run \'./tracker --help\' for more details.\n");
 
-  error::exit_when(!io::path_exists(geo_opt->argument),
-    "[FATAL ERROR] Geometry File Missing: ",
-    "The file ", geo_opt->argument, " cannot be found.\n");
+  if (script_opt.count) exit_on_missing_path(script_opt.argument, "Tracking Script");
 
-  error::exit_when(!io::path_exists(root_opt->argument),
-    "[FATAL ERROR] ROOT Directory Missing: ",
-    "The directory ", root_opt->argument, " cannot be found.\n");
+  auto options = reader::script::default_options;
 
-  Units::Define();
+  if (script_opt.count) {
+    options = reader::script::read(script_opt.argument);
+  } else {
+    options.geometry_file = geo_opt.count ? geo_opt.argument : "";
+    options.geometry_map_file = map_opt.count ? map_opt.argument : "";
+    options.root_directory = root_opt.count ? root_opt.argument : "";
+  }
 
-  using namespace MATHUSLA::TRACKER;
+  if (geo_opt.count) exit_on_missing_path(options.geometry_file, "Geometry File");
+  if (map_opt.count) exit_on_missing_path(options.geometry_map_file, "Geometry Map");
+  if (root_opt.count) exit_on_missing_path(options.root_directory, "ROOT Directory");
+
+  units::define();
 
   std::cout << "DEMO:\n";
-  geometry::open(geo_opt->argument);
+  geometry::open(options.geometry_file);
 
-  auto paths = reader::root::search_directory(root_opt->argument);
+  auto paths = reader::root::search_directory(options.root_directory);
   std::cout << "File Count: " << paths.size() << "\n";
+
+  const auto& detector_map = reader::root::import_detector_map(options.geometry_map_file);
 
   for (const auto& path : paths) {
     std::cout << path << "\n";
-    auto events = reader::root::import_events(path, {{"Time", "X", "Y", "Z"}});
+
+    auto events = map_opt.count
+      ? reader::root::import_events(path,
+          options.root_time_key, options.root_detector_key, detector_map)
+      : reader::root::import_events(path,
+          options.root_time_key, options.root_x_key, options.root_y_key, options.root_z_key);
+
     std::cout << "Processing " << events.size() << " Events\n";
 
     for (const auto& unsorted_event : events) {
       const auto& event = t_copy_sort(unsorted_event);
-      const auto& collapsed_event = analysis::collapse(event, {20, 20, 20, 20});
-      const auto& layered_event = analysis::partition(collapsed_event, 500).parts;
+      const auto& collapsed_event = analysis::collapse(event, options.collapse_size);
+      const auto& layered_event = analysis::partition(collapsed_event, options.layer_depth).parts;
 
       for (const auto& point : event) {
         std::cout << "OLD " << point  << "\n";
@@ -72,7 +98,7 @@ int main(int argc, char* argv[]) {
 
       std::cout << "\n";
 
-      auto seeds = analysis::seed(3, unsorted_event, {20, 20, 20, 20}, 500, 0.8);
+      auto seeds = analysis::seed(3, unsorted_event, options.collapse_size, options.layer_depth, options.line_width);
 
       std::cout << "\n";
 
@@ -84,17 +110,6 @@ int main(int argc, char* argv[]) {
   std::cout << "Done!\n";
   geometry::close();
 
-  /*
-  uint64_t count = 0;
-  auto sequences = combinatorics::generate_bit_sequences({
-    {6, 10}, {3, 5}, {1, 6}, {4, 5}, {1, 12}, {1, 3}});
-  combinatorics::order2_permutations(4, sequences, [&](const auto& chooser) {
-    std::cout << ++count << ": ";
-    for (size_t i = 0; i < chooser.size(); ++i)
-      if (chooser[i])
-        std::cout << sequences[i] << " ";
-    std::cout << "\n";
-  });
-  */
   return 0;
 }
+//----------------------------------------------------------------------------------------------
