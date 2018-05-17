@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iterator>
 #include <iostream>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -182,6 +183,12 @@ inline bool operator==(const r4_point& left, const r4_point& right) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__RN Coordinate-Wise Inequality_________________________________________________________________
+inline bool operator!=(const r2_point& left, const r2_point& right) { return !(left == right); }
+inline bool operator!=(const r3_point& left, const r3_point& right) { return !(left == right); }
+inline bool operator!=(const r4_point& left, const r4_point& right) { return !(left == right); }
+//----------------------------------------------------------------------------------------------
+
 //__R2/R3 Inner Product_________________________________________________________________________
 inline real operator*(const r2_point& left, const r2_point& right) {
   return left.x * right.x + left.y * right.y;
@@ -213,7 +220,7 @@ inline r3_point cross(const r3_point& left, const r3_point& right) {
 
 //__R3 Point-Line Distance______________________________________________________________________
 inline real point_line_distance(const r3_point& point, const r3_point& begin, const r3_point& end) {
-  const auto& denominator = norm(begin - end);
+  const auto&& denominator = norm(begin - end);
   return !denominator ? -1 : norm(cross(point - begin, point - end)) / denominator;
 }
 inline real point_line_distance(const r4_point& point, const r4_point& begin, const r4_point& end) {
@@ -383,6 +390,12 @@ template<std::size_t N> inline r4_point_array<N> transpose(const real_array4<N>&
     out_i.z = arr.zs[i];
   }
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Dot Product______________________________________________________________________
+template<std::size_t N> inline real operator*(const real_array<N>& left, const real_array<N>& right) {
+  return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -560,6 +573,12 @@ inline r4_point_vector transpose(const real_vector4& vec) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Real-Vector Dot Product_____________________________________________________________________
+inline real operator*(const real_vector& left, const real_vector& right) {
+  return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0);
+}
+//----------------------------------------------------------------------------------------------
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 //__R2-Point Array to Vector Transformation_____________________________________________________
@@ -715,7 +734,7 @@ template<class Range, class Compare> inline Range& stable_sort_range(Range& rang
 
 //__General Range Copy Sorting Function_________________________________________________________
 template<class Range, class Compare> inline Range copy_sort_range(const Range& range, Compare comp) {
-  auto copy = range;  //FIXME: unsure how to improve this
+  auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
   std::partial_sort_copy(range.cbegin(), range.cend(), copy.begin(), copy.end(), comp);
   return copy;
 }

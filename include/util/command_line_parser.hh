@@ -5,8 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "util.hh"
-
 namespace MATHUSLA {
 
 namespace util { ///////////////////////////////////////////////////////////////////////////////

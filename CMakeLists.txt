@@ -8,8 +8,6 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 find_package(Geant4 REQUIRED gdml)
 find_package(ROOT   REQUIRED Minuit)
 
-include(${Geant4_USE_FILE})
-
 add_executable(tracker
     src/tracker.cc
 

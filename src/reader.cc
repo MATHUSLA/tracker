@@ -163,14 +163,13 @@ const std::array<std::string, 8> _allowed_keys{{
   "seed-size"}};
 //----------------------------------------------------------------------------------------------
 
-//__Tracking Script Allowed Keys Iterators______________________________________________________
-const auto& _allowed_keys_begin = _allowed_keys.cbegin();
+//__Tracking Script Allowed Keys End Iterator___________________________________________________
 const auto& _allowed_keys_end = _allowed_keys.cend();
 //----------------------------------------------------------------------------------------------
 
 //__Tracking Script Key Check___________________________________________________________________
 bool _is_key_allowed(const std::string& key) {
-  return _allowed_keys_end != std::find(_allowed_keys_begin, _allowed_keys_end, key);
+  return _allowed_keys_end != std::find(_allowed_keys.cbegin(), _allowed_keys_end, key);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -179,14 +178,13 @@ bool _is_key_allowed(const std::string& key) {
 //__Tracking Script Options Parser______________________________________________________________
 const tracking_options read(const std::string& path) {
   std::ifstream file(path);
-  tracking_options out = default_options;
+  tracking_options out;
 
   std::string line;
   while (std::getline(file, line)) {
     if (line.empty()) continue;
 
-    std::string key;
-    std::string value;
+    std::string key, value;
     bool on_key = true;
     for (const auto& ch : line) {
       if (ch == '#') break;

@@ -36,7 +36,7 @@ fi
 mkdir -p build
 cd build
 
-if [[ "$CONFIG_CMAKE" -eq 1 ]]; then cmake ..;   fi;
+if [[ "$CONFIG_CMAKE" -eq 1 ]]; then cmake .. -DCMAKE_BUILD_TYPE=Release; fi;
 if [[ "$CLEAN_BUILD"  -eq 1 ]]; then make clean; fi;
 
 make -j8
