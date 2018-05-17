@@ -12,6 +12,8 @@
 #define EX_USAGE EXIT_FAILURE
 #endif
 
+#include "util/error.hh"
+
 namespace MATHUSLA {
 
 namespace util { ///////////////////////////////////////////////////////////////////////////////
@@ -149,7 +151,7 @@ void _print_error_message(const std::string& argv0, option_list options) {
     error::exit_when(_is_on(option, option::is_long_with_argument | option::no_arguments),
       argv0, ": option --", option->long_name, " must not have an argument\n");
 
-    error::exit_when((option->count > 1) && !(option->flags & option::repeatable),
+    error::exit_when((option->count > 1) && !_is_on(option, option::repeatable),
       argv0, ": option -", option->short_name,
              " (--", option->long_name, ") may not be repeated\n");
   }

@@ -1,5 +1,5 @@
-#ifndef UTIL__COMBINATORICS_HH
-#define UTIL__COMBINATORICS_HH
+#ifndef UTIL__ALGORITHM_HH
+#define UTIL__ALGORITHM_HH
 #pragma once
 
 #include <algorithm>
@@ -10,7 +10,7 @@ namespace MATHUSLA {
 
 namespace util { ///////////////////////////////////////////////////////////////////////////////
 
-namespace combinatorics { //////////////////////////////////////////////////////////////////////
+namespace algorithm { //////////////////////////////////////////////////////////////////////////
 
 namespace detail { /////////////////////////////////////////////////////////////////////////////
 //__Boolean-Like Object_________________________________________________________________________
@@ -92,10 +92,10 @@ inline UnaryFunction order2_permutations(std::size_t count, bit_vector_sequence&
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace combinatorics */ ////////////////////////////////////////////////////////////////
+} /* namespace algorithm */ ////////////////////////////////////////////////////////////////////
 
 } /* namespace util */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 
-#endif /* UTIL__COMBINATORICS_HH */
+#endif /* UTIL__ALGORITHM_HH */

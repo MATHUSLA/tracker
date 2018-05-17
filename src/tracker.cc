@@ -8,6 +8,8 @@
 #include "util/io.hh"
 #include "util/string.hh"
 
+#include "util/math.hh"
+
 //__Missing Path Exit Command___________________________________________________________________
 void exit_on_missing_path(const std::string& path,
                           const std::string& name) {
@@ -21,12 +23,13 @@ void exit_on_missing_path(const std::string& path,
 int main(int argc, char* argv[]) {
   using namespace MATHUSLA;
   using namespace MATHUSLA::TRACKER;
+
   using util::cli::option;
 
   option help_opt   ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
   option geo_opt    ('g', "geometry", "Geometry Import",             option::required_arguments);
   option map_opt    ('m', "map",      "Detector Map",                option::required_arguments);
-  option root_opt   ('d', "dir",      "ROOT Data Directory",         option::required_arguments);
+  option root_opt   ('d', "data",     "ROOT Data Directory",         option::required_arguments);
   option script_opt ('s', "script",   "Tracking Script",             option::required_arguments);
   option quiet_opt  ('q', "quiet",    "Quiet Mode",                  option::no_arguments);
 
@@ -39,7 +42,7 @@ int main(int argc, char* argv[]) {
 
   if (script_opt.count) exit_on_missing_path(script_opt.argument, "Tracking Script");
 
-  auto options = reader::script::default_options;
+  reader::script::tracking_options options;
 
   if (script_opt.count) {
     options = reader::script::read(script_opt.argument);
@@ -100,9 +103,15 @@ int main(int argc, char* argv[]) {
 
       auto seeds = analysis::seed(3, unsorted_event, options.collapse_size, options.layer_depth, options.line_width);
 
-      std::cout << "\n";
+      util::io::newline();
 
-      analysis::merge(seeds);  // not implemented!!!
+      analysis::partial_join(seeds, 1);
+      // util::io::newline();
+      // analysis::partial_join(analysis::partial_join(seeds, 1), 1);
+      // util::io::newline();
+      // analysis::partial_join(analysis::partial_join(analysis::partial_join(seeds, 1), 1), 1);
+      // util::io::newline(3);
+      // analysis::full_join(seeds, 1);
 
     }
   }
