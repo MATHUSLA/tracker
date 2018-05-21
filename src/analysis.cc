@@ -407,7 +407,6 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t
         parameters[5],
         parameters[6],
         geometry::volume(point)); });
-  //std::cout << "nll: " << out << "\n";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -445,8 +444,6 @@ _track_parameters& _fit_event(const event_points& event,
     command_parameters.data(),
     command_parameters.size(),
     error_flag);
-
-  // std::cout << "\n";
 
   // TODO: read out error_flag
 
@@ -547,30 +544,6 @@ track::track(const event_points& event, const fit_settings& settings)
 
   auto fit_track = _guess_track(_event);
   _fit_event(_event, fit_track, _settings);
-
-  /*
-
-  Track Parameters:
-  T0: 335.253  (+/- 2)
-  X0: 274.849  (+/- 1000)
-  Y0: 688.753  (+/- 1000)
-  Z0: -499  (+/- 1000)
-  VX: 0.48139  (+/- 29.9792)
-  VY: 8.20171  (+/- 29.9792)
-  VZ: -29.9602  (+/- 29.9792)
-
-
-  Track Parameters:
-  T0: 335.253  (+/- 1)
-  X0: 274.849  (+/- 1)
-  Y0: 688.753  (+/- 1)
-  Z0: -499  (+/- 1)
-  VX: 0.48139  (+/- 68.6857)
-  VY: 8.20171  (+/- 65.1366)
-  VZ: 0.000285904  (+/- 68.9068)
-
-   */
-
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);

@@ -122,11 +122,14 @@ struct canvas::canvas_impl {
   std::vector<TPolyLine3D*> _poly_lines;
   _style_point_map _polymarker_map, _polyline_map;
   bool _has_updated = false;
+
   canvas_impl(const std::string& name, const integer width, const integer height)
       : _canvas(new TCanvas(name.c_str(), name.c_str(), width, height)),
         _view(static_cast<TView3D*>(TView::CreateView())), _poly_lines({}) {
     _view->SetAutoRange(true);
   }
+
+  canvas_impl(const canvas_impl& other) = default;
 };
 //----------------------------------------------------------------------------------------------
 
