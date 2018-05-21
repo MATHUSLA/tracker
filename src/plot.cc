@@ -130,6 +130,7 @@ struct canvas::canvas_impl {
   }
 
   explicit canvas_impl(const canvas_impl& other) = default;
+  canvas_impl& operator=(const canvas_impl& other) = default;
 };
 //----------------------------------------------------------------------------------------------
 
