@@ -129,7 +129,7 @@ struct canvas::canvas_impl {
     _view->SetAutoRange(true);
   }
 
-  canvas_impl(const canvas_impl& other) = default;
+  explicit canvas_impl(const canvas_impl& other) = default;
 };
 //----------------------------------------------------------------------------------------------
 
