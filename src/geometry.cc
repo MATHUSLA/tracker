@@ -217,6 +217,15 @@ const box_volume limits_of(const std::string& name) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Limit Box of the Volume with Point__________________________________________________________
+const box_volume limits_of_volume(const r3_point& point) {
+  return limits_of(volume(point));
+}
+const box_volume limits_of_volume(const r4_point& point) {
+  return limits_of(volume(point));
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace geometry */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */

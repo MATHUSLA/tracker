@@ -1,5 +1,6 @@
 #include "analysis.hh"
 #include "geometry.hh"
+#include "plot.hh"
 #include "reader.hh"
 #include "units.hh"
 
@@ -7,8 +8,6 @@
 #include "util/error.hh"
 #include "util/io.hh"
 #include "util/string.hh"
-
-#include "util/math.hh"
 
 //__Missing Path Exit Command___________________________________________________________________
 void exit_on_missing_path(const std::string& path,
@@ -57,6 +56,7 @@ int main(int argc, char* argv[]) {
   if (root_opt.count) exit_on_missing_path(options.root_directory, "ROOT Directory");
 
   units::define();
+  plot::init();
 
   std::cout << "DEMO:\n";
   geometry::open(options.geometry_file);
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   for (const auto& path : paths) {
     std::cout << path << "\n";
 
-    auto events = map_opt.count
+    const auto events = map_opt.count
       ? reader::root::import_events(path,
           options.root_time_key, options.root_detector_key, detector_map)
       : reader::root::import_events(path,
@@ -105,19 +105,33 @@ int main(int argc, char* argv[]) {
 
       util::io::newline();
 
-      analysis::partial_join(seeds, 1);
-      // util::io::newline();
-      // analysis::partial_join(analysis::partial_join(seeds, 1), 1);
-      // util::io::newline();
-      // analysis::partial_join(analysis::partial_join(analysis::partial_join(seeds, 1), 1), 1);
-      // util::io::newline(3);
-      // analysis::full_join(seeds, 1);
+      auto part1 = analysis::join_all(seeds);
+      util::io::newline();
 
+      auto tracks = analysis::fit_seeds(part1);
+      plot::canvas canvas;
+      for (const auto& track : tracks) {
+        const auto& event = track.event();
+        for (const auto& point : event) {
+          canvas.add_point(point, 0.5);
+          const auto& limits = geometry::limits_of_volume(point);
+          canvas.add_point(limits.center, 0.25, plot::color::BLUE);
+          canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);
+        }
+        canvas.add_line(track(event.front().z), track(event.back().z), 1, plot::color::RED);
+      }
+      canvas.draw();
+      // canvas.clear();
+      // canvas.add_box(-100, -100, -100, 100, 100, 100, 3, plot::color::GREEN);
+      // canvas.draw();
     }
   }
 
   std::cout << "Done!\n";
   geometry::close();
+  plot::end();
+
+  std::cout << "donedone\n";
 
   return 0;
 }

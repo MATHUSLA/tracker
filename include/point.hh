@@ -5,10 +5,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <iterator>
-#include <iostream>
+#include <ostream>
 #include <numeric>
-#include <string>
 #include <vector>
 
 namespace MATHUSLA {
@@ -16,8 +14,8 @@ namespace MATHUSLA {
 namespace type { ///////////////////////////////////////////////////////////////////////////////
 
 //__Numerical Types_____________________________________________________________________________
-using integer = long;
-using real = double;
+using integer = long long;
+using real = long double;
 //----------------------------------------------------------------------------------------------
 
 //__RN Point Types______________________________________________________________________________
@@ -25,12 +23,6 @@ struct r2_point { real    x, y;    };
 struct r3_point { real    x, y, z; };
 struct r4_point { real t, x, y, z; };
 enum class Coordinate { T, X, Y, Z };
-//----------------------------------------------------------------------------------------------
-
-//__RN Point Reference Types____________________________________________________________________
-using r2_ref = std::reference_wrapper<r2_point>;
-using r3_ref = std::reference_wrapper<r3_point>;
-using r4_ref = std::reference_wrapper<r4_point>;
 //----------------------------------------------------------------------------------------------
 
 //__Point-Wise Reduction of Dimension___________________________________________________________
@@ -255,15 +247,6 @@ template<std::size_t N> struct real_array3 { real_array<N>     xs, ys, zs; };
 template<std::size_t N> struct real_array4 { real_array<N> ts, xs, ys, zs; };
 //----------------------------------------------------------------------------------------------
 
-//__Array Point Constructs References___________________________________________________________
-template<std::size_t N> using r2_ref_array = typename std::array<r2_ref, N>;
-template<std::size_t N> using r3_ref_array = typename std::array<r3_ref, N>;
-template<std::size_t N> using r4_ref_array = typename std::array<r4_ref, N>;
-template<std::size_t N> using r2_point_array_ref = typename std::reference_wrapper<r2_point_array<N>>;
-template<std::size_t N> using r3_point_array_ref = typename std::reference_wrapper<r3_point_array<N>>;
-template<std::size_t N> using r4_point_array_ref = typename std::reference_wrapper<r4_point_array<N>>;
-//----------------------------------------------------------------------------------------------
-
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N> inline r2_point_array<N> reduce_to_r2(const r3_point_array<N>& arr) {
   r2_point_array<N> out;
@@ -395,7 +378,7 @@ template<std::size_t N> inline r4_point_array<N> transpose(const real_array4<N>&
 
 //__Real-Array Dot Product______________________________________________________________________
 template<std::size_t N> inline real operator*(const real_array<N>& left, const real_array<N>& right) {
-  return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0);
+  return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0.0L);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -411,24 +394,13 @@ struct real_vector3 { real_vector     xs, ys, zs; };
 struct real_vector4 { real_vector ts, xs, ys, zs; };
 //----------------------------------------------------------------------------------------------
 
-//__Vector Point Constructs References__________________________________________________________
-using r2_ref_vector = typename std::vector<r2_ref>;
-using r3_ref_vector = typename std::vector<r3_ref>;
-using r4_ref_vector = typename std::vector<r4_ref>;
-using r2_point_vector_ref = typename std::reference_wrapper<r2_point_vector>;
-using r3_point_vector_ref = typename std::reference_wrapper<r3_point_vector>;
-using r4_point_vector_ref = typename std::reference_wrapper<r4_point_vector>;
-//----------------------------------------------------------------------------------------------
-
 //__Vector-Wise Reduction of Dimension__________________________________________________________
 inline r2_point_vector reduce_to_r2(const r3_point_vector& vec) {
   const auto&& size = vec.size();
   r2_point_vector out;
   out.reserve(size);
-  for (std::size_t i = 0; i < size; ++i) {
-    const auto& vec_i = vec[i];
-    out[i] = { vec_i.x, vec_i.y };
-  }
+  std::for_each(vec.cbegin(), vec.cend(),
+    [&](const auto& point) { out.push_back({point.x, point.y}); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -438,10 +410,8 @@ inline r2_point_vector reduce_to_r2(const r4_point_vector& vec) {
   const auto&& size = vec.size();
   r2_point_vector out;
   out.reserve(size);
-  for (std::size_t i = 0; i < size; ++i) {
-    const auto& vec_i = vec[i];
-    out[i] = { vec_i.x, vec_i.y };
-  }
+  std::for_each(vec.cbegin(), vec.cend(),
+    [&](const auto& point) { out.push_back({point.x, point.y}); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -451,10 +421,8 @@ inline r3_point_vector reduce_to_r3(const r4_point_vector& vec) {
   const auto&& size = vec.size();
   r3_point_vector out;
   out.reserve(size);
-  for (std::size_t i = 0; i < size; ++i) {
-    const auto& vec_i = vec[i];
-    out[i] = { vec_i.x, vec_i.y, vec_i.z };
-  }
+  std::for_each(vec.cbegin(), vec.cend(),
+    [&](const auto& point) { out.push_back({point.x, point.y, point.z}); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -485,8 +453,8 @@ inline real_vector2 transpose(const r2_point_vector& vec) {
   out.ys.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
     const auto& vec_i = vec[i];
-    out.xs[i] = vec_i.x;
-    out.ys[i] = vec_i.y;
+    out.xs.push_back(vec_i.x);
+    out.ys.push_back(vec_i.y);
   }
   return out;
 }
@@ -501,9 +469,9 @@ inline real_vector3 transpose(const r3_point_vector& vec) {
   out.zs.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
     const auto& vec_i = vec[i];
-    out.xs[i] = vec_i.x;
-    out.ys[i] = vec_i.y;
-    out.zs[i] = vec_i.z;
+    out.xs.push_back(vec_i.x);
+    out.ys.push_back(vec_i.y);
+    out.zs.push_back(vec_i.z);
   }
   return out;
 }
@@ -519,10 +487,10 @@ inline real_vector4 transpose(const r4_point_vector& vec) {
   out.zs.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
     const auto& vec_i = vec[i];
-    out.ts[i] = vec_i.t;
-    out.xs[i] = vec_i.x;
-    out.ys[i] = vec_i.y;
-    out.zs[i] = vec_i.z;
+    out.ts.push_back(vec_i.t);
+    out.xs.push_back(vec_i.x);
+    out.ys.push_back(vec_i.y);
+    out.zs.push_back(vec_i.z);
   }
   return out;
 }
@@ -575,7 +543,7 @@ inline r4_point_vector transpose(const real_vector4& vec) {
 
 //__Real-Vector Dot Product_____________________________________________________________________
 inline real operator*(const real_vector& left, const real_vector& right) {
-  return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0);
+  return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0.0L);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -614,8 +582,8 @@ template<std::size_t N> inline real_vector2 to_vector(const real_array2<N>& arr)
   out.xs.reserve(N);
   out.ys.reserve(N);
   for (std::size_t i = 0; i < N; ++i) {
-    out.xs[i] = arr.xs[i];
-    out.ys[i] = arr.ys[i];
+    out.xs.push_back(arr.xs[i]);
+    out.ys.push_back(arr.ys[i]);
   }
   return out;
 }
@@ -628,9 +596,9 @@ template<std::size_t N> inline real_vector3 to_vector(const real_array3<N>& arr)
   out.ys.reserve(N);
   out.zs.reserve(N);
   for (std::size_t i = 0; i < N; ++i) {
-    out.xs[i] = arr.xs[i];
-    out.ys[i] = arr.ys[i];
-    out.zs[i] = arr.zs[i];
+    out.xs.push_back(arr.xs[i]);
+    out.ys.push_back(arr.ys[i]);
+    out.zs.push_back(arr.zs[i]);
   }
   return out;
 }
@@ -644,10 +612,10 @@ template<std::size_t N> inline real_vector4 to_vector(const real_array4<N>& arr)
   out.ys.reserve(N);
   out.zs.reserve(N);
   for (std::size_t i = 0; i < N; ++i) {
-    out.ts[i] = arr.ts[i];
-    out.xs[i] = arr.xs[i];
-    out.ys[i] = arr.ys[i];
-    out.zs[i] = arr.zs[i];
+    out.ts.push_back(arr.ts[i]);
+    out.xs.push_back(arr.xs[i]);
+    out.ys.push_back(arr.ys[i]);
+    out.zs.push_back(arr.zs[i]);
   }
   return out;
 }
@@ -740,25 +708,33 @@ template<class Range, class Compare> inline Range copy_sort_range(const Range& r
 }
 //----------------------------------------------------------------------------------------------
 
+//__General Range Stable Sorting Function_______________________________________________________
+template<class Range, class Compare> inline Range stable_copy_sort_range(const Range& range, Compare comp) {
+  auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
+  std::stable_sort(copy.begin(), copy.end(), comp);
+  return copy;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Coordinate-Wise Sorting Functors____________________________________________________________
-template<class T> struct t_sorter { constexpr bool operator()(const T& a, const T& b) const { return a.t < b.t; } };
-template<class T> struct x_sorter { constexpr bool operator()(const T& a, const T& b) const { return a.x < b.x; } };
-template<class T> struct y_sorter { constexpr bool operator()(const T& a, const T& b) const { return a.y < b.y; } };
-template<class T> struct z_sorter { constexpr bool operator()(const T& a, const T& b) const { return a.z < b.z; } };
+template<class T> struct t_ordered { constexpr bool operator()(const T& a, const T& b) const { return a.t < b.t; } };
+template<class T> struct x_ordered { constexpr bool operator()(const T& a, const T& b) const { return a.x < b.x; } };
+template<class T> struct y_ordered { constexpr bool operator()(const T& a, const T& b) const { return a.y < b.y; } };
+template<class T> struct z_ordered { constexpr bool operator()(const T& a, const T& b) const { return a.z < b.z; } };
 //----------------------------------------------------------------------------------------------
 
 //__General Coordinate-Wise Sorting Functions___________________________________________________
 template<class Range> inline Range& t_sort(Range& range) {
-  return sort_range(range, t_sorter<typename Range::value_type>{});
+  return sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& x_sort(Range& range) {
-  return sort_range(range, x_sorter<typename Range::value_type>{});
+  return sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& y_sort(Range& range) {
-  return sort_range(range, y_sorter<typename Range::value_type>{});
+  return sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& z_sort(Range& range) {
-  return sort_range(range, z_sorter<typename Range::value_type>{});
+  return sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& coordinate_sort(Range& range, const Coordinate& coordinate) {
   switch (coordinate) {
@@ -772,16 +748,16 @@ template<class Range> inline Range& coordinate_sort(Range& range, const Coordina
 
 //__General Coordinate-Wise Stable Sorting Functions____________________________________________
 template<class Range> inline Range& t_stable_sort(Range& range) {
-  return stable_sort_range(range, t_sorter<typename Range::value_type>{});
+  return stable_sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& x_stable_sort(Range& range) {
-  return stable_sort_range(range, x_sorter<typename Range::value_type>{});
+  return stable_sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& y_stable_sort(Range& range) {
-  return stable_sort_range(range, y_sorter<typename Range::value_type>{});
+  return stable_sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& z_stable_sort(Range& range) {
-  return stable_sort_range(range, z_sorter<typename Range::value_type>{});
+  return stable_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& coordinate_stable_sort(Range& range, const Coordinate& coordinate) {
   switch (coordinate) {
@@ -795,16 +771,16 @@ template<class Range> inline Range& coordinate_stable_sort(Range& range, const C
 
 //__General Coordinate-Wise Copy Sorting Functions______________________________________________
 template<class Range> inline Range t_copy_sort(const Range& range) {
-  return copy_sort_range(range, t_sorter<typename Range::value_type>{});
+  return copy_sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range x_copy_sort(const Range& range) {
-  return copy_sort_range(range, x_sorter<typename Range::value_type>{});
+  return copy_sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range y_copy_sort(const Range& range) {
-  return copy_sort_range(range, y_sorter<typename Range::value_type>{});
+  return copy_sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range z_copy_sort(const Range& range) {
-  return copy_sort_range(range, z_sorter<typename Range::value_type>{});
+  return copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range coordinate_copy_sort(const Range& range, const Coordinate& coordinate) {
   switch (coordinate) {
@@ -812,6 +788,29 @@ template<class Range> inline Range coordinate_copy_sort(const Range& range, cons
     case Coordinate::X: return x_copy_sort(range);
     case Coordinate::Y: return y_copy_sort(range);
     case Coordinate::Z: return z_copy_sort(range);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__General Coordinate-Wise Stable Sorting Functions____________________________________________
+template<class Range> inline Range t_stable_copy_sort(const Range& range) {
+  return stable_copy_sort_range(range, t_ordered<typename Range::value_type>{});
+}
+template<class Range> inline Range x_stable_copy_sort(const Range& range) {
+  return stable_copy_sort_range(range, x_ordered<typename Range::value_type>{});
+}
+template<class Range> inline Range y_stable_copy_sort(const Range& range) {
+  return stable_copy_sort_range(range, y_ordered<typename Range::value_type>{});
+}
+template<class Range> inline Range z_stable_copy_sort(const Range& range) {
+  return stable_copy_sort_range(range, z_ordered<typename Range::value_type>{});
+}
+template<class Range> inline Range coordinate_stable_copy_sort(const Range& range, const Coordinate& coordinate) {
+  switch (coordinate) {
+    case Coordinate::T: return t_stable_copy_sort(range);
+    case Coordinate::X: return x_stable_copy_sort(range);
+    case Coordinate::Y: return y_stable_copy_sort(range);
+    case Coordinate::Z: return z_stable_copy_sort(range);
   }
 }
 //----------------------------------------------------------------------------------------------

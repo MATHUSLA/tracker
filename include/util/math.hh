@@ -18,7 +18,7 @@ T fused_product(const T& left, const T& right, const Ts&... rest) {
   return std::fma(left, right, fused_product(rest...));
 }
 template<class InputIt1, class InputIt2, class T>
-T range_fused_product(InputIt1 first1, InputIt1 last1, InputIt2 first2, T value=0) {
+T range_fused_product(InputIt1 first1, InputIt1 last1, InputIt2 first2, T value) {
   while (first1 != last1) {
     value = std::fma(*first1, *first2, std::move(value));
     ++first1;

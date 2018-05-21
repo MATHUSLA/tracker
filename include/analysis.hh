@@ -16,20 +16,20 @@ using event_vector = std::vector<event_points>;
 //----------------------------------------------------------------------------------------------
 
 //__Average Point_______________________________________________________________________________
-r4_point mean(const event_points& points);
+const r4_point mean(const event_points& points);
 //----------------------------------------------------------------------------------------------
 
 //__Row-Major Covariance Matrix_________________________________________________________________
-r4_point_vector covariance_matrix(const event_points& points);
-//----------------------------------------------------------------------------------------------
-
-//__Event Partition Type________________________________________________________________________
-struct event_partition { event_vector parts; Coordinate coordinate; };
+const r4_point_vector covariance_matrix(const event_points& points);
 //----------------------------------------------------------------------------------------------
 
 //__Collapse Points by R4 Interval______________________________________________________________
 event_points collapse(const event_points& event,
                       const r4_point& ds);
+//----------------------------------------------------------------------------------------------
+
+//__Event Partition Type________________________________________________________________________
+struct event_partition { event_vector parts; Coordinate coordinate; };
 //----------------------------------------------------------------------------------------------
 
 //__Partition Points by Coordinate______________________________________________________________
@@ -51,21 +51,6 @@ event_vector seed(const size_t n,
                   const real line_dr);
 //----------------------------------------------------------------------------------------------
 
-//__Seed Search_________________________________________________________________________________
-event_vector seeds_with(const r4_point& point,
-                        const event_vector& seeds);
-//----------------------------------------------------------------------------------------------
-
-//__Seed Search Front___________________________________________________________________________
-event_vector seeds_starting_with(const r4_point& point,
-                                 const event_vector& seeds);
-//----------------------------------------------------------------------------------------------
-
-//__Seed Search Back____________________________________________________________________________
-event_vector seeds_ending_with(const r4_point& point,
-                               const event_vector& seeds);
-//----------------------------------------------------------------------------------------------
-
 //__Check if Seeds can be Joined________________________________________________________________
 bool seeds_compatible(const event_points& first,
                       const event_points& second,
@@ -76,16 +61,6 @@ bool seeds_compatible(const event_points& first,
 event_points join(const event_points& first,
                   const event_points& second,
                   const size_t difference);
-//----------------------------------------------------------------------------------------------
-
-//__Partial Join Set of Seeds___________________________________________________________________
-event_vector partial_join(const event_vector& seeds,
-                          const size_t difference);
-//----------------------------------------------------------------------------------------------
-
-//__Full Join Set of Seeds______________________________________________________________________
-event_vector full_join(const event_vector& seeds,
-                       const size_t difference);
 //----------------------------------------------------------------------------------------------
 
 //__Seed Join___________________________________________________________________________________
@@ -101,7 +76,7 @@ struct fit_settings {
   std::string         command_name       = "MIGRAD";
   std::vector<double> command_parameters = {};
   double              error_def          = 0.5;
-  integer             max_iterations     = 500;
+  integer             max_iterations     = 250;
 };
 //----------------------------------------------------------------------------------------------
 

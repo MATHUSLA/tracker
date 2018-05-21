@@ -6,8 +6,9 @@
 #include "ROOT/TMinuit.h"
 
 #include "geometry.hh"
+#include "units.hh"
 
-#include "util/algorithm.hh"
+#include "util/bit_vector.hh"
 #include "util/io.hh"
 #include "util/math.hh"
 
@@ -16,35 +17,35 @@ namespace MATHUSLA { namespace TRACKER {
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 //__Average Point_______________________________________________________________________________
-r4_point mean(const event_points& points) {
+const r4_point mean(const event_points& points) {
   const auto&& size = points.size();
   return (size == 0) ? r4_point{} : std::accumulate(points.cbegin(), points.cend(), r4_point{}) / size;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Row-Major Covariance Matrix_________________________________________________________________
-r4_point_vector covariance_matrix(const event_points& points) {
+const r4_point_vector covariance_matrix(const event_points& points) {
   const auto&& size = points.size();
   if (size == 0) return {};
 
-  const auto&& inv_size = 1 / size;
+  const auto&& inv_size = 1.0L / size;
 
   const auto& average = inv_size * std::accumulate(points.cbegin(), points.cend(), r4_point{});
   const auto& points_T = transpose(points);
 
-  const auto&& covTT = inv_size * (points_T.ts * points_T.ts) - average.t * average.t;
-  const auto&& covXX = inv_size * (points_T.xs * points_T.xs) - average.x * average.x;
-  const auto&& covYY = inv_size * (points_T.ys * points_T.ys) - average.y * average.y;
-  const auto&& covZZ = inv_size * (points_T.zs * points_T.zs) - average.z * average.z;
+  const real&& covTT = inv_size * (points_T.ts * points_T.ts) - average.t * average.t;
+  const real&& covXX = inv_size * (points_T.xs * points_T.xs) - average.x * average.x;
+  const real&& covYY = inv_size * (points_T.ys * points_T.ys) - average.y * average.y;
+  const real&& covZZ = inv_size * (points_T.zs * points_T.zs) - average.z * average.z;
 
-  const auto&& covTX = inv_size * (points_T.ts * points_T.xs) - average.t * average.x;
-  const auto&& covTY = inv_size * (points_T.ts * points_T.ys) - average.t * average.y;
-  const auto&& covTZ = inv_size * (points_T.ts * points_T.zs) - average.t * average.z;
+  const real&& covTX = inv_size * (points_T.ts * points_T.xs) - average.t * average.x;
+  const real&& covTY = inv_size * (points_T.ts * points_T.ys) - average.t * average.y;
+  const real&& covTZ = inv_size * (points_T.ts * points_T.zs) - average.t * average.z;
 
-  const auto&& covXY = inv_size * (points_T.xs * points_T.ys) - average.x * average.y;
-  const auto&& covXZ = inv_size * (points_T.xs * points_T.zs) - average.x * average.z;
+  const real&& covXY = inv_size * (points_T.xs * points_T.ys) - average.x * average.y;
+  const real&& covXZ = inv_size * (points_T.xs * points_T.zs) - average.x * average.z;
 
-  const auto&& covYZ = inv_size * (points_T.ys * points_T.zs) - average.y * average.z;
+  const real&& covYZ = inv_size * (points_T.ys * points_T.zs) - average.y * average.z;
 
   return {{covTT, covTX, covTY, covTZ},
           {covTX, covXX, covXY, covXZ},
@@ -116,7 +117,7 @@ event_partition partition(const event_points& points,
 
   auto& parts = out.parts;
 
-  const auto& sorted_points = coordinate_copy_sort(points, coordinate);
+  const auto& sorted_points = coordinate_stable_copy_sort(points, coordinate);
   const auto&& size = sorted_points.size();
 
   event_points::size_type count = 0;
@@ -175,18 +176,18 @@ event_vector seed(const size_t n,
   const auto&& layer_count = layers.size();
   if (layer_count < n) return {}; // FIXME: unsure what to do here
 
-  util::algorithm::bit_vector_sequence layer_sequence;
+  util::bit_vector_sequence layer_sequence;
   for (const auto& layer : layers)
     layer_sequence.emplace_back(1, layer.size());
 
-  util::algorithm::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
+  util::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
     event_points tuple;
     tuple.reserve(n);
 
-    for (size_t i = 0; i < layer_count; ++i) {
-      if (chooser[i]) {
-        const auto& layer = layers[i];
-        const auto& bits = layer_sequence[i];
+    for (size_t index = 0; index < layer_count; ++index) {
+      if (chooser[index]) {
+        const auto& layer = layers[index];
+        const auto& bits = layer_sequence[index];
         size_t j = 0;
         std::copy_if(layer.cbegin(), layer.cend(), std::back_inserter(tuple),
           [&](auto) { return bits[j++]; });
@@ -201,41 +202,6 @@ event_vector seed(const size_t n,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Seed Search_________________________________________________________________________________
-event_vector seeds_with(const r4_point& point,
-                        const event_vector& seeds) {
-  event_vector out;
-  out.reserve(seeds.size());
-  std::copy_if(seeds.cbegin(), seeds.cend(), std::back_inserter(out), [&](const auto& seed) {
-    const auto& end = seed.cend();
-    return end != std::find(seed.cbegin(), end, point);
-  });
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Seed Search Front___________________________________________________________________________
-event_vector seeds_starting_with(const r4_point& point,
-                                 const event_vector& seeds) {
-  event_vector out;
-  out.reserve(seeds.size());
-  std::copy_if(seeds.cbegin(), seeds.cend(), std::back_inserter(out),
-    [&](const auto& seed) { return point == seed.front(); });
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Seed Search Back____________________________________________________________________________
-event_vector seeds_ending_with(const r4_point& point,
-                               const event_vector& seeds) {
-  event_vector out;
-  out.reserve(seeds.size());
-  std::copy_if(seeds.cbegin(), seeds.cend(), std::back_inserter(out),
-    [&](const auto& seed) { return point == seed.back(); });
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Check if Seeds can be Joined________________________________________________________________
 bool seeds_compatible(const event_points& first, const event_points& second, const size_t difference) {
   return std::equal(first.cbegin() + difference, first.cend(), second.cbegin(), second.cend() - difference);
@@ -244,90 +210,142 @@ bool seeds_compatible(const event_points& first, const event_points& second, con
 
 //__Join Two Seeds______________________________________________________________________________
 event_points join(const event_points& first, const event_points& second, const size_t difference) {
-  const auto& first_begin = first.cbegin();
-  const auto& first_end = first.cend();
-  const auto& second_begin = second.cbegin();
-  const auto& second_end = second.cend();
+  const auto&& first_size = first.size();
+  const auto&& second_size = second.size();
+  const auto&& overlap = first_size - difference;
 
-  auto first_iter = first_begin + difference;
-  auto second_iter = second_begin;
-  const auto& first_stop = first_end;
-  const auto& second_stop = second_end - difference;
-
-  const auto& overlap = first_stop - first_iter;
-
-  if ((first_end - first_begin <= difference) || overlap != (second_stop - second_iter))
+  if (overlap <= 0 || second_size < overlap)
     return {};
 
+  const auto&& size = difference + second_size;
   event_points out;
-  out.reserve(overlap + 2 * difference);
-  auto out_inserter = std::back_inserter(out);
+  out.reserve(size);
 
-  std::copy(first_begin, first_iter, out_inserter);
-  while (first_iter != first_stop) {
-    if (*first_iter != *second_iter++) return {};
-    *out_inserter++ = *first_iter++;
+  size_t index = 0;
+  for (; index < difference; ++index) out.push_back(first[index]);
+  for (; index < difference + overlap; ++index) {
+    const auto& point = first[index];
+    if (point != second[index - difference])
+      return {};
+    out.push_back(point);
   }
-  std::copy(second_stop, second_end, out_inserter);
+  for (; index < size; ++index) out.push_back(second[index - difference]);
 
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
-//__Partial Join Set of Seeds___________________________________________________________________
-event_vector partial_join(const event_vector& seeds, const size_t difference) {
-  // TODO: implement
+namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-  event_vector out{};
-  out.reserve(seeds.size());
-  for (const auto& seed : seeds) {
-    std::cout << "seed: ";
-    util::io::print_range(seed) << "\n";
-    for (const auto& point : seed) {
-      const auto& secondary_seeds = seeds_starting_with(point, seeds);
-      std::for_each(secondary_seeds.cbegin(), secondary_seeds.cend(), [&](const auto& secondary) {
-        std::cout << "secondary ";
-        util::io::print_range(secondary) << "\n";
-        const auto& joined = join(seed, secondary, difference);
-        if (!joined.empty()) {
-          std::cout << "joined ";
-          util::io::print_range(joined) << "\n";
-          out.push_back(joined);
-        }
-      });
-      std::cout << "\n\n";
+//__Target Range________________________________________________________________________________
+struct _range { size_t begin, end; };
+//----------------------------------------------------------------------------------------------
+
+//__Find Target Range for Secondaries___________________________________________________________
+const _range _find_range(const size_t seed_index,
+                         const size_t difference,
+                         const event_vector& seeds,
+                         const std::vector<size_t>& change_list) {
+  const auto& seed_second = seeds[seed_index][difference];
+  const auto&& size = change_list.size();
+  size_t begin, end = change_list[size - 1], index = 1;
+  while (true) {
+    begin = change_list[index++];
+    if (begin == end) break;
+    if (seed_second != seeds[begin].front()) continue;
+    end = change_list[index];
+    break;
+  }
+  return { std::move(begin), std::move(end) };
+}
+//----------------------------------------------------------------------------------------------
+
+//__Join all Secondaries to a Seed______________________________________________________________
+void _join_secondaries(const size_t seed_index,
+                       const size_t difference,
+                       const _range range,
+                       const event_vector& seeds,
+                       util::bit_vector& join_list,
+                       event_vector& out) {
+  const auto& seed = seeds[seed_index];
+  const auto&& range_end = std::move(range.end);
+  for (auto index = range.begin; index < range_end; ++index) {
+    const auto& joined = join(seed, seeds[index], difference);
+    if (!joined.empty()) {
+      out.push_back(joined);
+      join_list[index] = true;
+      join_list[seed_index] = true;
     }
   }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Partial Join________________________________________________________________________________
+const event_vector _partial_join(const event_vector& seeds,
+                                 const size_t difference,
+                                 event_vector& singular) {
+  const auto&& size = seeds.size();
+
+  std::vector<size_t> change_list;
+  change_list.push_back(0);
+  for (size_t index = 1, last_index = 0; index < size; ++index) {
+    if (seeds[index].front() != seeds[last_index].front()) {
+      change_list.push_back(index);
+      last_index = index;
+    }
+  }
+  change_list.push_back(size);
+  change_list.shrink_to_fit();
+
+  util::bit_vector join_list(size);
+
+  event_vector out;
+  out.reserve(size);
+  for (size_t index = 0; index < size; ++index) {
+    _join_secondaries(
+      index,
+      difference,
+      _find_range(index, difference, seeds, change_list),
+      seeds,
+      join_list,
+      out);
+  }
+
+  for (size_t index = 0; index < size; ++index)
+    if (!join_list[index])
+      singular.push_back(seeds[index]);
 
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
-//__Full Join Set of Seeds______________________________________________________________________
-event_vector full_join(const event_vector& seeds, const size_t difference) {
-  auto out = partial_join(seeds, difference);
-  while (partial_join(out, difference).size() == out.size());
-  return out;
-}
-//----------------------------------------------------------------------------------------------
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Seed Join___________________________________________________________________________________
 event_vector join_all(const event_vector& seeds) {
   event_vector out;
   out.reserve(seeds.size());
+  auto out_inserter = std::back_inserter(out);
 
-  // TODO: implement
-
-  for (const auto& seed : seeds) {
-    //util::io::print_range(seed, " -> ") << "\n";
-    for (const auto& point : seed) {
-      const auto& ss = seeds_starting_with(point, seeds);
-      std::for_each(ss.cbegin(), ss.cend(), [&](const auto& inner) {
-        const auto& joined = join(seed, inner, 1);
-        if (!joined.empty()) util::io::print_range(joined, " :: ") << "\n";
-      });
-    }
+  auto current_seeds = seeds;
+  while (true) {
+    const auto& size = current_seeds.size();
+    current_seeds = _partial_join(current_seeds, 1, out);
+    if (current_seeds.size() == size) break;
   }
+  std::copy(current_seeds.cbegin(), current_seeds.cend(), out_inserter);
+
+  std::cout << "seeds: " << seeds.size() << "\n";
+  /*
+  for (const auto& seed : seeds)
+    util::io::print_range(seed) << "\n";
+  */
+
+  std::cout << "out: " << out.size() << "\n";
+  /*
+  for (const auto& seed : out)
+    util::io::print_range(seed) << "\n";
+  */
 
   return out;
 }
@@ -349,7 +367,7 @@ real _track_squared_residual(const real t0,
   const auto& min = limits.min;
   const auto& max = limits.max;
   const auto&& dz = (center.z - z0) / vz;
-  const auto&& t_res = (dz + t0) / (2 /* nanoseconds */);
+  const auto&& t_res = (dz + t0) / (2 * units::time);
   const auto&& x_res = (std::fma(dz, vx, x0) - center.x) / (max.x - min.x);
   const auto&& y_res = (std::fma(dz, vy, y0) - center.y) / (max.y - min.y);
   return t_res*t_res + 12*x_res*x_res + 12*y_res*y_res;
@@ -360,10 +378,25 @@ real _track_squared_residual(const real t0,
 struct _track_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 //----------------------------------------------------------------------------------------------
 
+//__Fast Guess of Initial Track Parameters______________________________________________________
+_track_parameters _guess_track(const event_points& event) {
+  const auto& first = event.front();
+  const auto& last = event.back();
+  const auto&& dt = last.t - first.t;
+  return {{first.t, 2*units::time, 0, 0},
+          {first.x, 100*units::length, 0, 0},
+          {first.y, 100*units::length, 0, 0},
+          {first.z, 100*units::length, 0, 0},
+          {(last.x - first.x) / dt, 0.1*units::speed_of_light, 0, units::speed_of_light},
+          {(last.y - first.y) / dt, 0.1*units::speed_of_light, 0, units::speed_of_light},
+          {(last.z - first.z) / dt, 0.1*units::speed_of_light, 0, units::speed_of_light}};
+}
+//----------------------------------------------------------------------------------------------
+
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
 thread_local event_points&& _nll_fit_event = {};
 void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t) {
-  out = 0.5 * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0,
+  out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
     [&](const auto& sum, const auto& point) {
       return sum + _track_squared_residual(
         parameters[0],
@@ -374,6 +407,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t
         parameters[5],
         parameters[6],
         geometry::volume(point)); });
+  //std::cout << "nll: " << out << "\n";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -412,6 +446,8 @@ _track_parameters& _fit_event(const event_points& event,
     command_parameters.size(),
     error_flag);
 
+  // std::cout << "\n";
+
   // TODO: read out error_flag
 
   Double_t value, error;
@@ -439,14 +475,6 @@ _track_parameters& _fit_event(const event_points& event,
   vz.error = error;
 
   return parameters;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Fast Guess of Initial Track Parameters______________________________________________________
-_track_parameters _guess_track(const event_points& event) {
-  const auto& first = event.front();
-  const auto& last = event.back();
-  return {first.t, first.x, first.y, first.z, 1, 1, 1};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -505,7 +533,7 @@ real_array<16> _4x4_inverse(const real_array<16> m) {
   out[11] = fused_product(m[3],  m_05_08 - m_04_09, m[7],  m_00_09 - m_01_08, m[11], m_01_04 - m_00_05);
   out[15] = fused_product(m[2],  m_04_09 - m_05_08, m[6],  m_01_08 - m_00_09, m[10], m_00_05 - m_01_04);
 
-  const auto&& inv_det = 1 / det;
+  const auto&& inv_det = 1.0L / det;
   std::transform(out.cbegin(), out.cend(), out.begin(), [&](const auto& value) { return value * inv_det; });
   return out;
 }
@@ -519,6 +547,30 @@ track::track(const event_points& event, const fit_settings& settings)
 
   auto fit_track = _guess_track(_event);
   _fit_event(_event, fit_track, _settings);
+
+  /*
+
+  Track Parameters:
+  T0: 335.253  (+/- 2)
+  X0: 274.849  (+/- 1000)
+  Y0: 688.753  (+/- 1000)
+  Z0: -499  (+/- 1000)
+  VX: 0.48139  (+/- 29.9792)
+  VY: 8.20171  (+/- 29.9792)
+  VZ: -29.9602  (+/- 29.9792)
+
+
+  Track Parameters:
+  T0: 335.253  (+/- 1)
+  X0: 274.849  (+/- 1)
+  Y0: 688.753  (+/- 1)
+  Z0: -499  (+/- 1)
+  VX: 0.48139  (+/- 68.6857)
+  VY: 8.20171  (+/- 65.1366)
+  VZ: 0.000285904  (+/- 68.9068)
+
+   */
+
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);
@@ -573,8 +625,8 @@ track::track(const event_points& event, const fit_settings& settings)
 
 //__Get Position of Track at Fixed Z____________________________________________________________
 const r4_point track::operator()(const real z) const {
-  const auto&& dz = (z - _z0.value) / _vz.value;
-  return { dz + _t0.value, std::fma(dz, _vx.value, _x0.value), std::fma(dz, _vy.value, _y0.value), z };
+  const auto&& dt = (z - _z0.value) / _vz.value;
+  return { dt + _t0.value, std::fma(dt, _vx.value, _x0.value), std::fma(dt, _vy.value, _y0.value), z };
 }
 //----------------------------------------------------------------------------------------------
 
@@ -603,7 +655,7 @@ const real_vector track::residual_vector() const {
 //__Relativistic Beta for the Track_____________________________________________________________
 real track::beta() const {
   return std::sqrt(util::math::fused_product(
-    _vx.value, _vx.value, _vy.value, _vy.value, _vz.value, _vz.value));
+    _vx.value, _vx.value, _vy.value, _vy.value, _vz.value, _vz.value)) / units::speed_of_light;
 }
 //----------------------------------------------------------------------------------------------
 

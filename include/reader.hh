@@ -19,7 +19,7 @@ std::vector<std::string> search_directory(const std::string& path);
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Detector Map___________________________________________________________________________
-using detector_map = std::unordered_map<type::integer, std::string>;
+using detector_map = std::unordered_map<integer, std::string>;
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Detector Map Import____________________________________________________________________

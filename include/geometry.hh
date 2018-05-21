@@ -38,6 +38,11 @@ struct box_volume { r3_point center, min, max; };
 const box_volume limits_of(const std::string& name);
 //----------------------------------------------------------------------------------------------
 
+//__Limit Box of the Volume with Point__________________________________________________________
+const box_volume limits_of_volume(const r3_point& point);
+const box_volume limits_of_volume(const r4_point& point);
+//----------------------------------------------------------------------------------------------
+
 } /* namespace geometry */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */

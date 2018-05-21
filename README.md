@@ -7,7 +7,7 @@ The tracker comes with a simple build script called `install` which allows for b
 
 Here is a list of useful commands:
 
-| Action | Options after `./install` |
+| Action | Options for `./install` |
 |:-:|:-:|
 | Build Only | none  |
 | Build and Auto Run | `--run`  |
@@ -16,7 +16,7 @@ Here is a list of useful commands:
 
 The tracking executable also comes with a set of command line arguments to specify geometry files, data files, ... etc. Here is a list of options:
 
-| Action | Short Options after `./tracker` | Long Options after `./tracker` |
+| Action | Short Options | Long Options |
 |:-:|:-:|:-:|
 | Geometry File | `-g <filepath>` | `--geometry=<filepath>`  |
 | Detector Map | `-m <filepath>` | `--map=<filepath>` |

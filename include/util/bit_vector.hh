@@ -1,5 +1,5 @@
-#ifndef UTIL__ALGORITHM_HH
-#define UTIL__ALGORITHM_HH
+#ifndef UTIL__BIT_VECTOR_HH
+#define UTIL__BIT_VECTOR_HH
 #pragma once
 
 #include <algorithm>
@@ -9,8 +9,6 @@
 namespace MATHUSLA {
 
 namespace util { ///////////////////////////////////////////////////////////////////////////////
-
-namespace algorithm { //////////////////////////////////////////////////////////////////////////
 
 namespace detail { /////////////////////////////////////////////////////////////////////////////
 //__Boolean-Like Object_________________________________________________________________________
@@ -36,6 +34,8 @@ public:
     resize(size, 0);
     for (auto i = count > size ? 0 : size - count; i < size; ++i) operator[](i) = true;
   }
+
+  bit_vector(std::size_t size) : bit_vector(0, size) {}
 
   std::size_t count() const { return std::count(begin(), end(), true); }
 
@@ -80,7 +80,7 @@ template<class UnaryFunction>
 inline UnaryFunction order2_permutations(std::size_t count, bit_vector_sequence& vectors, UnaryFunction f) {
   const auto&& size = vectors.size();
   bit_vector chooser(count, size);
-  std::size_t index = 0;
+  std::size_t index;
   do {
     do {
       f(chooser);
@@ -92,10 +92,8 @@ inline UnaryFunction order2_permutations(std::size_t count, bit_vector_sequence&
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace algorithm */ ////////////////////////////////////////////////////////////////////
-
 } /* namespace util */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 
-#endif /* UTIL__ALGORITHM_HH */
+#endif /* UTIL__BIT_VECTOR_HH */

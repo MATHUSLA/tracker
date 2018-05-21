@@ -13,6 +13,7 @@ add_executable(tracker
 
     src/analysis.cc
     src/geometry.cc
+    src/plot.cc
     src/reader.cc
 
     src/util/command_line_parser.cc
