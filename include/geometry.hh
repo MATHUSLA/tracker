@@ -6,9 +6,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
-
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,6 +59,11 @@ const box_volume limits_of(const std::string& name);
 //__Limit Box of the Volume with Point__________________________________________________________
 const box_volume limits_of_volume(const r3_point& point);
 const box_volume limits_of_volume(const r4_point& point);
+//----------------------------------------------------------------------------------------------
+
+//__Find Center of Geometry around Point________________________________________________________
+const r3_point find_center(const r3_point& point);
+const r4_point find_center(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
 } /* namespace geometry */ /////////////////////////////////////////////////////////////////////
