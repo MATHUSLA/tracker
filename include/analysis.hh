@@ -41,9 +41,13 @@ const r4_point mean(const event_points& points);
 const r4_point_vector covariance_matrix(const event_points& points);
 //----------------------------------------------------------------------------------------------
 
+//__Time Normalize Events_______________________________________________________________________
+const event_points time_normalize(const event_points& event);
+//----------------------------------------------------------------------------------------------
+
 //__Collapse Points by R4 Interval______________________________________________________________
-event_points collapse(const event_points& event,
-                      const r4_point& ds);
+const event_points collapse(const event_points& event,
+                            const r4_point& ds);
 //----------------------------------------------------------------------------------------------
 
 //__Event Partition Type________________________________________________________________________
@@ -51,9 +55,13 @@ struct event_partition { event_vector parts; Coordinate coordinate; };
 //----------------------------------------------------------------------------------------------
 
 //__Partition Points by Coordinate______________________________________________________________
-event_partition partition(const event_points& points,
-                          const real interval,
-                          const Coordinate coordinate=Coordinate::Z);
+const event_partition partition(const event_points& points,
+                                const real interval,
+                                const Coordinate coordinate=Coordinate::Z);
+//----------------------------------------------------------------------------------------------
+
+//__Center of Geometric Object for each Point___________________________________________________
+const event_points find_centers(const event_points& points);
 //----------------------------------------------------------------------------------------------
 
 //__Fast Check if Points Form a Line____________________________________________________________
@@ -62,11 +70,11 @@ bool fast_line_check(const event_points& points,
 //----------------------------------------------------------------------------------------------
 
 //__Seeding Algorithm___________________________________________________________________________
-event_vector seed(const size_t n,
-                  const event_points& event,
-                  const r4_point& collapse_ds,
-                  const real layer_dz,
-                  const real line_dr);
+const event_vector seed(const size_t n,
+                        const event_points& event,
+                        const r4_point& collapse_ds,
+                        const real layer_dz,
+                        const real line_dr);
 //----------------------------------------------------------------------------------------------
 
 //__Check if Seeds can be Joined________________________________________________________________
@@ -76,13 +84,13 @@ bool seeds_compatible(const event_points& first,
 //----------------------------------------------------------------------------------------------
 
 //__Join Two Seeds______________________________________________________________________________
-event_points join(const event_points& first,
-                  const event_points& second,
-                  const size_t difference);
+const event_points join(const event_points& first,
+                        const event_points& second,
+                        const size_t difference);
 //----------------------------------------------------------------------------------------------
 
 //__Seed Join___________________________________________________________________________________
-event_vector join_all(const event_vector& seeds);
+const event_vector join_all(const event_vector& seeds);
 //----------------------------------------------------------------------------------------------
 
 //__Fitting Parameter Type______________________________________________________________________
@@ -98,8 +106,7 @@ struct fit_settings {
 };
 //----------------------------------------------------------------------------------------------
 
-////////////////////////////////////////////////////////////////////////////////////////////////
-
+//__Track Object________________________________________________________________________________
 class track {
 public:
   track(const event_points& event,
@@ -159,8 +166,7 @@ private:
   std::vector<std::string> _detectors;
   fit_settings _settings;
 };
-
-////////////////////////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------------------------
 
 //__Output Stream Operator______________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
@@ -177,8 +183,8 @@ track_vector& operator+=(track_vector& tracks,
 //----------------------------------------------------------------------------------------------
 
 //__Fit all Seeds to Tracks_____________________________________________________________________
-track_vector fit_seeds(const event_vector& seeds,
-                       const fit_settings& settings={});
+const track_vector fit_seeds(const event_vector& seeds,
+                             const fit_settings& settings={});
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////

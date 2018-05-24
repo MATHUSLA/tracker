@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Processing " << events.size() << " Events\n";
 
     for (const auto& unsorted_event : events) {
-      const auto& event = t_copy_sort(unsorted_event);
+      const auto& event = analysis::t_copy_sort(unsorted_event);
       const auto& collapsed_event = analysis::collapse(event, options.collapse_size);
       const auto& layered_event = analysis::partition(collapsed_event, options.layer_depth).parts;
 
@@ -123,10 +123,15 @@ int main(int argc, char* argv[]) {
 
       util::io::newline();
 
-      auto part1 = analysis::join_all(seeds);
-      util::io::newline();
+      auto joined = analysis::join_all(seeds);
 
-      auto tracks = analysis::fit_seeds(part1);
+      std::cout << "joined (" << joined.size() << "): \n\n";
+      for (const auto& seed : joined)
+        util::io::print_range(seed) << "\n";
+
+      std::cout << "\nTRACK FITTING: \n\n";
+
+      auto tracks = analysis::fit_seeds(joined);
       plot::canvas canvas;
       for (const auto& track : tracks) {
         const auto& event = track.event();
@@ -136,20 +141,18 @@ int main(int argc, char* argv[]) {
           canvas.add_point(limits.center, 0.25, plot::color::BLUE);
           canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);
         }
+        canvas.add_line(event.front(), event.back());
+        std::cout << track(event.front().z) << " " << track(event.back().z) << "\n";
         canvas.add_line(track(event.front().z), track(event.back().z), 1, plot::color::RED);
       }
       canvas.draw();
-      // canvas.clear();
-      // canvas.add_box(-100, -100, -100, 100, 100, 100, 3, plot::color::GREEN);
-      // canvas.draw();
     }
   }
 
-  std::cout << "Done!\n";
   geometry::close();
   plot::end();
 
-  std::cout << "donedone\n";
+  std::cout << "Done!\n";
 
   return 0;
 }

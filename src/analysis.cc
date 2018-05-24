@@ -18,8 +18,8 @@
 
 #include "analysis.hh"
 
-#include <deque>
 #include <numeric>
+#include <queue>
 
 #include "ROOT/TMinuit.h"
 
@@ -72,21 +72,33 @@ const r4_point_vector covariance_matrix(const event_points& points) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Time Normalize Events_______________________________________________________________________
+const event_points time_normalize(const event_points& event) {
+  const auto size = event.size();
+  if (size == 0) return {};
+  auto out = t_copy_sort(event);
+  const auto min = r4_point{event.front().t, 0, 0, 0};
+  std::transform(out.cbegin(), out.cend(), out.begin(),
+    [&](const auto& point) { return point - min; });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Collapse Points by R4 Interval______________________________________________________________
-event_points collapse(const event_points& event,
-                      const r4_point& ds) {
-  if (event.empty())
-    return event;
+const event_points collapse(const event_points& event,
+                            const r4_point& ds) {
+  const auto&& size = event.size();
+  if (size == 0) return {};
 
   event_points out;
+  out.reserve(size);
 
-  const auto& sorted_event = t_copy_sort(event);
-  const auto&& size = sorted_event.size();
+  const auto& sorted_event = time_normalize(event);
 
   using size_type = event_points::size_type;
 
   size_type index = 0;
-  std::deque<size_type> marked_indicies{};
+  std::queue<size_type> marked_indicies;
   while (index < size) {
     size_type collected = 1, missed_index = 0;
     const auto& point = sorted_event[index];
@@ -98,7 +110,7 @@ event_points collapse(const event_points& event,
     while (++index < size) {
 
       while (!marked_indicies.empty() && index++ == marked_indicies.front())
-        marked_indicies.pop_front();
+        marked_indicies.pop();
 
       const auto& next = sorted_event[index];
       if (next.t > time_interval)
@@ -108,7 +120,7 @@ event_points collapse(const event_points& event,
         ++collected;
         sum += next;
         if (skipped)
-          marked_indicies.push_back(index);
+          marked_indicies.push(index);
       } else if (!skipped) {
         skipped = true;
         missed_index = index;
@@ -126,15 +138,14 @@ event_points collapse(const event_points& event,
 //----------------------------------------------------------------------------------------------
 
 //__Partition Points by Coordinate______________________________________________________________
-event_partition partition(const event_points& points,
-                          const real interval,
-                          const Coordinate coordinate) {
+const event_partition partition(const event_points& points,
+                                const real interval,
+                                const Coordinate coordinate) {
   event_partition out{{}, coordinate};
   if (points.empty())
     return out;
 
   auto& parts = out.parts;
-
   const auto& sorted_points = coordinate_stable_copy_sort(points, coordinate);
   const auto&& size = sorted_points.size();
 
@@ -164,6 +175,16 @@ event_partition partition(const event_points& points,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Center of Geometric Object for each Point___________________________________________________
+const event_points find_centers(const event_points& points) {
+  event_points out;
+  out.reserve(points.size());
+  std::transform(points.cbegin(), points.cend(), std::back_inserter(out),
+    [&](const auto& point) { return geometry::find_center(point); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Fast Check if Points Form a Line____________________________________________________________
 bool fast_line_check(const event_points& points, const real threshold) {
   const auto& line_begin = points.front();
@@ -175,11 +196,11 @@ bool fast_line_check(const event_points& points, const real threshold) {
 //----------------------------------------------------------------------------------------------
 
 //__Seeding Algorithm___________________________________________________________________________
-event_vector seed(const size_t n,
-                  const event_points& event,
-                  const r4_point& collapse_ds,
-                  const real layer_dz,
-                  const real line_dr) {
+const event_vector seed(const size_t n,
+                        const event_points& event,
+                        const r4_point& collapse_ds,
+                        const real layer_dz,
+                        const real line_dr) {
   if (n <= 2) return {};
 
   const auto& points = collapse(event, collapse_ds);
@@ -227,7 +248,9 @@ bool seeds_compatible(const event_points& first, const event_points& second, con
 //----------------------------------------------------------------------------------------------
 
 //__Join Two Seeds______________________________________________________________________________
-event_points join(const event_points& first, const event_points& second, const size_t difference) {
+const event_points join(const event_points& first,
+                        const event_points& second,
+                        const size_t difference) {
   const auto&& first_size = first.size();
   const auto&& second_size = second.size();
   const auto&& overlap = first_size - difference;
@@ -255,116 +278,121 @@ event_points join(const event_points& first, const event_points& second, const s
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-//__Target Range________________________________________________________________________________
-struct _range { size_t begin, end; };
+//__Index Representation of Event Vector________________________________________________________
+using index_vector = std::vector<std::size_t>;
 //----------------------------------------------------------------------------------------------
 
-//__Find Target Range for Secondaries___________________________________________________________
-const _range _find_range(const size_t seed_index,
-                         const size_t difference,
-                         const event_vector& seeds,
-                         const std::vector<size_t>& change_list) {
-  const auto& seed_second = seeds[seed_index][difference];
-  const auto&& size = change_list.size();
-  size_t begin, end = change_list[size - 1], index = 1;
-  while (true) {
-    begin = change_list[index++];
-    if (begin == end) break;
-    if (seed_second != seeds[begin].front()) continue;
-    end = change_list[index];
-    break;
-  }
-  return { std::move(begin), std::move(end) };
-}
-//----------------------------------------------------------------------------------------------
-
-//__Join all Secondaries to a Seed______________________________________________________________
+//__Join All Secondaries matching Seed__________________________________________________________
 void _join_secondaries(const size_t seed_index,
                        const size_t difference,
-                       const _range range,
-                       const event_vector& seeds,
+                       event_vector& seed_buffer,
+                       const index_vector& indicies,
                        util::bit_vector& join_list,
-                       event_vector& out) {
-  const auto& seed = seeds[seed_index];
-  const auto&& range_end = std::move(range.end);
-  for (auto index = range.begin; index < range_end; ++index) {
-    const auto& joined = join(seed, seeds[index], difference);
-    if (!joined.empty()) {
-      out.push_back(joined);
-      join_list[index] = true;
+                       index_vector& out) {
+  const auto& seed = seed_buffer[indicies[seed_index]];
+  const auto size = indicies.size();
+  for (size_t i = 0; i < size; ++i) {
+    const auto& next_seed = seed_buffer[indicies[i]];
+    const auto& joined_seed = join(seed, next_seed, difference);
+    if (!joined_seed.empty()) {
+      seed_buffer.push_back(joined_seed);
+      out.push_back(seed_buffer.size() - 1);
+      join_list[i] = true;
       join_list[seed_index] = true;
     }
   }
 }
 //----------------------------------------------------------------------------------------------
 
-//__Partial Join________________________________________________________________________________
-const event_vector _partial_join(const event_vector& seeds,
-                                 const size_t difference,
-                                 event_vector& singular) {
-  const auto&& size = seeds.size();
+//__Queue for Joinable Seeds____________________________________________________________________
+using seed_queue = std::queue<index_vector>;
+//----------------------------------------------------------------------------------------------
 
-  std::vector<size_t> change_list;
-  change_list.push_back(0);
-  for (size_t index = 1, last_index = 0; index < size; ++index) {
-    if (seeds[index].front() != seeds[last_index].front()) {
-      change_list.push_back(index);
-      last_index = index;
-    }
-  }
-  change_list.push_back(size);
-  change_list.shrink_to_fit();
+//__Partial Join Seeds from Seed Buffer_________________________________________________________
+bool _partial_join(event_vector& seed_buffer,
+                   const index_vector& indicies,
+                   const size_t difference,
+                   seed_queue& joined,
+                   seed_queue& singular,
+                   event_vector& out) {
+  const auto size = indicies.size();
+  if (size <= 1) return false;
 
   util::bit_vector join_list(size);
-
-  event_vector out;
-  out.reserve(size);
-  for (size_t index = 0; index < size; ++index) {
-    _join_secondaries(
-      index,
-      difference,
-      _find_range(index, difference, seeds, change_list),
-      seeds,
-      join_list,
-      out);
-  }
+  index_vector to_joined, to_singular;
+  to_joined.reserve(size);
+  to_singular.reserve(size);
 
   for (size_t index = 0; index < size; ++index)
-    if (!join_list[index])
-      singular.push_back(seeds[index]);
+    _join_secondaries(index, difference, seed_buffer, indicies, join_list, to_joined);
 
-  return out;
+  if (!to_joined.empty()) {
+    for (size_t i = 0; i < size; ++i)
+      if (!join_list[i])
+        to_singular.push_back(indicies[i]);
+
+    joined.push(to_joined);
+    singular.push(to_singular);
+    return true;
+  }
+
+  for (size_t i = 0; i < size; ++i)
+    out.push_back(seed_buffer[indicies[i]]);
+
+  return false;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Join Seeds from Seed Queues_________________________________________________________________
+void _join_next_in_queue(seed_queue& queue,
+                         event_vector& seed_buffer,
+                         const size_t difference,
+                         seed_queue& joined,
+                         seed_queue& singular,
+                         event_vector& out) {
+  if (!queue.empty()) {
+    const auto indicies = std::move(queue.front());
+    queue.pop();
+    _partial_join(seed_buffer, indicies, difference, joined, singular, out);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seed Join Loop______________________________________________________________________________
+void _full_join(event_vector& seed_buffer,
+                const size_t difference,
+                const size_t max_difference,
+                seed_queue& joined,
+                seed_queue& singular,
+                event_vector& out) {
+  do {
+    _join_next_in_queue(joined, seed_buffer, difference, joined, singular, out);
+    _join_next_in_queue(singular, seed_buffer, difference + 1, joined, singular, out);
+  } while (!joined.empty() || !singular.empty());
 }
 //----------------------------------------------------------------------------------------------
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Seed Join___________________________________________________________________________________
-event_vector join_all(const event_vector& seeds) {
+const event_vector join_all(const event_vector& seeds) {
+  const auto size = seeds.size();
+
   event_vector out;
-  out.reserve(seeds.size());
-  auto out_inserter = std::back_inserter(out);
+  out.reserve(size);  // FIXME: bad estimate?
 
-  auto current_seeds = seeds;
-  while (true) {
-    const auto& size = current_seeds.size();
-    current_seeds = _partial_join(current_seeds, 1, out);
-    if (current_seeds.size() == size) break;
-  }
-  std::copy(current_seeds.cbegin(), current_seeds.cend(), out_inserter);
+  event_vector seed_buffer;
+  std::copy(seeds.cbegin(), seeds.cend(), std::back_inserter(seed_buffer));
 
-  std::cout << "seeds: " << seeds.size() << "\n";
-  /*
-  for (const auto& seed : seeds)
-    util::io::print_range(seed) << "\n";
-  */
+  seed_queue joined, singular;
 
-  std::cout << "out: " << out.size() << "\n";
-  /*
-  for (const auto& seed : out)
-    util::io::print_range(seed) << "\n";
-  */
+  index_vector initial_seeds;
+  initial_seeds.reserve(size);
+  for (size_t i = 0; i < size; ++i)
+    initial_seeds.push_back(i);
 
+  joined.push(initial_seeds);
+  _full_join(seed_buffer, 1, 2, joined, singular, out);
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -384,10 +412,10 @@ real _track_squared_residual(const real t0,
   const auto& center = limits.center;
   const auto& min = limits.min;
   const auto& max = limits.max;
-  const auto&& dz = (center.z - z0) / vz;
-  const auto&& t_res = (dz + t0) / (2 * units::time);
-  const auto&& x_res = (std::fma(dz, vx, x0) - center.x) / (max.x - min.x);
-  const auto&& y_res = (std::fma(dz, vy, y0) - center.y) / (max.y - min.y);
+  const auto&& dt = (center.z - z0) / vz;
+  const auto&& t_res = (dt + t0) / (2 * units::time);
+  const auto&& x_res = (std::fma(dt, vx, x0) - center.x) / (max.x - min.x);
+  const auto&& y_res = (std::fma(dt, vy, y0) - center.y) / (max.y - min.y);
   return t_res*t_res + 12*x_res*x_res + 12*y_res*y_res;
 }
 //----------------------------------------------------------------------------------------------
@@ -690,8 +718,8 @@ track_vector& operator+=(track_vector& tracks, const event_points& seed) {
 //----------------------------------------------------------------------------------------------
 
 //__Fit all Seeds to Tracks_____________________________________________________________________
-track_vector fit_seeds(const event_vector& seeds,
-                       const fit_settings& settings) {
+const track_vector fit_seeds(const event_vector& seeds,
+                             const fit_settings& settings) {
   track_vector out;
   out.reserve(seeds.size());
   std::transform(seeds.cbegin(), seeds.cend(), std::back_inserter(out),

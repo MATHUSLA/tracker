@@ -244,6 +244,16 @@ const box_volume limits_of_volume(const r4_point& point) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Find Center of Geometry around Point________________________________________________________
+const r3_point find_center(const r3_point& point) {
+  return limits_of_volume(point).center;
+}
+const r4_point find_center(const r4_point& point) {
+  const auto& center = limits_of_volume(point).center;
+  return {point.t, center.x, center.y, center.z};
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace geometry */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */
