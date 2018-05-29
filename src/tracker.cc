@@ -141,7 +141,7 @@ int main(int argc, char* argv[]) {
           canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);
         }
         canvas.add_line(event.front(), event.back());
-        std::cout << track(event.front().z) << " " << track(event.back().z) << " " << track.chi_squared() << "\n";
+        std::cout << track(event.front().z) << " " << track(event.back().z) << " " << track.beta() << "\n";
         canvas.add_line(track(event.front().z), track(event.back().z), 1, plot::color::RED);
       }
 

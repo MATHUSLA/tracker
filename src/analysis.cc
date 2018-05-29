@@ -780,7 +780,7 @@ real track::chi_squared() const {
 
 //__Track Degrees of Freedom____________________________________________________________________
 size_t track::degrees_of_freedom() const {
-  return 4 * _event.size() - 6;
+  return 6;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -816,8 +816,8 @@ const track_vector fit_seeds(const event_vector& seeds,
                              const fit_settings& settings) {
   track_vector out;
   out.reserve(seeds.size());
-  std::transform(seeds.cbegin(), seeds.cend(), std::back_inserter(out),
-    [&](const auto& seed) { return track(seed, settings); });
+  for (const auto& seed : seeds)
+    out.emplace_back(seed, settings);
   return out;
 }
 //----------------------------------------------------------------------------------------------
