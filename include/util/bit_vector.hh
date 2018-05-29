@@ -74,7 +74,7 @@ using bit_vector_sequence = std::vector<bit_vector>;
 
 //__Generate Bit Vector Sequences In-place______________________________________________________
 inline bit_vector_sequence generate_bit_sequences(std::vector<std::pair<std::size_t, std::size_t>> setup) {
-  const auto&& size = setup.size();
+  const auto size = setup.size();
   if (size == 0) return {};
   bit_vector_sequence out;
   out.reserve(size);
@@ -96,7 +96,7 @@ inline UnaryFunction order1_permutations(std::size_t count, std::size_t total, U
 //__Second Order Bit Permutation Sequencer______________________________________________________
 template<class UnaryFunction>
 inline UnaryFunction order2_permutations(std::size_t count, bit_vector_sequence& vectors, UnaryFunction f) {
-  const auto&& size = vectors.size();
+  const auto size = vectors.size();
   bit_vector chooser(count, size);
   std::size_t index;
   do {

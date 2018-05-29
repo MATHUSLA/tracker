@@ -24,7 +24,7 @@
 #define FP_FAST_FMAF
 #define FP_FAST_FMAL
 
-#include "util/algorithm.hh"
+#include "util/bit_vector.hh"
 #include "util/command_line_parser.hh"
 #include "util/error.hh"
 #include "util/io.hh"

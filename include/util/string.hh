@@ -33,7 +33,7 @@ template <class Range>
 void split(const std::string& string,
            Range& tokens,
            const std::string& delimiters=" ") {
-  const auto&& size = string.size();
+  const auto size = string.size();
   std::string::size_type position, previous = 0;
   while (previous <= size) {
     position = string.find_first_of(delimiters, previous);
@@ -54,7 +54,7 @@ void splitlines(const std::string& string,
 
 //__Remove Leading and Trailing Spaces__________________________________________________________
 inline std::string& strip(std::string& string) {
-  const auto& end = string.end();
+  const auto end = string.end();
 
   auto forward = string.cbegin();
   while (std::isspace(*forward) && forward != end) ++forward;
