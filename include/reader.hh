@@ -41,7 +41,8 @@ using detector_map = std::unordered_map<integer, std::string>;
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Detector Map Import____________________________________________________________________
-detector_map import_detector_map(const std::string& path);
+detector_map import_detector_map(const std::string& path,
+                                 bool silence_errors=false);
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import___________________________________________________________________________
@@ -71,9 +72,10 @@ struct tracking_options {
   std::string root_z_key        = "Z";
   std::string root_detector_key = "Detector";
   r4_point    collapse_size     = {0, 0, 0, 0};
+  Coordinate  layer_axis        = Coordinate::Z;
   real        layer_depth       = 500;
   real        line_width        = 1;
-  integer     seed_size         = 3;
+  size_t      seed_size         = 3;
 };
 //----------------------------------------------------------------------------------------------
 

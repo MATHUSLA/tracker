@@ -230,7 +230,7 @@ inline r3_point cross(const r3_point& left, const r3_point& right) {
 
 //__R3 Point-Line Distance______________________________________________________________________
 inline real point_line_distance(const r3_point& point, const r3_point& begin, const r3_point& end) {
-  const auto&& denominator = norm(begin - end);
+  const auto denominator = norm(begin - end);
   return !denominator ? -1 : norm(cross(point - begin, point - end)) / denominator;
 }
 inline real point_line_distance(const r4_point& point, const r4_point& begin, const r4_point& end) {
@@ -414,9 +414,8 @@ struct real_vector4 { real_vector ts, xs, ys, zs; };
 
 //__Vector-Wise Reduction of Dimension__________________________________________________________
 inline r2_point_vector reduce_to_r2(const r3_point_vector& vec) {
-  const auto&& size = vec.size();
   r2_point_vector out;
-  out.reserve(size);
+  out.reserve(vec.size());
   std::for_each(vec.cbegin(), vec.cend(),
     [&](const auto& point) { out.push_back({point.x, point.y}); });
   return out;
@@ -425,9 +424,8 @@ inline r2_point_vector reduce_to_r2(const r3_point_vector& vec) {
 
 //__Vector-Wise Reduction of Dimension__________________________________________________________
 inline r2_point_vector reduce_to_r2(const r4_point_vector& vec) {
-  const auto&& size = vec.size();
   r2_point_vector out;
-  out.reserve(size);
+  out.reserve(vec.size());
   std::for_each(vec.cbegin(), vec.cend(),
     [&](const auto& point) { out.push_back({point.x, point.y}); });
   return out;
@@ -436,9 +434,8 @@ inline r2_point_vector reduce_to_r2(const r4_point_vector& vec) {
 
 //__Vector-Wise Reduction of Dimension__________________________________________________________
 inline r3_point_vector reduce_to_r3(const r4_point_vector& vec) {
-  const auto&& size = vec.size();
   r3_point_vector out;
-  out.reserve(size);
+  out.reserve(vec.size());
   std::for_each(vec.cbegin(), vec.cend(),
     [&](const auto& point) { out.push_back({point.x, point.y, point.z}); });
   return out;
@@ -465,7 +462,7 @@ inline real_vector3 reduce_to_r3(const real_vector4& vec) {
 
 //__R2-Point Vector Transposition_______________________________________________________________
 inline real_vector2 transpose(const r2_point_vector& vec) {
-  const auto&& size = vec.size();
+  const auto size = vec.size();
   real_vector2 out;
   out.xs.reserve(size);
   out.ys.reserve(size);
@@ -480,7 +477,7 @@ inline real_vector2 transpose(const r2_point_vector& vec) {
 
 //__R3-Point Vector Transposition_______________________________________________________________
 inline real_vector3 transpose(const r3_point_vector& vec) {
-  const auto&& size = vec.size();
+  const auto size = vec.size();
   real_vector3 out;
   out.xs.reserve(size);
   out.ys.reserve(size);
@@ -497,7 +494,7 @@ inline real_vector3 transpose(const r3_point_vector& vec) {
 
 //__R4-Point Vector Transposition_______________________________________________________________
 inline real_vector4 transpose(const r4_point_vector& vec) {
-  const auto&& size = vec.size();
+  const auto size = vec.size();
   real_vector4 out;
   out.ts.reserve(size);
   out.xs.reserve(size);
@@ -516,7 +513,7 @@ inline real_vector4 transpose(const r4_point_vector& vec) {
 
 //__R2-Vector Point Transposition_______________________________________________________________
 inline r2_point_vector transpose(const real_vector2& vec) {
-  const auto&& size = vec.xs.size();
+  const auto size = vec.xs.size();
   r2_point_vector out;
   out.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
@@ -530,7 +527,7 @@ inline r2_point_vector transpose(const real_vector2& vec) {
 
 //__R3-Vector Point Transposition_______________________________________________________________
 inline r3_point_vector transpose(const real_vector3& vec) {
-  const auto&& size = vec.xs.size();
+  const auto size = vec.xs.size();
   r3_point_vector out;
   out.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
@@ -545,7 +542,7 @@ inline r3_point_vector transpose(const real_vector3& vec) {
 
 //__R4-Vector Point Transposition_______________________________________________________________
 inline r4_point_vector transpose(const real_vector4& vec) {
-  const auto&& size = vec.xs.size();
+  const auto size = vec.xs.size();
   r4_point_vector out;
   out.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {

@@ -36,34 +36,34 @@ namespace analysis { ///////////////////////////////////////////////////////////
 
 //__Average Point_______________________________________________________________________________
 const r4_point mean(const event_points& points) {
-  const auto&& size = points.size();
+  const auto size = points.size();
   return (size == 0) ? r4_point{} : std::accumulate(points.cbegin(), points.cend(), r4_point{}) / size;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Row-Major Covariance Matrix_________________________________________________________________
 const r4_point_vector covariance_matrix(const event_points& points) {
-  const auto&& size = points.size();
+  const auto size = points.size();
   if (size == 0) return {};
 
-  const auto&& inv_size = 1.0L / size;
+  const auto inv_size = 1.0L / size;
 
   const auto& average = inv_size * std::accumulate(points.cbegin(), points.cend(), r4_point{});
   const auto& points_T = transpose(points);
 
-  const real&& covTT = inv_size * (points_T.ts * points_T.ts) - average.t * average.t;
-  const real&& covXX = inv_size * (points_T.xs * points_T.xs) - average.x * average.x;
-  const real&& covYY = inv_size * (points_T.ys * points_T.ys) - average.y * average.y;
-  const real&& covZZ = inv_size * (points_T.zs * points_T.zs) - average.z * average.z;
+  const real covTT = inv_size * (points_T.ts * points_T.ts) - average.t * average.t;
+  const real covXX = inv_size * (points_T.xs * points_T.xs) - average.x * average.x;
+  const real covYY = inv_size * (points_T.ys * points_T.ys) - average.y * average.y;
+  const real covZZ = inv_size * (points_T.zs * points_T.zs) - average.z * average.z;
 
-  const real&& covTX = inv_size * (points_T.ts * points_T.xs) - average.t * average.x;
-  const real&& covTY = inv_size * (points_T.ts * points_T.ys) - average.t * average.y;
-  const real&& covTZ = inv_size * (points_T.ts * points_T.zs) - average.t * average.z;
+  const real covTX = inv_size * (points_T.ts * points_T.xs) - average.t * average.x;
+  const real covTY = inv_size * (points_T.ts * points_T.ys) - average.t * average.y;
+  const real covTZ = inv_size * (points_T.ts * points_T.zs) - average.t * average.z;
 
-  const real&& covXY = inv_size * (points_T.xs * points_T.ys) - average.x * average.y;
-  const real&& covXZ = inv_size * (points_T.xs * points_T.zs) - average.x * average.z;
+  const real covXY = inv_size * (points_T.xs * points_T.ys) - average.x * average.y;
+  const real covXZ = inv_size * (points_T.xs * points_T.zs) - average.x * average.z;
 
-  const real&& covYZ = inv_size * (points_T.ys * points_T.zs) - average.y * average.z;
+  const real covYZ = inv_size * (points_T.ys * points_T.zs) - average.y * average.z;
 
   return {{covTT, covTX, covTY, covTZ},
           {covTX, covXX, covXY, covXZ},
@@ -87,7 +87,7 @@ const event_points time_normalize(const event_points& event) {
 //__Collapse Points by R4 Interval______________________________________________________________
 const event_points collapse(const event_points& event,
                             const r4_point& ds) {
-  const auto&& size = event.size();
+  const auto size = event.size();
   if (size == 0) return {};
 
   event_points out;
@@ -102,7 +102,7 @@ const event_points collapse(const event_points& event,
   while (index < size) {
     size_type collected = 1, missed_index = 0;
     const auto& point = sorted_event[index];
-    const auto&& time_interval = point.t + ds.t;
+    const auto time_interval = point.t + ds.t;
 
     r4_point sum = point;
 
@@ -147,7 +147,7 @@ const event_partition partition(const event_points& points,
 
   auto& parts = out.parts;
   const auto& sorted_points = coordinate_stable_copy_sort(points, coordinate);
-  const auto&& size = sorted_points.size();
+  const auto size = sorted_points.size();
 
   event_points::size_type count = 0;
   auto point_iter = sorted_points.cbegin();
@@ -204,7 +204,7 @@ const event_vector seed(const size_t n,
   if (n <= 2) return {};
 
   const auto& points = collapse(event, collapse_ds);
-  const auto&& size = points.size();
+  const auto size = points.size();
 
   if (size <= n) return { points };
 
@@ -212,7 +212,7 @@ const event_vector seed(const size_t n,
   out.reserve(std::pow(size, n) / std::pow(n/2.718, n));  // FIXME: work on this limit (Stirling's approximation)
 
   const auto& layers = partition(points, layer_dz).parts;
-  const auto&& layer_count = layers.size();
+  const auto layer_count = layers.size();
   if (layer_count < n) return {}; // FIXME: unsure what to do here
 
   util::bit_vector_sequence layer_sequence;
@@ -251,14 +251,14 @@ bool seeds_compatible(const event_points& first, const event_points& second, con
 const event_points join(const event_points& first,
                         const event_points& second,
                         const size_t difference) {
-  const auto&& first_size = first.size();
-  const auto&& second_size = second.size();
-  const auto&& overlap = first_size - difference;
+  const auto first_size = first.size();
+  const auto second_size = second.size();
+  const auto overlap = first_size - difference;
 
   if (overlap <= 0 || second_size < overlap)
     return {};
 
-  const auto&& size = difference + second_size;
+  const auto size = difference + second_size;
   event_points out;
   out.reserve(size);
 
@@ -407,15 +407,16 @@ real _track_squared_residual(const real t0,
                              const real vx,
                              const real vy,
                              const real vz,
-                             const std::string& volume) {
-  const auto& limits = geometry::limits_of(volume);
+                             const r4_point& point) {
+  const auto volume = geometry::volume(point);
+  const auto limits = geometry::limits_of(volume);
   const auto& center = limits.center;
   const auto& min = limits.min;
   const auto& max = limits.max;
-  const auto&& dt = (center.z - z0) / vz;
-  const auto&& t_res = (dt + t0) / (2 * units::time);
-  const auto&& x_res = (std::fma(dt, vx, x0) - center.x) / (max.x - min.x);
-  const auto&& y_res = (std::fma(dt, vy, y0) - center.y) / (max.y - min.y);
+  const auto dt = (center.z - z0) / vz;
+  const auto t_res = (dt + t0 - point.t) / (2 * units::time);
+  const auto x_res = (std::fma(dt, vx, x0) - center.x) / (max.x - min.x);
+  const auto y_res = (std::fma(dt, vy, y0) - center.y) / (max.y - min.y);
   return t_res*t_res + 12*x_res*x_res + 12*y_res*y_res;
 }
 //----------------------------------------------------------------------------------------------
@@ -428,14 +429,14 @@ struct _track_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 _track_parameters _guess_track(const event_points& event) {
   const auto& first = event.front();
   const auto& last = event.back();
-  const auto&& dt = last.t - first.t;
+  const auto dt = last.t - first.t;
   return {{first.t, 2*units::time, 0, 0},
           {first.x, 100*units::length, 0, 0},
           {first.y, 100*units::length, 0, 0},
           {first.z, 100*units::length, 0, 0},
-          {(last.x - first.x) / dt, 0.1*units::speed_of_light, 0, units::speed_of_light},
-          {(last.y - first.y) / dt, 0.1*units::speed_of_light, 0, units::speed_of_light},
-          {(last.z - first.z) / dt, 0.1*units::speed_of_light, 0, units::speed_of_light}};
+          {(last.x - first.x) / dt, 0.01*units::speed_of_light, 0, 0},
+          {(last.y - first.y) / dt, 0.01*units::speed_of_light, 0, 0},
+          {(last.z - first.z) / dt, 0.01*units::speed_of_light, 0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -452,7 +453,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t
         parameters[4],
         parameters[5],
         parameters[6],
-        geometry::volume(point)); });
+        point); });
 }
 //----------------------------------------------------------------------------------------------
 
@@ -521,25 +522,101 @@ _track_parameters& _fit_event(const event_points& event,
 }
 //----------------------------------------------------------------------------------------------
 
-//__4x4 Matrix Inverse__________________________________________________________________________
-real_array<16> _4x4_inverse(const real_array<16> m) {
+//__4x4 Cholesky Factorization (only for Positive Definite Symmetric Matricies)_________________
+real_array<16> _4x4_cholesky_factor(const real_array<16> m) {
+  using namespace util::math;
+  real_array<16> out{};
+  out[0]  = std::sqrt(m[0]);
+  out[4]  = m[4] / out[0];
+  out[5]  = std::sqrt(m[5] - out[4] * out[4]);
+  out[8]  = m[8] / out[0];
+  out[9]  = (m[9] - out[8] * out[4]) / out[5];
+  out[10] = std::sqrt(m[10] - out[9] * out[9] - out[8] * out[8]);
+  out[12] = m[12] / out[0];
+  out[13] = (m[13] - out[12] * out[4] ) / out[5];
+  out[14] = (m[14] - out[13] * out[9] - out[12] * out[8]) / out[10];
+  out[15] = std::sqrt(m[15] - out[14] * out[14] - out[13] * out[13] - out[12] * out[12]);
+  // std::cout.precision(15);
+  // std::cout << m[10] << " " << out[9] << " " << out[8] << ": " << m[10] - fused_product(out[9], out[9], out[8], out[8]) << "\n";
+  // util::io::print_range(m) << "\n";
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__4x4 Inverse Using Cholesky Factorization (only for Positive Definite Symmetric Matricies)___
+real_array<16> _4x4_cholesky_inverse(const real_array<16> m) {
+  const auto L = _4x4_cholesky_factor(m);
+
+  real_array<16> L_inv{};
+  L_inv[0]  = 1.0L / L[0];
+  L_inv[5]  = 1.0L / L[5];
+  L_inv[10] = 1.0L / L[10];
+  L_inv[15] = 1.0L / L[15];
+
+  L_inv[4]  = -L_inv[5]  *  L[4]  * L_inv[0];
+  L_inv[8]  = -L_inv[10] * (L[8]  * L_inv[0]
+                         +  L[9]  * L_inv[4]);
+  L_inv[9]  = -L_inv[10] *  L[9]  * L_inv[5];
+  L_inv[12] = -L_inv[15] * (L[12] * L_inv[0]
+                         +  L[13] * L_inv[4]
+                         +  L[14] * L_inv[8]);
+  L_inv[13] = -L_inv[15] * (L[13] * L_inv[5]
+                         +  L[14] * L_inv[9]);
+  L_inv[14] = -L_inv[15] *  L[14] * L_inv[10];
+
+  real_array<16> out;
+  out[0]  = L_inv[0]  * L_inv[0]
+          + L_inv[4]  * L_inv[4]
+          + L_inv[8]  * L_inv[8]
+          + L_inv[12] * L_inv[12];
+  out[5]  = L_inv[5]  * L_inv[5]
+          + L_inv[9]  * L_inv[9]
+          + L_inv[13] * L_inv[13];
+  out[10] = L_inv[10] * L_inv[10]
+          + L_inv[14] * L_inv[14];
+  out[15] = L_inv[15] * L_inv[15];
+
+  out[4]  = L_inv[4]  * L_inv[5]
+          + L_inv[8]  * L_inv[9]
+          + L_inv[12] * L_inv[13];
+  out[8]  = L_inv[8]  * L_inv[10]
+          + L_inv[12] * L_inv[14];
+  out[9]  = L_inv[9]  * L_inv[10]
+          + L_inv[13] * L_inv[14];
+  out[12] = L_inv[12] * L_inv[15];
+  out[13] = L_inv[13] * L_inv[15];
+  out[14] = L_inv[14] * L_inv[15];
+
+  out[1]  = out[4];
+  out[2]  = out[8];
+  out[3]  = out[12];
+  out[6]  = out[9];
+  out[7]  = out[13];
+  out[11] = out[14];
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__4x4 Naive Matrix Inverse____________________________________________________________________
+real_array<16> _4x4_naive_inverse(const real_array<16> m) {
   using namespace util::math;
 
   real det;
   real_array<16> out;
 
-  const auto&& m_04_09 = m[4]  * m[9];
-  const auto&& m_04_13 = m[4]  * m[13];
-  const auto&& m_05_08 = m[5]  * m[8];
-  const auto&& m_05_12 = m[5]  * m[12];
-  const auto&& m_06_11 = m[6]  * m[11];
-  const auto&& m_06_15 = m[6]  * m[15];
-  const auto&& m_07_10 = m[7]  * m[10];
-  const auto&& m_07_14 = m[7]  * m[14];
-  const auto&& m_08_13 = m[8]  * m[13];
-  const auto&& m_09_12 = m[9]  * m[12];
-  const auto&& m_10_15 = m[10] * m[15];
-  const auto&& m_11_14 = m[11] * m[14];
+  const auto m_04_09 = m[4]  * m[9];
+  const auto m_04_13 = m[4]  * m[13];
+  const auto m_05_08 = m[5]  * m[8];
+  const auto m_05_12 = m[5]  * m[12];
+  const auto m_06_11 = m[6]  * m[11];
+  const auto m_06_15 = m[6]  * m[15];
+  const auto m_07_10 = m[7]  * m[10];
+  const auto m_07_14 = m[7]  * m[14];
+  const auto m_08_13 = m[8]  * m[13];
+  const auto m_09_12 = m[9]  * m[12];
+  const auto m_10_15 = m[10] * m[15];
+  const auto m_11_14 = m[11] * m[14];
 
   out[0]  = fused_product(m[5], m_10_15 - m_11_14, m[9],  m_07_14 - m_06_15, m[13], m_06_11 - m_07_10);
   out[4]  = fused_product(m[4], m_11_14 - m_10_15, m[8],  m_06_15 - m_07_14, m[12], m_07_10 - m_06_11);
@@ -549,19 +626,19 @@ real_array<16> _4x4_inverse(const real_array<16> m) {
   det = m[0] * out[0] + m[1] * out[4] + m[2] * out[8] + m[3] * out[12];
   if (det == 0) return {};
 
-  const auto&& m_00_05 = m[0] * m[5];
-  const auto&& m_00_09 = m[0] * m[9];
-  const auto&& m_00_13 = m[0] * m[13];
-  const auto&& m_01_04 = m[1] * m[4];
-  const auto&& m_01_08 = m[1] * m[8];
-  const auto&& m_01_12 = m[1] * m[12];
-  const auto&& m_02_07 = m[2] * m[7];
-  const auto&& m_02_11 = m[2] * m[11];
-  const auto&& m_02_15 = m[2] * m[15];
-  const auto&& m_03_06 = m[3] * m[6];
-  const auto&& m_03_10 = m[3] * m[10];
-  const auto&& m_03_14 = m[3] * m[14];
-  const auto&& m_05_10 = m[5] * m[10];
+  const auto m_00_05 = m[0] * m[5];
+  const auto m_00_09 = m[0] * m[9];
+  const auto m_00_13 = m[0] * m[13];
+  const auto m_01_04 = m[1] * m[4];
+  const auto m_01_08 = m[1] * m[8];
+  const auto m_01_12 = m[1] * m[12];
+  const auto m_02_07 = m[2] * m[7];
+  const auto m_02_11 = m[2] * m[11];
+  const auto m_02_15 = m[2] * m[15];
+  const auto m_03_06 = m[3] * m[6];
+  const auto m_03_10 = m[3] * m[10];
+  const auto m_03_14 = m[3] * m[14];
+  const auto m_05_10 = m[5] * m[10];
 
   out[1]  = fused_product(m[1],  m_11_14 - m_10_15, m[9],  m_02_15 - m_03_14, m[13], m_03_10 - m_02_11);
   out[5]  = fused_product(m[0],  m_10_15 - m_11_14, m[8],  m_03_14 - m_02_15, m[12], m_02_11 - m_03_10);
@@ -576,9 +653,30 @@ real_array<16> _4x4_inverse(const real_array<16> m) {
   out[11] = fused_product(m[3],  m_05_08 - m_04_09, m[7],  m_00_09 - m_01_08, m[11], m_01_04 - m_00_05);
   out[15] = fused_product(m[2],  m_04_09 - m_05_08, m[6],  m_01_08 - m_00_09, m[10], m_00_05 - m_01_04);
 
-  const auto&& inv_det = 1.0L / det;
+  const auto inv_det = 1.0L / det;;
   std::transform(out.cbegin(), out.cend(), out.begin(), [&](const auto& value) { return value * inv_det; });
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Compute Weighted Inner Product______________________________________________________________
+real _weighted_inner_product(const real_array<16> weight,
+                             const real_array<4> left,
+                             const real_array<4> right) {
+  real out;
+  for (size_t i = 0; i < 4; ++i) {
+    for (size_t j = 0; j < 4; ++j) {
+      out += weight[4*i+j] * left[i] * right[j];
+    }
+  }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Compute Weighted Length_____________________________________________________________________
+real _weighted_length(const real_array<16> weight,
+                      const real_array<4> vector) {
+  return _weighted_inner_product(weight, vector, vector);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -599,36 +697,32 @@ track::track(const event_points& event, const fit_settings& settings)
   _vy = std::move(fit_track.vy);
   _vz = std::move(fit_track.vz);
 
-  const auto& event_begin = _event.cbegin();
-  const auto& event_end = _event.cend();
-
   const auto& covariance = covariance_matrix(_event);
   const auto& row0 = covariance[0];
   const auto& row1 = covariance[1];
   const auto& row2 = covariance[2];
   const auto& row3 = covariance[3];
-  const auto& inverse_covariance = _4x4_inverse({
+
+  const auto& inverse_covariance = _4x4_cholesky_inverse({
     row0.t, row0.x, row0.y, row0.z,
     row1.t, row1.x, row1.y, row1.z,
     row2.t, row2.x, row2.y, row2.z,
     row3.t, row3.x, row3.y, row3.z});
 
+  const auto& event_begin = _event.cbegin();
+  const auto& event_end = _event.cend();
+
   std::transform(event_begin, event_end, std::back_inserter(_delta_chi_squared),
     [&](const auto& point) {
-      const auto& delta = point - (*this)(point.z);
-      const real_array<4> delta_array{delta.t, delta.x, delta.y, delta.z};
-      real chi_sq;
-      for (size_t i = 0; i < 4; ++i) { for (size_t j = 0; j < 4; ++j) {
-        chi_sq += inverse_covariance[4*i+j] * delta_array[i] * delta_array[j];
-      } }
-      return chi_sq;
+      const auto delta = point - (*this)(point.z);
+      return _weighted_length(inverse_covariance, {delta.t, delta.x, delta.y, delta.z});
     });
 
   std::transform(event_begin, event_end, std::back_inserter(_detectors),
     [&](const auto& point) { return geometry::volume(point); });
 
-  std::transform(_detectors.cbegin(), _detectors.cend(), std::back_inserter(_squared_residuals),
-    [&](const auto& detector) {
+  std::transform(event_begin, event_end, std::back_inserter(_squared_residuals),
+    [&](const auto& point) {
       return _track_squared_residual(
         _t0.value,
         _x0.value,
@@ -637,14 +731,14 @@ track::track(const event_points& event, const fit_settings& settings)
         _vx.value,
         _vy.value,
         _vz.value,
-        detector);
+        point);
     });
 }
 //----------------------------------------------------------------------------------------------
 
 //__Get Position of Track at Fixed Z____________________________________________________________
 const r4_point track::operator()(const real z) const {
-  const auto&& dt = (z - _z0.value) / _vz.value;
+  const auto dt = (z - _z0.value) / _vz.value;
   return { dt + _t0.value, std::fma(dt, _vx.value, _x0.value), std::fma(dt, _vy.value, _y0.value), z };
 }
 //----------------------------------------------------------------------------------------------
@@ -657,7 +751,7 @@ real track::residual() const {
 
 //__Total Squared-Residual______________________________________________________________________
 real track::squared_residual() const {
-  return std::accumulate(_squared_residuals.cbegin(), _squared_residuals.cend(), 0);
+  return std::accumulate(_squared_residuals.cbegin(), _squared_residuals.cend(), 0.0L);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -680,19 +774,19 @@ real track::beta() const {
 
 //__Chi-Squared Test Statistic__________________________________________________________________
 real track::chi_squared() const {
-  return std::accumulate(_delta_chi_squared.cbegin(), _delta_chi_squared.cend(), 0);
+  return std::accumulate(_delta_chi_squared.cbegin(), _delta_chi_squared.cend(), 0.0L);
 }
 //----------------------------------------------------------------------------------------------
 
-//__Track Degree of Freedom_____________________________________________________________________
-integer track::degree_of_freedom() const {
+//__Track Degrees of Freedom____________________________________________________________________
+size_t track::degrees_of_freedom() const {
   return 4 * _event.size() - 6;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Chi-Squared per Degree of Freedom___________________________________________________________
 real track::chi_squared_per_dof() const {
-  return chi_squared() / degree_of_freedom();
+  return chi_squared() / degrees_of_freedom();
 }
 //----------------------------------------------------------------------------------------------
 

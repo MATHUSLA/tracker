@@ -151,7 +151,7 @@ public:
   real beta() const;
 
   real chi_squared() const;
-  integer degree_of_freedom() const;
+  size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
   const real_vector& chi_squared_vector() const { return _delta_chi_squared; }
 
@@ -186,6 +186,17 @@ track_vector& operator+=(track_vector& tracks,
 const track_vector fit_seeds(const event_vector& seeds,
                              const fit_settings& settings={});
 //----------------------------------------------------------------------------------------------
+
+/*
+//__Perform Full Analysis of Event______________________________________________________________
+const track_vector full(const event_points& event,
+                        const size_t max_seed_size,
+                        const r4_point& max_collapse_ds,
+                        const real max_layer_dz,
+                        const real max_line_dr,
+                        const fit_settings& settings={});
+//----------------------------------------------------------------------------------------------
+*/
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
 

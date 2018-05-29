@@ -36,6 +36,7 @@ namespace MATHUSLA { namespace TRACKER {
 namespace reader { /////////////////////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
+
 //__Recursive TSystemFile Traversal_____________________________________________________________
 void _collect_paths(TSystemDirectory* dir,
                     std::vector<std::string>& paths,
@@ -53,9 +54,11 @@ void _collect_paths(TSystemDirectory* dir,
   }
 }
 //----------------------------------------------------------------------------------------------
+
 //__ROOT File Key Traversal_____________________________________________________________________
 template<class BinaryFunction>
-BinaryFunction _traverse_file(const std::string& path, BinaryFunction f) {
+BinaryFunction _traverse_file(const std::string& path,
+                              BinaryFunction f) {
   auto file = TFile::Open(path.c_str());
   TIter next(file->GetListOfKeys());
   TKey* key = nullptr;
@@ -65,6 +68,7 @@ BinaryFunction _traverse_file(const std::string& path, BinaryFunction f) {
   return std::move(f);
 }
 //----------------------------------------------------------------------------------------------
+
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 namespace root { ///////////////////////////////////////////////////////////////////////////////
@@ -78,21 +82,25 @@ std::vector<std::string> search_directory(const std::string& path) {
 //----------------------------------------------------------------------------------------------
 
 //__Import Detector Map from File_______________________________________________________________
-detector_map import_detector_map(const std::string& path) {
+detector_map import_detector_map(const std::string& path,
+                                 bool silence_errors) {
   std::ifstream file(path);
   detector_map out{};
   std::string line;
+  uint_fast64_t line_counter;
   while (std::getline(file, line)) {
-    // TODO: how about std::isspace?
+    ++line_counter;
     const auto& space = line.find(" ");
     if (space == std::string::npos || line[0] == '#') {
       continue;
     } else {
       try {
-        const auto& name = line.substr(0, space);
-        const auto& id = std::stoll(line.substr(1 + space));
-        out.insert({id, name}); // overwrites duplicate names
-      } catch (...) {}
+        out.insert({std::stoll(line.substr(1 + space)), line.substr(0, space)});
+      } catch (...) {
+        util::error::exit_when(!silence_errors,
+          "[FATAL ERROR] Detector Map has an invalid ID.\n",
+          "              See Line ", line_counter, ".\n");
+      }
     }
   }
   return out;
@@ -115,8 +123,9 @@ analysis::event_vector import_events(const std::string& path,
       tree->SetBranchAddress(x_key.c_str(), &x);
       tree->SetBranchAddress(y_key.c_str(), &y);
       tree->SetBranchAddress(z_key.c_str(), &z);
-      analysis::event_points points{};
-      const auto&& size = tree->GetEntries();
+      const auto size = tree->GetEntries();
+      analysis::event_points points;
+      points.reserve(size);
       for (auto i = 0; i < size; ++i) {
         tree->GetEntry(i);
         points.push_back({
@@ -146,13 +155,14 @@ analysis::event_vector import_events(const std::string& path,
       tree = static_cast<TTree*>(file->Get(key->GetName()));
       tree->SetBranchAddress(time_key.c_str(), &t);
       tree->SetBranchAddress(detector_key.c_str(), &detector);
-      analysis::event_points points{};
-      const auto&& size = tree->GetEntries();
+      const auto size = tree->GetEntries();
+      analysis::event_points points;
+      points.reserve(size);
       for (auto i = 0; i < size; ++i) {
         tree->GetEntry(i);
         const auto& search = map.find(detector);
-        const auto& name = search != map.end() ? search->second : std::to_string(detector);
-        const auto& center = geometry::limits_of(name).center;
+        const auto& name = search != map.end() ? search->second : std::to_string(std::llround(std::trunc(detector)));
+        const auto center = geometry::limits_of(name).center;
         points.push_back({t, center.x, center.y, center.z});
       }
       out.push_back(points);
@@ -170,19 +180,20 @@ namespace script { /////////////////////////////////////////////////////////////
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Allowed Keys for Tracking Script Options Map________________________________________________
-const std::array<std::string, 8> _allowed_keys{{
+const std::array<std::string, 9> _allowed_keys{{
   "geometry-file",
   "geometry-map",
   "root-data",
   "root-keys",
   "collapse-size",
+  "layer-axis",
   "layer-depth",
   "line-width",
   "seed-size"}};
 //----------------------------------------------------------------------------------------------
 
 //__Tracking Script Allowed Keys End Iterator___________________________________________________
-const auto& _allowed_keys_end = _allowed_keys.cend();
+const auto _allowed_keys_end = _allowed_keys.cend();
 //----------------------------------------------------------------------------------------------
 
 //__Tracking Script Key Check___________________________________________________________________
@@ -226,7 +237,7 @@ const tracking_options read(const std::string& path) {
 
         std::vector<std::string> root_keys;
         util::string::split(value, root_keys, ",;");
-        const auto& size = root_keys.size();
+        const auto size = root_keys.size();
         const auto& end = root_keys.cend();
 
         util::error::exit_when(std::find(root_keys.cbegin(), end, "") != end,
@@ -252,7 +263,7 @@ const tracking_options read(const std::string& path) {
 
         std::vector<std::string> point;
         util::string::split(value, point, ",;");
-        const auto& size = point.size();
+        const auto size = point.size();
         const auto& end = point.cend();
 
         util::error::exit_when(size != 4,
@@ -264,17 +275,27 @@ const tracking_options read(const std::string& path) {
           "              Expected 4 arguments \"dt, dx, dy, dz\".\n");
 
         out.collapse_size = {
-          static_cast<type::real>(std::stold(point[0])),
-          static_cast<type::real>(std::stold(point[1])),
-          static_cast<type::real>(std::stold(point[2])),
-          static_cast<type::real>(std::stold(point[3])) };
-
+          static_cast<real>(std::stold(point[0])),
+          static_cast<real>(std::stold(point[1])),
+          static_cast<real>(std::stold(point[2])),
+          static_cast<real>(std::stold(point[3])) };
+      } else if (key == "layer-axis") {
+        if (value == "x" || value == "X") {
+          out.layer_axis = Coordinate::X;
+        } else if (value == "y" || value == "Y") {
+          out.layer_axis = Coordinate::Y;
+        } else if (value == "z" || value == "Z") {
+          out.layer_axis = Coordinate::Z;
+        } else {
+          util::error::exit("[FATAL ERROR] \"Layer Axis\" argument in Tracking Script is invalid.\n",
+                            "              Expected X/x, Y/y, or Z/z but received ", value, ".\n");
+        }
       } else if (key == "layer-depth") {
-        out.layer_depth = static_cast<type::real>(std::stold(value));
+        out.layer_depth = static_cast<real>(std::stold(value));
       } else if (key == "line-width") {
-        out.line_width = static_cast<type::real>(std::stold(value));
+        out.line_width = static_cast<real>(std::stold(value));
       } else if (key == "seed-size") {
-        out.seed_size = static_cast<type::integer>(std::stoull(value));
+        out.seed_size = static_cast<size_t>(std::stoull(value));
       }
     }
   }

@@ -44,7 +44,7 @@ TApplication* _app = nullptr;
 
 //__Convert RGB Color to TColor_________________________________________________________________
 Int_t _color_to_TColor_free_index(const color& color) {
-  const auto&& free_index = TColor::GetFreeColorIndex();
+  const auto free_index = TColor::GetFreeColorIndex();
   new TColor(free_index, color.r/255.0L, color.g/255.0L, color.b/255.0L);
   return free_index;
 }
@@ -68,6 +68,7 @@ struct _style_hash {
       << std::uppercase
       << std::setw(6)
       << ((style.color.r << 16) | (style.color.g << 8) | style.color.b)
+      << '_'
       << std::dec
       << std::setw(17)
       << std::setprecision(17)
@@ -184,7 +185,7 @@ void canvas::draw() {
   _impl->_canvas->cd();
 
   const auto& marker_map = _impl->_polymarker_map;
-  const auto&& marker_map_size = marker_map.bucket_count();
+  const auto marker_map_size = marker_map.bucket_count();
   for (size_t i = 0; i < marker_map_size; ++i) {
     auto polymarker = new TPolyMarker3D(marker_map.bucket_size(i), 20);
     const auto& begin = marker_map.cbegin(i);

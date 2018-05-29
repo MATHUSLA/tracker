@@ -36,12 +36,15 @@ namespace io { /////////////////////////////////////////////////////////////////
 
 //__Print Range of Printable Elements___________________________________________________________
 template<class Range>
-std::ostream& print_range(const Range& range, const std::string& spacer=" ", std::ostream& os=std::cout) {
+std::ostream& print_range(const Range& range,
+                          const std::string& spacer=" ",
+                          const std::string& prefix="",
+                          std::ostream& os=std::cout) {
   const auto& begin = range.cbegin();
   const auto& end = range.cend() - 1;
   if (end - begin >= 0) {
-    std::for_each(begin, end, [&](const auto& element) { os << element << spacer; });
-    os << *end;
+    std::for_each(begin, end, [&](const auto& element) { os << prefix << element << spacer; });
+    os << prefix << *end;
   }
   return os;
 }

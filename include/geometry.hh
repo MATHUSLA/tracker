@@ -33,6 +33,14 @@ void open(const std::string& path);
 void close();
 //----------------------------------------------------------------------------------------------
 
+//__Current Geometry File_______________________________________________________________________
+const std::string& current_geometry_path();
+//----------------------------------------------------------------------------------------------
+
+//__List of all Geometry Volumes________________________________________________________________
+const std::vector<std::string> full_structure();
+//----------------------------------------------------------------------------------------------
+
 //__Volume Containment Check____________________________________________________________________
 bool is_inside_volume(const r3_point& point, const std::string& name);
 bool is_inside_volume(const r4_point& point, const std::string& name);

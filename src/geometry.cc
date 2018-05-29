@@ -48,6 +48,7 @@ G4ThreeVector _to_G4ThreeVector(const r3_point& point) {
 //----------------------------------------------------------------------------------------------
 
 //__Static Variables____________________________________________________________________________
+thread_local std::string _path;
 thread_local G4RunManager* _manager;
 thread_local G4VPhysicalVolume* _world;
 thread_local std::unordered_map<std::string, _geometric_volume> _geometry;
@@ -116,9 +117,8 @@ bool _in_volume(const r3_point& point, const _geometric_volume& gvolume) {
 //__Find Volume Hierarchy_______________________________________________________________________
 std::vector<_geometric_volume> _get_volume_hierarchy(const r3_point& point) {
   std::vector<_geometric_volume> out{};
-  _traverse_geometry([&](const auto& name, const auto& gvolume) {
-    if (_in_volume(point, gvolume)) out.push_back(gvolume);
-  });
+  _traverse_geometry(
+    [&](const auto& _, const auto& gvolume) { if (_in_volume(point, gvolume)) out.push_back(gvolume); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -126,9 +126,8 @@ std::vector<_geometric_volume> _get_volume_hierarchy(const r3_point& point) {
 //__Find Volume_________________________________________________________________________________
 _geometric_volume _get_volume(const r3_point& point) {
   _geometric_volume out{};
-  _traverse_geometry([&](const auto& name, const auto& gvolume) {
-    if (_in_volume(point, gvolume)) out = gvolume;
-  });
+  _traverse_geometry(
+    [&](const auto& _, const auto& gvolume) { if (_in_volume(point, gvolume)) out = gvolume; });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -137,6 +136,8 @@ _geometric_volume _get_volume(const r3_point& point) {
 
 //__Initialize Geant4 Geometry Manager__________________________________________________________
 void open(const std::string& path) {
+  close();
+  _path = path;
   const static std::string&& _bar = std::string(61, '-');
   std::cout << "\nInitialize Geant4 Geometry Manager:\n" << _bar << "\n\n";
   _world = _load_geometry(path);
@@ -151,7 +152,27 @@ void open(const std::string& path) {
 
 //__Close Geant4 Geometry Manager_______________________________________________________________
 void close() {
+  _path.clear();
+  _geometry_insertion_order.clear();
+  _geometry.clear();
+  delete _world;
   delete _manager;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Current Geometry File_______________________________________________________________________
+const std::string& current_geometry_path() {
+  return _path;
+}
+//----------------------------------------------------------------------------------------------
+
+//__List of all Geometry Volumes________________________________________________________________
+const std::vector<std::string> full_structure() {
+  std::vector<std::string> out;
+  out.reserve(_geometry.size());
+  std::transform(_geometry.cbegin(), _geometry.cend(), std::back_inserter(out),
+    [](const auto& element) { return element.first; });
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
