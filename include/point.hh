@@ -328,7 +328,8 @@ inline real point_line_distance(const r4_point& point,
 inline real point_line_distance(const r4_point& point,
                                 const r4_point& begin,
                                 const r4_point& end,
-                                Coordinate x1, Coordinate x2) {
+                                const Coordinate x1,
+                                const Coordinate x2) {
   return -1;
 }
 //----------------------------------------------------------------------------------------------
@@ -336,7 +337,9 @@ inline real point_line_distance(const r4_point& point,
 inline real point_line_distance(const r4_point& point,
                                 const r4_point& begin,
                                 const r4_point& end,
-                                Coordinate x1, Coordinate x2, Coordinate x3) {
+                                const Coordinate x1,
+                                const Coordinate x2,
+                                const Coordinate x3) {
   return -1;
 }
 //----------------------------------------------------------------------------------------------
@@ -825,7 +828,7 @@ template<std::size_t N> inline real_array4<N> to_array(const real_vector4& vec) 
 
 //__General Range Sorting Function______________________________________________________________
 template<class Range, class Compare> inline Range& sort_range(Range& range,
-                                                              Compare comp) {
+                                                              const Compare comp) {
   std::sort(range.begin(), range.end(), comp);
   return range;
 }
@@ -833,7 +836,7 @@ template<class Range, class Compare> inline Range& sort_range(Range& range,
 
 //__General Range Stable Sorting Function_______________________________________________________
 template<class Range, class Compare> inline Range& stable_sort_range(Range& range,
-                                                                     Compare comp) {
+                                                                     const Compare comp) {
   std::stable_sort(range.begin(), range.end(), comp);
   return range;
 }
@@ -841,7 +844,7 @@ template<class Range, class Compare> inline Range& stable_sort_range(Range& rang
 
 //__General Range Copy Sorting Function_________________________________________________________
 template<class Range, class Compare> inline Range copy_sort_range(const Range& range,
-                                                                  Compare comp) {
+                                                                  const Compare comp) {
   auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
   std::partial_sort_copy(range.cbegin(), range.cend(), copy.begin(), copy.end(), comp);
   return copy;
@@ -850,7 +853,7 @@ template<class Range, class Compare> inline Range copy_sort_range(const Range& r
 
 //__General Range Stable Sorting Function_______________________________________________________
 template<class Range, class Compare> inline Range stable_copy_sort_range(const Range& range,
-                                                                         Compare comp) {
+                                                                         const Compare comp) {
   auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
   std::stable_sort(copy.begin(), copy.end(), comp);
   return copy;
@@ -898,7 +901,7 @@ template<class Range> inline Range& z_sort(Range& range) {
   return sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& coordinate_sort(Range& range,
-                                                    const Coordinate& coordinate) {
+                                                    const Coordinate coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_sort(range);
     case Coordinate::X: return x_sort(range);
@@ -922,7 +925,7 @@ template<class Range> inline Range& z_stable_sort(Range& range) {
   return stable_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range& coordinate_stable_sort(Range& range,
-                                                           const Coordinate& coordinate) {
+                                                           const Coordinate coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_stable_sort(range);
     case Coordinate::X: return x_stable_sort(range);
@@ -946,7 +949,7 @@ template<class Range> inline Range z_copy_sort(const Range& range) {
   return copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range coordinate_copy_sort(const Range& range,
-                                                        const Coordinate& coordinate) {
+                                                        const Coordinate coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_copy_sort(range);
     case Coordinate::X: return x_copy_sort(range);
@@ -970,7 +973,7 @@ template<class Range> inline Range z_stable_copy_sort(const Range& range) {
   return stable_copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<class Range> inline Range coordinate_stable_copy_sort(const Range& range,
-                                                               const Coordinate& coordinate) {
+                                                               const Coordinate coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_stable_copy_sort(range);
     case Coordinate::X: return x_stable_copy_sort(range);

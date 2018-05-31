@@ -431,7 +431,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t
 _track_parameters& _fit_event(const event_points& event,
                               _track_parameters& parameters,
                               const fit_settings& settings,
-                              Coordinate fixed=Coordinate::Z) {
+                              const Coordinate fixed=Coordinate::Z) {
   TMinuit minuit;
   minuit.SetGraphicsMode(settings.graphics_on);
   minuit.SetPrintLevel(settings.print_level);
