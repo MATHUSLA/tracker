@@ -36,6 +36,14 @@ add_executable(tracker
     src/util/command_line_parser.cc
 )
 
+# add_library(tracker
+#     src/analysis.cc
+#     src/geometry.cc
+#     src/plot.cc
+#     src/reader.cc
+#     src/util/command_line_parser.cc
+# )
+
 target_link_libraries(tracker
     ${Geant4_LIBRARIES}
     ${ROOT_LIBRARIES})

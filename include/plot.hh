@@ -72,12 +72,18 @@ public:
 
   canvas& operator=(canvas&& other) = default;
 
+  static canvas load(const std::string& path,
+                     const std::string& name="canvas");
+
   const std::string name() const;
   integer width() const;
   integer height() const;
+  bool empty() const;
 
   void draw();
   void clear();
+
+  bool save(const std::string& path) const;
 
   void add_point(const real x,
                  const real y,
@@ -136,19 +142,6 @@ private:
   std::unique_ptr<canvas_impl> _impl;
 };
 //----------------------------------------------------------------------------------------------
-
-namespace root { ///////////////////////////////////////////////////////////////////////////////
-
-//__Export Plot Canvas to ROOT File_____________________________________________________________
-void to_file(const canvas& canvas,
-             const std::string& path);
-//----------------------------------------------------------------------------------------------
-
-//__Import Plot Canvas from ROOT File___________________________________________________________
-canvas from_file(const std::string& path);
-//----------------------------------------------------------------------------------------------
-
-} /* namespace root */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace plot */ /////////////////////////////////////////////////////////////////////////
 

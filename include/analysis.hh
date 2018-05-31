@@ -37,10 +37,6 @@ using event_vector = std::vector<event_points>;
 const r4_point mean(const event_points& points);
 //----------------------------------------------------------------------------------------------
 
-//__Row-Major Covariance Matrix_________________________________________________________________
-const r4_point_vector covariance_matrix(const event_points& points);
-//----------------------------------------------------------------------------------------------
-
 //__Time Normalize Events_______________________________________________________________________
 const event_points time_normalize(const event_points& event);
 //----------------------------------------------------------------------------------------------
@@ -101,6 +97,8 @@ struct fit_parameter { real value, error, min, max; };
 struct fit_settings {
   std::string         command_name       = "MIGRAD";
   std::vector<double> command_parameters = {};
+  bool                graphics_on        = false;
+  integer             print_level        = -1;
   double              error_def          = 0.5;
   integer             max_iterations     = 250;
 };

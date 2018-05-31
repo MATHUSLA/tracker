@@ -22,13 +22,14 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "ROOT/TApplication.h"
-#include "ROOT/TCanvas.h"
-#include "ROOT/TPolyLine3D.h"
-#include "ROOT/TPolyMarker3D.h"
-#include "ROOT/TView3D.h"
-#include "ROOT/TAxis3D.h"
-#include "ROOT/TColor.h"
+#include <ROOT/TApplication.h>
+#include <ROOT/TCanvas.h>
+#include <ROOT/TPolyLine3D.h>
+#include <ROOT/TPolyMarker3D.h>
+#include <ROOT/TView3D.h>
+#include <ROOT/TAxis3D.h>
+#include <ROOT/TColor.h>
+#include <ROOT/TFile.h>
 
 #include <iostream>
 
@@ -43,10 +44,8 @@ TApplication* _app = nullptr;
 //----------------------------------------------------------------------------------------------
 
 //__Convert RGB Color to TColor_________________________________________________________________
-Int_t _color_to_TColor_free_index(const color& color) {
-  const auto free_index = TColor::GetFreeColorIndex();
-  new TColor(free_index, color.r/255.0L, color.g/255.0L, color.b/255.0L);
-  return free_index;
+Int_t _to_TColor_id(const color& color) {
+  return TColor::GetColor(color.r, color.g, color.b);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -139,17 +138,23 @@ struct canvas::canvas_impl {
   TCanvas* _canvas;
   TView3D* _view;
   std::vector<TPolyLine3D*> _poly_lines;
-  _style_point_map _polymarker_map, _polyline_map;
+  _style_point_map _polymarker_map;
   bool _has_updated = false;
 
-  canvas_impl(const std::string& name, const integer width, const integer height)
-      : _canvas(new TCanvas(name.c_str(), name.c_str(), width, height)),
-        _view(static_cast<TView3D*>(TView::CreateView())), _poly_lines({}) {
+  void reset_view() {
+    _view = static_cast<TView3D*>(TView::CreateView());
     _view->SetAutoRange(true);
   }
 
+  canvas_impl(const std::string& name, const integer width, const integer height)
+      : _canvas(new TCanvas(name.c_str(), name.c_str(), width, height)) {
+    reset_view();
+  }
+
   explicit canvas_impl(const canvas_impl& other) = default;
+  explicit canvas_impl(canvas_impl&& other) = default;
   canvas_impl& operator=(const canvas_impl& other) = default;
+  canvas_impl& operator=(canvas_impl&& other) = default;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -160,6 +165,22 @@ canvas::canvas(const std::string& name, const integer width, const integer heigh
 
 //__Canvas Destructor___________________________________________________________________________
 canvas::~canvas() = default;
+//----------------------------------------------------------------------------------------------
+
+//__Construct Canvas from File__________________________________________________________________
+canvas canvas::load(const std::string& path,
+                    const std::string& name) {
+  TFile file(path.c_str(), "READ");
+  canvas out;
+  if (!file.IsZombie()) {
+    TCanvas* test = nullptr;
+    file.GetObject(name.c_str(), test);
+    if (test) {
+      out._impl->_canvas = test;
+    }
+  }
+  return std::move(out);
+}
 //----------------------------------------------------------------------------------------------
 
 //__Canvas Name_________________________________________________________________________________
@@ -180,6 +201,12 @@ integer canvas::height() const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Check if Canvas Has Objects_________________________________________________________________
+bool canvas::empty() const {
+  return _impl->_poly_lines.empty() && _impl->_polymarker_map.empty();
+}
+//----------------------------------------------------------------------------------------------
+
 //__Draw Canvas_________________________________________________________________________________
 void canvas::draw() {
   _impl->_canvas->cd();
@@ -197,12 +224,12 @@ void canvas::draw() {
     if (begin != end) {
       const auto& style = (*begin).first;
       polymarker->SetMarkerSize(style.size);
-      polymarker->SetMarkerColor(_color_to_TColor_free_index(style.color));
+      polymarker->SetMarkerColor(_to_TColor_id(style.color));
       polymarker->Draw();
     }
   }
 
-  for (auto poly_line : _impl->_poly_lines)
+  for (const auto& poly_line : _impl->_poly_lines)
     poly_line->Draw();
 
 
@@ -223,12 +250,28 @@ void canvas::draw() {
 
 //__Clear A Canvas______________________________________________________________________________
 void canvas::clear() {
-  // TODO: fix
-  _impl->_polymarker_map.clear();
-  _impl->_polyline_map.clear();
-  _impl->_poly_lines.clear();
-  _impl->_canvas->GetPad(0)->Clear();
-  //_impl->_has_updated = false;
+  if (_impl->_has_updated) {
+    _impl->_canvas->cd();
+    _impl->_canvas->Clear();
+    _impl->_canvas->Modified();
+    _impl->_canvas->Update();
+    _impl->reset_view();
+    _impl->_polymarker_map.clear();
+    _impl->_poly_lines.clear();
+    _impl->_has_updated = false;
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Save Canvas to ROOT File____________________________________________________________________
+bool canvas::save(const std::string& path) const {
+  TFile file(path.c_str(), "UPDATE");
+  if (!file.IsZombie()) {
+    _impl->_canvas->Write();
+    file.Close();
+    return true;
+  }
+  return false;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -269,12 +312,12 @@ void canvas::add_line(const real x1,
                       const color& color) {
   _impl->_canvas->cd();
   auto& lines = _impl->_poly_lines;
-  lines.push_back(new TPolyLine3D());
+  lines.push_back(new TPolyLine3D);
   auto& line = lines.back();
   line->SetNextPoint(x1, y1, z1);
   line->SetNextPoint(x2, y2, z2);
   line->SetLineWidth(width);
-  line->SetLineColor(_color_to_TColor_free_index(color));
+  line->SetLineColor(_to_TColor_id(color));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -296,6 +339,7 @@ void canvas::add_line(const r4_point& first,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Add Box to Canvas___________________________________________________________________________
 void canvas::add_box(const real min_x,
                      const real min_y,
                      const real min_z,
@@ -317,7 +361,7 @@ void canvas::add_box(const real min_x,
   add_line(min_x, max_y, min_z, min_x, max_y, max_z, width, color);
   add_line(max_x, max_y, min_z, max_x, max_y, max_z, width, color);
 }
-
+//----------------------------------------------------------------------------------------------
 
 //__Add Box to Canvas___________________________________________________________________________
 void canvas::add_box(const r3_point& min,
@@ -336,24 +380,6 @@ void canvas::add_box(const r4_point& min,
   add_box(reduce_to_r3(min), reduce_to_r3(max), width, color);
 }
 //----------------------------------------------------------------------------------------------
-
-namespace root { ///////////////////////////////////////////////////////////////////////////////
-
-//__Export Plot Canvas to ROOT File_____________________________________________________________
-void to_file(const canvas& canvas,
-             const std::string& path) {
-  // TODO: implement
-}
-//----------------------------------------------------------------------------------------------
-
-//__Import Plot Canvas from ROOT File___________________________________________________________
-canvas from_file(const std::string& path) {
-  // TODO: implement
-  return std::move(canvas());
-}
-//----------------------------------------------------------------------------------------------
-
-} /* namespace root */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace plot */  ////////////////////////////////////////////////////////////////////////
 

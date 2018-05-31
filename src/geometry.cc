@@ -20,12 +20,12 @@
 
 #include <unordered_map>
 
-#include "Geant4/G4GDMLParser.hh"
-#include "Geant4/G4VPhysicalVolume.hh"
-#include "Geant4/G4VUserDetectorConstruction.hh"
-#include "Geant4/G4RunManager.hh"
-#include "Geant4/G4VoxelLimits.hh"
-#include "Geant4/G4AffineTransform.hh"
+#include <Geant4/G4GDMLParser.hh>
+#include <Geant4/G4VPhysicalVolume.hh>
+#include <Geant4/G4VUserDetectorConstruction.hh>
+#include <Geant4/G4RunManager.hh>
+#include <Geant4/G4VoxelLimits.hh>
+#include <Geant4/G4AffineTransform.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -33,7 +33,30 @@ namespace geometry { ///////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
+//__Geometric Type______________________________________________________________________________
 struct _geometric_volume { G4VPhysicalVolume* volume; G4AffineTransform transform; };
+//----------------------------------------------------------------------------------------------
+
+//__Hash of R3 Point for Precomputed Name Map___________________________________________________
+struct r3_point_hash {
+  size_t operator()(const r3_point& point) const {
+    auto out = 17U;
+    out = std::fma(out, 31U, std::hash<real>()(point.x));
+    out = std::fma(out, 31U, std::hash<real>()(point.y));
+    out = std::fma(out, 31U, std::hash<real>()(point.z));
+    return out;
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Static Geometry Variables___________________________________________________________________
+thread_local std::string _path;
+thread_local G4RunManager* _manager;
+thread_local G4VPhysicalVolume* _world;
+thread_local std::unordered_map<std::string, _geometric_volume> _geometry;
+thread_local std::vector<std::string> _geometry_insertion_order;
+thread_local std::unordered_map<r3_point, std::string, r3_point_hash> _precomputed_name;
+//----------------------------------------------------------------------------------------------
 
 //__Convert From G4ThreeVector to R3_Point______________________________________________________
 r3_point _to_r3_point(const G4ThreeVector& vector) {
@@ -47,12 +70,17 @@ G4ThreeVector _to_G4ThreeVector(const r3_point& point) {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Static Variables____________________________________________________________________________
-thread_local std::string _path;
-thread_local G4RunManager* _manager;
-thread_local G4VPhysicalVolume* _world;
-thread_local std::unordered_map<std::string, _geometric_volume> _geometry;
-thread_local std::vector<std::string> _geometry_insertion_order;
+//__Safely Get Name of Volume___________________________________________________________________
+const std::string _safe_get_name(const _geometric_volume& gvolume) {
+  const auto& volume = gvolume.volume;
+  return volume ? volume->GetName() : "";
+}
+//----------------------------------------------------------------------------------------------
+
+//__Unsafely Get Name of Volume_________________________________________________________________
+const std::string _unsafe_get_name(const _geometric_volume& gvolume) {
+  return gvolume.volume->GetName();
+}
 //----------------------------------------------------------------------------------------------
 
 //__Load Geometry from GDML File________________________________________________________________
@@ -73,7 +101,7 @@ class _empty_construction : public G4VUserDetectorConstruction {
 //__Build Geometry Tree and Insertion-Order List________________________________________________
 void _setup_geometry(const _geometric_volume& top) {
   const auto& volume = top.volume->GetLogicalVolume();
-  const auto&& size = volume->GetNoDaughters();
+  const auto size = volume->GetNoDaughters();
   for (auto i = 0; i < size; ++i) {
     const auto& daughter = volume->GetDaughter(i);
     const auto& name = daughter->GetName();
@@ -104,7 +132,8 @@ BinaryFunction _traverse_geometry(BinaryFunction f) {
 //----------------------------------------------------------------------------------------------
 
 //__Volume Containment Check____________________________________________________________________
-bool _in_volume(const r3_point& point, const _geometric_volume& gvolume) {
+bool _in_volume(const r3_point& point,
+                const _geometric_volume& gvolume) {
   const auto& volume = gvolume.volume;
   const auto& transform = gvolume.transform;
   const auto& translation = transform.NetTranslation();
@@ -117,18 +146,26 @@ bool _in_volume(const r3_point& point, const _geometric_volume& gvolume) {
 //__Find Volume Hierarchy_______________________________________________________________________
 std::vector<_geometric_volume> _get_volume_hierarchy(const r3_point& point) {
   std::vector<_geometric_volume> out{};
-  _traverse_geometry(
-    [&](const auto& _, const auto& gvolume) { if (_in_volume(point, gvolume)) out.push_back(gvolume); });
+  _traverse_geometry([&](const auto& _, const auto& gvolume) {
+    if (_in_volume(point, gvolume)) out.push_back(gvolume); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Find Volume_________________________________________________________________________________
 _geometric_volume _get_volume(const r3_point& point) {
-  _geometric_volume out{};
-  _traverse_geometry(
-    [&](const auto& _, const auto& gvolume) { if (_in_volume(point, gvolume)) out = gvolume; });
-  return out;
+  const auto& search = _precomputed_name.find(point);
+  if (search != _precomputed_name.end()) {
+    return _geometry[search->second];
+  } else {
+    _geometric_volume out{};
+    _traverse_geometry([&](const auto& _, const auto& gvolume) {
+      if (_in_volume(point, gvolume))
+        out = gvolume;
+    });
+    _precomputed_name[point] = _unsafe_get_name(out);
+    return out;
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -191,9 +228,8 @@ bool is_inside_volume(const r4_point& point,
 //__Get Volume Hierarchy________________________________________________________________________
 const std::vector<std::string> volume_hierarchy(const r3_point& point) {
   const auto& hierarchy = _get_volume_hierarchy(point);
-  std::vector<std::string> out{};
-  std::transform(hierarchy.cbegin(), hierarchy.cend(), std::back_inserter(out),
-    [](const auto& gvolume) { return gvolume.volume->GetName(); });
+  std::vector<std::string> out;
+  std::transform(hierarchy.cbegin(), hierarchy.cend(), std::back_inserter(out), _safe_get_name);
   return out;
 }
 const std::vector<std::string> volume_hierarchy(const r4_point& point) {
@@ -203,9 +239,7 @@ const std::vector<std::string> volume_hierarchy(const r4_point& point) {
 
 //__Get Volume Name_____________________________________________________________________________
 const std::string volume(const r3_point& point) {
-  const auto& gvolume = _get_volume(point);
-  const auto& volume = gvolume.volume;
-  return volume ? volume->GetName() : "";
+  return _safe_get_name(_get_volume(point));
 }
 const std::string volume(const r4_point& point) {
   return volume(reduce_to_r3(point));
@@ -219,11 +253,11 @@ const box_volume limits_of(const std::string& name) {
 
   box_volume out{};
 
-  const auto& search = _geometry.find(name);
-  if (search == _geometry.end())
+  const auto& geometry_search = _geometry.find(name);
+  if (geometry_search == _geometry.end())
     return out;
 
-  const auto& gvolume = search->second;
+  const auto& gvolume = geometry_search->second;
   const auto& volume = gvolume.volume;
   if (!volume)
     return out;
@@ -235,17 +269,21 @@ const box_volume limits_of(const std::string& name) {
   const auto& center = rotation * translation;
   out.center = _to_r3_point(center);
 
+  const auto& name_search = _precomputed_name.find(out.center);
+  if (name_search == _precomputed_name.end())
+    _precomputed_name[out.center] = name;
+
   G4double min, max;
   G4ThreeVector min_vector, max_vector;
 
   const auto& solid = volume->GetLogicalVolume()->GetSolid();
-  solid->CalculateExtent(kXAxis, _blank_voxels, _blank_transform, min, max);
+  solid->CalculateExtent(EAxis::kXAxis, _blank_voxels, _blank_transform, min, max);
   min_vector.setX(min);
   max_vector.setX(max);
-  solid->CalculateExtent(kYAxis, _blank_voxels, _blank_transform, min, max);
+  solid->CalculateExtent(EAxis::kYAxis, _blank_voxels, _blank_transform, min, max);
   min_vector.setY(min);
   max_vector.setY(max);
-  solid->CalculateExtent(kZAxis, _blank_voxels, _blank_transform, min, max);
+  solid->CalculateExtent(EAxis::kZAxis, _blank_voxels, _blank_transform, min, max);
   min_vector.setZ(min);
   max_vector.setZ(max);
 

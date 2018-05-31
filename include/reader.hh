@@ -61,6 +61,8 @@ analysis::event_vector import_events(const std::string& path,
 
 namespace script { /////////////////////////////////////////////////////////////////////////////
 
+enum class tracking_data_mode { Points, Detectors };
+
 //__Tracking Script Options_____________________________________________________________________
 struct tracking_options {
   std::string geometry_file     = "";

@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
       for (const auto& seed : joined)
         util::io::print_range(seed) << "\n";
 
-      auto tracks = analysis::fit_seeds(joined);
+      auto tracks = analysis::fit_seeds(joined, {"MIGRAD", {}, false, -1, 0.5, 150});
 
       std::cout << "\nTRACK FITTING (" << tracks.size() << "):\n\n";
       for (const auto& track : tracks) {
@@ -141,14 +141,14 @@ int main(int argc, char* argv[]) {
           canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);
         }
         canvas.add_line(event.front(), event.back());
-        std::cout << track(event.front().z) << " " << track(event.back().z) << " " << track.beta() << "\n";
+        std::cout << track(event.front().z) << " " << track(event.back().z) << " " << track.chi_squared_per_dof() << "\n";
         canvas.add_line(track(event.front().z), track(event.back().z), 1, plot::color::RED);
       }
 
       canvas.draw();
     }
   }
-
+  
   geometry::close();
   plot::end();
 

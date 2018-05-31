@@ -17,6 +17,8 @@ Here is a list of useful commands:
 | Clean CMake Build  | `--cmake --clean`       |
 | More Options       | `--help`                |
 
+After a successful run of `./install`, a new executable is created called `tracker`. This file is used to run the tracking algorithm.
+
 The tracking executable also comes with a set of command line arguments to specify geometry files, data files, ... etc. Here is a list of options:
 
 | Action                 | Short Options    | Long Options            |
@@ -32,15 +34,15 @@ The tracking executable also comes with a set of command line arguments to speci
 
 The tracking script is a configuration file which allows the user to specify details of the tracking algorithm. Here is a list of allowed keys and their associated value types.
 
-| Key             | Value Type                              | Description                                     |
-|:---------------:|:---------------------------------------:|:-----------------------------------------------:|
-| `geometry-file` | file path                               | path to `GDML` geometry file                    |
-| `geometry-map`  | file path                               | path to geometry map                            |
-| `root-data`     | directory                               | path to ROOT data to be processed               |
-| `root-keys`     | `T, X, Y, Z` keys OR `T, Detector` keys | ROOT keys for reading from files in `root-data` |
-| `collapse-size` | `dt, dx, dy, dz`                        | spacetime interval for point collapse           |
-| `layer-depth`   | positive `real`                         | layer size for geometry approximation           |
-| `line-width`    | positive `real`                         | tolerance for line approximation                |
-| `seed-size`     | positive `integer`                      | number of points per seed                       |
+| Key             | Value Type                    | Description                                     |
+|:---------------:|:-----------------------------:|:-----------------------------------------------:|
+| `geometry-file` | file path                     | path to `GDML` geometry file                    |
+| `geometry-map`  | file path                     | path to geometry map                            |
+| `root-data`     | directory                     | path to ROOT data to be processed               |
+| `root-keys`     | `T, X, Y, Z` OR `T, Detector` | ROOT keys for reading from files in `root-data` |
+| `collapse-size` | `dt, dx, dy, dz`              | spacetime interval for point collapse           |
+| `layer-depth`   | positive `real`               | layer size for geometry approximation           |
+| `line-width`    | positive `real`               | tolerance for line approximation                |
+| `seed-size`     | positive `integer`            | number of points per seed                       |
 
 The tracking script also includes the arguments for file paths so it replaces the  `-gmd` options defined in [__Build and Run__](#build-and-run).
