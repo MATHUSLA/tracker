@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
   for (const auto& path : paths) {
     std::cout << path << "\n";
 
-    const auto events = !options.geometry_map_file.empty()
+    const auto events = options.mode == reader::CollectionMode::Detector
       ? reader::root::import_events(path,
           options.root_time_key, options.root_detector_key, detector_map)
       : reader::root::import_events(path,
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Processing " << events.size() << " Events\n";
 
     for (const auto& unsorted_event : events) {
-      plot::canvas canvas;
+      plot::canvas canvas(path);
 
       // demo for Prototype only
       for (const auto& name : geometry::full_structure()) {

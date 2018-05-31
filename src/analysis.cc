@@ -155,7 +155,8 @@ const event_points find_centers(const event_points& points) {
 //----------------------------------------------------------------------------------------------
 
 //__Fast Check if Points Form a Line____________________________________________________________
-bool fast_line_check(const event_points& points, const real threshold) {
+bool fast_line_check(const event_points& points,
+                     const real threshold) {
   const auto& line_begin = points.front();
   const auto& line_end = points.back();
   return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,

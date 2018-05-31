@@ -27,6 +27,8 @@
 #include <numeric>
 #include <vector>
 
+#include "util/math.hh"
+
 namespace MATHUSLA {
 
 namespace type { ///////////////////////////////////////////////////////////////////////////////
@@ -50,13 +52,16 @@ inline r3_point reduce_to_r3(const r4_point& point) { return { point.x, point.y,
 //----------------------------------------------------------------------------------------------
 
 //__Stream Convenience Printing_________________________________________________________________
-inline std::ostream& operator<<(std::ostream& os, const r2_point& point) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const r2_point& point) {
   return os << '(' << point.x << ", " << point.y << ')';
 }
-inline std::ostream& operator<<(std::ostream& os, const r3_point& point) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const r3_point& point) {
   return os << '(' << point.x << ", " << point.y << ", " << point.z << ')';
 }
-inline std::ostream& operator<<(std::ostream& os, const r4_point& point) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const r4_point& point) {
   return os << '(' << point.t << ", " << point.x << ", " << point.y << ", " << point.z << ')';
 }
 //----------------------------------------------------------------------------------------------
@@ -68,18 +73,21 @@ inline r4_point operator-(const r4_point& point) { return { -point.t, -point.x, 
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Addition________________________________________________________
-inline r2_point& operator+=(r2_point& left, const r2_point& right) {
+inline r2_point& operator+=(r2_point& left,
+                            const r2_point& right) {
   left.x += right.x;
   left.y += right.y;
   return left;
 }
-inline r3_point& operator+=(r3_point& left, const r3_point& right) {
+inline r3_point& operator+=(r3_point& left,
+                            const r3_point& right) {
   left.x += right.x;
   left.y += right.y;
   left.z += right.z;
   return left;
 }
-inline r4_point& operator+=(r4_point& left, const r4_point& right) {
+inline r4_point& operator+=(r4_point& left,
+                            const r4_point& right) {
   left.t += right.t;
   left.x += right.x;
   left.y += right.y;
@@ -89,24 +97,36 @@ inline r4_point& operator+=(r4_point& left, const r4_point& right) {
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Addition_________________________________________________________________
-inline r2_point operator+(r2_point left, const r2_point& right) { return left += right; }
-inline r3_point operator+(r3_point left, const r3_point& right) { return left += right; }
-inline r4_point operator+(r4_point left, const r4_point& right) { return left += right; }
+inline r2_point operator+(r2_point left,
+                          const r2_point& right) {
+  return left += right;
+}
+inline r3_point operator+(r3_point left,
+                          const r3_point& right) {
+  return left += right;
+}
+inline r4_point operator+(r4_point left,
+                          const r4_point& right) {
+  return left += right;
+}
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Subtraction_____________________________________________________
-inline r2_point& operator-=(r2_point& left, const r2_point& right) {
+inline r2_point& operator-=(r2_point& left,
+                            const r2_point& right) {
   left.x -= right.x;
   left.y -= right.y;
   return left;
 }
-inline r3_point& operator-=(r3_point& left, const r3_point& right) {
+inline r3_point& operator-=(r3_point& left,
+                            const r3_point& right) {
   left.x -= right.x;
   left.y -= right.y;
   left.z -= right.z;
   return left;
 }
-inline r4_point& operator-=(r4_point& left, const r4_point& right) {
+inline r4_point& operator-=(r4_point& left,
+                            const r4_point& right) {
   left.t -= right.t;
   left.x -= right.x;
   left.y -= right.y;
@@ -116,24 +136,36 @@ inline r4_point& operator-=(r4_point& left, const r4_point& right) {
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Subtraction______________________________________________________________
-inline r2_point operator-(r2_point left, const r2_point& right) { return left -= right; }
-inline r3_point operator-(r3_point left, const r3_point& right) { return left -= right; }
-inline r4_point operator-(r4_point left, const r4_point& right) { return left -= right; }
+inline r2_point operator-(r2_point left,
+                          const r2_point& right) {
+  return left -= right;
+}
+inline r3_point operator-(r3_point left,
+                          const r3_point& right) {
+  return left -= right;
+}
+inline r4_point operator-(r4_point left,
+                          const r4_point& right) {
+  return left -= right;
+}
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Scalar Multiplication___________________________________________
-inline r2_point& operator*=(r2_point& left, const real right) {
+inline r2_point& operator*=(r2_point& left,
+                            const real right) {
   left.x *= right;
   left.y *= right;
   return left;
 }
-inline r3_point& operator*=(r3_point& left, const real right) {
+inline r3_point& operator*=(r3_point& left,
+                            const real right) {
   left.x *= right;
   left.y *= right;
   left.z *= right;
   return left;
 }
-inline r4_point& operator*=(r4_point& left, const real right) {
+inline r4_point& operator*=(r4_point& left,
+                            const real right) {
   left.t *= right;
   left.x *= right;
   left.y *= right;
@@ -143,27 +175,48 @@ inline r4_point& operator*=(r4_point& left, const real right) {
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Scalar Multiplication____________________________________________________
-inline r2_point operator*(r2_point left, const real right) { return left *= right; }
-inline r2_point operator*(const real left, r2_point right) { return right *= left; }
-inline r3_point operator*(r3_point left, const real right) { return left *= right; }
-inline r3_point operator*(const real left, r3_point right) { return right *= left; }
-inline r4_point operator*(r4_point left, const real right) { return left *= right; }
-inline r4_point operator*(const real left, r4_point right) { return right *= left; }
+inline r2_point operator*(r2_point left,
+                          const real right) {
+  return left *= right;
+}
+inline r2_point operator*(const real left,
+                          r2_point right) {
+  return right *= left;
+}
+inline r3_point operator*(r3_point left,
+                          const real right) {
+  return left *= right;
+}
+inline r3_point operator*(const real left,
+                          r3_point right) {
+  return right *= left;
+}
+inline r4_point operator*(r4_point left,
+                          const real right) {
+  return left *= right;
+}
+inline r4_point operator*(const real left,
+                          r4_point right) {
+  return right *= left;
+}
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Scalar Division_________________________________________________
-inline r2_point& operator/=(r2_point& left, const real right) {
+inline r2_point& operator/=(r2_point& left,
+                            const real right) {
   left.x /= right;
   left.y /= right;
   return left;
 }
-inline r3_point& operator/=(r3_point& left, const real right) {
+inline r3_point& operator/=(r3_point& left,
+                            const real right) {
   left.x /= right;
   left.y /= right;
   left.z /= right;
   return left;
 }
-inline r4_point& operator/=(r4_point& left, const real right) {
+inline r4_point& operator/=(r4_point& left,
+                            const real right) {
   left.t /= right;
   left.x /= right;
   left.y /= right;
@@ -173,55 +226,84 @@ inline r4_point& operator/=(r4_point& left, const real right) {
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Scalar Division__________________________________________________________
-inline r2_point operator/(r2_point left, const real right) { return left /= right; }
-inline r2_point operator/(const real left, r2_point right) { return right /= left; }
-inline r3_point operator/(r3_point left, const real right) { return left /= right; }
-inline r3_point operator/(const real left, r3_point right) { return right /= left; }
-inline r4_point operator/(r4_point left, const real right) { return left /= right; }
-inline r4_point operator/(const real left, r4_point right) { return right /= left; }
+inline r2_point operator/(r2_point left,
+                          const real right) { return left /= right; }
+inline r2_point operator/(const real left,
+                          r2_point right) { return right /= left; }
+inline r3_point operator/(r3_point left,
+                          const real right) { return left /= right; }
+inline r3_point operator/(const real left,
+                          r3_point right) { return right /= left; }
+inline r4_point operator/(r4_point left,
+                          const real right) { return left /= right; }
+inline r4_point operator/(const real left,
+                          r4_point right) { return right /= left; }
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Equality_________________________________________________________________
-inline bool operator==(const r2_point& left, const r2_point& right) {
+inline bool operator==(const r2_point& left,
+                       const r2_point& right) {
   return left.x == right.x && left.y == right.y;
 }
-inline bool operator==(const r3_point& left, const r3_point& right) {
+inline bool operator==(const r3_point& left,
+                       const r3_point& right) {
   return left.x == right.x && left.y == right.y && left.z == right.z;
 }
-inline bool operator==(const r4_point& left, const r4_point& right) {
+inline bool operator==(const r4_point& left,
+                       const r4_point& right) {
   return left.t == right.t && left.x == right.x && left.y == right.y && left.z == right.z;
 }
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Inequality_________________________________________________________________
-inline bool operator!=(const r2_point& left, const r2_point& right) { return !(left == right); }
-inline bool operator!=(const r3_point& left, const r3_point& right) { return !(left == right); }
-inline bool operator!=(const r4_point& left, const r4_point& right) { return !(left == right); }
+inline bool operator!=(const r2_point& left,
+                       const r2_point& right) {
+  return !(left == right);
+}
+inline bool operator!=(const r3_point& left,
+                       const r3_point& right) {
+  return !(left == right);
+}
+inline bool operator!=(const r4_point& left,
+                       const r4_point& right) {
+  return !(left == right);
+}
 //----------------------------------------------------------------------------------------------
 
-//__R2/R3 Inner Product_________________________________________________________________________
-inline real operator*(const r2_point& left, const r2_point& right) {
+//__R2/R3/R4 Inner Product______________________________________________________________________
+inline real operator*(const r2_point& left,
+                      const r2_point& right) {
   return left.x * right.x + left.y * right.y;
 }
-inline real operator*(const r3_point& left, const r3_point& right) {
+inline real operator*(const r3_point& left,
+                      const r3_point& right) {
   return left.x * right.x + left.y * right.y + left.z * right.z;
+}
+inline real operator*(const r4_point& left,
+                      const r4_point& right) {
+  return left.t * right.t + left.x * right.x + left.y * right.y + left.z * right.z;
 }
 //----------------------------------------------------------------------------------------------
 
-//__R2/R3 Length________________________________________________________________________________
+//__R2/R3/R4 Length_____________________________________________________________________________
 inline real norm(const r2_point& point) {
   return std::sqrt(point * point);
 }
 inline real norm(const r3_point& point) {
   return std::sqrt(point * point);
 }
+inline real norm(const r4_point& point) {
+  return std::sqrt(point * point);
+}
 //----------------------------------------------------------------------------------------------
 
 //__R2/R3 Cross Product_________________________________________________________________________
-inline r3_point cross(const r2_point& left, const r2_point& right) {
+inline r3_point cross(const r2_point& left,
+                      const r2_point& right) {
   return { 0, 0, left.x * right.y - left.y * right.x };
 }
-inline r3_point cross(const r3_point& left, const r3_point& right) {
+inline r3_point cross(const r3_point& left,
+                      const r3_point& right) {
   return { left.y * right.z - left.z * right.y,
            left.z * right.x - left.x * right.z,
            left.x * right.y - left.y * right.x };
@@ -229,26 +311,64 @@ inline r3_point cross(const r3_point& left, const r3_point& right) {
 //----------------------------------------------------------------------------------------------
 
 //__R3 Point-Line Distance______________________________________________________________________
-inline real point_line_distance(const r3_point& point, const r3_point& begin, const r3_point& end) {
+inline real point_line_distance(const r3_point& point,
+                                const r3_point& begin,
+                                const r3_point& end) {
   const auto denominator = norm(begin - end);
   return !denominator ? -1 : norm(cross(point - begin, point - end)) / denominator;
 }
-inline real point_line_distance(const r4_point& point, const r4_point& begin, const r4_point& end) {
+inline real point_line_distance(const r4_point& point,
+                                const r4_point& begin,
+                                const r4_point& end) {
   return point_line_distance(reduce_to_r3(point), reduce_to_r3(begin), reduce_to_r3(end));
 }
 //----------------------------------------------------------------------------------------------
 
+/*
+inline real point_line_distance(const r4_point& point,
+                                const r4_point& begin,
+                                const r4_point& end,
+                                Coordinate x1, Coordinate x2) {
+  return -1;
+}
+//----------------------------------------------------------------------------------------------
+
+inline real point_line_distance(const r4_point& point,
+                                const r4_point& begin,
+                                const r4_point& end,
+                                Coordinate x1, Coordinate x2, Coordinate x3) {
+  return -1;
+}
+//----------------------------------------------------------------------------------------------
+
+inline real point_line_distance(const r4_point& point,
+                                const r4_point& begin,
+                                const r4_point& end) {
+  const auto delta = begin - point;
+  const auto line = end - begin;
+  const auto norm2_line = line * line;
+  return !norm2_line ? -1 : norm(delta - (delta * line) * line / norm2_line);
+}
+//----------------------------------------------------------------------------------------------
+*/
+
 //__R3 Interval Check___________________________________________________________________________
-inline bool within_dr(const r3_point& a, const r3_point& b, const r3_point& dr) {
+inline bool within_dr(const r3_point& a,
+                      const r3_point& b,
+                      const r3_point& dr) {
   return std::abs(a.x - b.x) <= dr.x && std::abs(a.y - b.y) <= dr.y && std::abs(a.z - b.z) <= dr.z;
 }
-inline bool within_dr(const r4_point& a, const r4_point& b, const r4_point& dr) {
+inline bool within_dr(const r4_point& a,
+                      const r4_point& b,
+                      const r4_point& dr) {
   return std::abs(a.x - b.x) <= dr.x && std::abs(a.y - b.y) <= dr.y && std::abs(a.z - b.z) <= dr.z;
 }
 //----------------------------------------------------------------------------------------------
 
 //__R4 Interval Check___________________________________________________________________________
-inline bool within_ds(const r4_point& a, const r4_point& b, const r4_point& ds) {
+inline bool within_ds(const r4_point& a,
+                      const r4_point& b,
+                      const r4_point& ds) {
   return std::abs(a.t - b.t) <= ds.t && within_dr(a, b, ds);
 }
 //----------------------------------------------------------------------------------------------
@@ -395,7 +515,8 @@ template<std::size_t N> inline r4_point_array<N> transpose(const real_array4<N>&
 //----------------------------------------------------------------------------------------------
 
 //__Real-Array Dot Product______________________________________________________________________
-template<std::size_t N> inline real operator*(const real_array<N>& left, const real_array<N>& right) {
+template<std::size_t N> inline real operator*(const real_array<N>& left,
+                                              const real_array<N>& right) {
   return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0.0L);
 }
 //----------------------------------------------------------------------------------------------
@@ -557,7 +678,8 @@ inline r4_point_vector transpose(const real_vector4& vec) {
 //----------------------------------------------------------------------------------------------
 
 //__Real-Vector Dot Product_____________________________________________________________________
-inline real operator*(const real_vector& left, const real_vector& right) {
+inline real operator*(const real_vector& left,
+                      const real_vector& right) {
   return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0.0L);
 }
 //----------------------------------------------------------------------------------------------
@@ -702,21 +824,24 @@ template<std::size_t N> inline real_array4<N> to_array(const real_vector4& vec) 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 //__General Range Sorting Function______________________________________________________________
-template<class Range, class Compare> inline Range& sort_range(Range& range, Compare comp) {
+template<class Range, class Compare> inline Range& sort_range(Range& range,
+                                                              Compare comp) {
   std::sort(range.begin(), range.end(), comp);
   return range;
 }
 //----------------------------------------------------------------------------------------------
 
 //__General Range Stable Sorting Function_______________________________________________________
-template<class Range, class Compare> inline Range& stable_sort_range(Range& range, Compare comp) {
+template<class Range, class Compare> inline Range& stable_sort_range(Range& range,
+                                                                     Compare comp) {
   std::stable_sort(range.begin(), range.end(), comp);
   return range;
 }
 //----------------------------------------------------------------------------------------------
 
 //__General Range Copy Sorting Function_________________________________________________________
-template<class Range, class Compare> inline Range copy_sort_range(const Range& range, Compare comp) {
+template<class Range, class Compare> inline Range copy_sort_range(const Range& range,
+                                                                  Compare comp) {
   auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
   std::partial_sort_copy(range.cbegin(), range.cend(), copy.begin(), copy.end(), comp);
   return copy;
@@ -724,7 +849,8 @@ template<class Range, class Compare> inline Range copy_sort_range(const Range& r
 //----------------------------------------------------------------------------------------------
 
 //__General Range Stable Sorting Function_______________________________________________________
-template<class Range, class Compare> inline Range stable_copy_sort_range(const Range& range, Compare comp) {
+template<class Range, class Compare> inline Range stable_copy_sort_range(const Range& range,
+                                                                         Compare comp) {
   auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
   std::stable_sort(copy.begin(), copy.end(), comp);
   return copy;
@@ -732,10 +858,30 @@ template<class Range, class Compare> inline Range stable_copy_sort_range(const R
 //----------------------------------------------------------------------------------------------
 
 //__Coordinate-Wise Sorting Functors____________________________________________________________
-template<class T> struct t_ordered { constexpr bool operator()(const T& a, const T& b) const { return a.t < b.t; } };
-template<class T> struct x_ordered { constexpr bool operator()(const T& a, const T& b) const { return a.x < b.x; } };
-template<class T> struct y_ordered { constexpr bool operator()(const T& a, const T& b) const { return a.y < b.y; } };
-template<class T> struct z_ordered { constexpr bool operator()(const T& a, const T& b) const { return a.z < b.z; } };
+template<class C> struct t_ordered {
+  constexpr bool operator()(const C& a,
+                            const C& b) const {
+    return a.t < b.t;
+  }
+};
+template<class C> struct x_ordered {
+  constexpr bool operator()(const C& a,
+                            const C& b) const {
+    return a.x < b.x;
+  }
+};
+template<class C> struct y_ordered {
+  constexpr bool operator()(const C& a,
+                            const C& b) const {
+    return a.y < b.y;
+  }
+};
+template<class C> struct z_ordered {
+  constexpr bool operator()(const C& a,
+                            const C& b) const {
+    return a.z < b.z;
+  }
+};
 //----------------------------------------------------------------------------------------------
 
 //__General Coordinate-Wise Sorting Functions___________________________________________________
@@ -751,7 +897,8 @@ template<class Range> inline Range& y_sort(Range& range) {
 template<class Range> inline Range& z_sort(Range& range) {
   return sort_range(range, z_ordered<typename Range::value_type>{});
 }
-template<class Range> inline Range& coordinate_sort(Range& range, const Coordinate& coordinate) {
+template<class Range> inline Range& coordinate_sort(Range& range,
+                                                    const Coordinate& coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_sort(range);
     case Coordinate::X: return x_sort(range);
@@ -774,7 +921,8 @@ template<class Range> inline Range& y_stable_sort(Range& range) {
 template<class Range> inline Range& z_stable_sort(Range& range) {
   return stable_sort_range(range, z_ordered<typename Range::value_type>{});
 }
-template<class Range> inline Range& coordinate_stable_sort(Range& range, const Coordinate& coordinate) {
+template<class Range> inline Range& coordinate_stable_sort(Range& range,
+                                                           const Coordinate& coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_stable_sort(range);
     case Coordinate::X: return x_stable_sort(range);
@@ -797,7 +945,8 @@ template<class Range> inline Range y_copy_sort(const Range& range) {
 template<class Range> inline Range z_copy_sort(const Range& range) {
   return copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
-template<class Range> inline Range coordinate_copy_sort(const Range& range, const Coordinate& coordinate) {
+template<class Range> inline Range coordinate_copy_sort(const Range& range,
+                                                        const Coordinate& coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_copy_sort(range);
     case Coordinate::X: return x_copy_sort(range);
@@ -820,7 +969,8 @@ template<class Range> inline Range y_stable_copy_sort(const Range& range) {
 template<class Range> inline Range z_stable_copy_sort(const Range& range) {
   return stable_copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
-template<class Range> inline Range coordinate_stable_copy_sort(const Range& range, const Coordinate& coordinate) {
+template<class Range> inline Range coordinate_stable_copy_sort(const Range& range,
+                                                               const Coordinate& coordinate) {
   switch (coordinate) {
     case Coordinate::T: return t_stable_copy_sort(range);
     case Coordinate::X: return x_stable_copy_sort(range);

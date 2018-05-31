@@ -182,11 +182,12 @@ namespace script { /////////////////////////////////////////////////////////////
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Allowed Keys for Tracking Script Options Map________________________________________________
-const std::array<std::string, 9> _allowed_keys{{
+const std::array<std::string, 10> _allowed_keys{{
   "geometry-file",
   "geometry-map",
   "root-data",
-  "root-keys",
+  "root-position-keys",
+  "root-detector-key",
   "collapse-size",
   "layer-axis",
   "layer-depth",
@@ -235,32 +236,33 @@ const tracking_options read(const std::string& path) {
         out.geometry_map_file = value;
       } else if (key == "root-data") {
         out.root_directory = value;
-      } else if (key == "root-keys") {
 
+      } else if (key == "root-position-keys") {
         std::vector<std::string> root_keys;
         util::string::split(value, root_keys, ",;");
         const auto size = root_keys.size();
         const auto& end = root_keys.cend();
-
         util::error::exit_when(std::find(root_keys.cbegin(), end, "") != end,
           "[FATAL ERROR] \"ROOT Keys\" argument in Tracking Script is invalid.\n"
-          "              Expected 2 arguments \"Time, Detector\" or 4 arguments \"Time, X, Y, Z\".\n");
+          "              Expected 1 arguments \"T\" or 4 arguments \"T, X, Y, Z\".\n");
 
-        if (size == 2) {
+        if (size == 1) {
           out.root_time_key = root_keys[0];
-          out.root_detector_key = root_keys[1];
+          out.mode = CollectionMode::Detector;
         } else if (size == 4) {
           out.root_time_key = root_keys[0];
           out.root_x_key = root_keys[1];
           out.root_y_key = root_keys[2];
           out.root_z_key = root_keys[3];
+          out.mode = CollectionMode::Position;
         } else {
           util::error::exit(
             "[FATAL ERROR] \"ROOT Keys\" argument in Tracking Script is invalid.\n"
-            "              Expected 2 arguments \"Time, Detector\" or 4 arguments \"Time, X, Y, Z\" "
+            "              Expected 1 arguments \"T\" or 4 arguments \"T, X, Y, Z\" "
                           "but received ", size, ".\n");
         }
-
+      } else if (key == "root-detector-key") {
+        out.root_detector_key = value;
       } else if (key == "collapse-size") {
 
         std::vector<std::string> point;

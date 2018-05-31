@@ -59,21 +59,24 @@ analysis::event_vector import_events(const std::string& path,
 
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////
 
+enum class CollectionMode { Position, Detector };
+
 //__Tracking Options Structure__________________________________________________________________
 struct tracking_options {
-  std::string geometry_file     = "";
-  std::string geometry_map_file = "";
-  std::string root_directory    = "";
-  std::string root_time_key     = "Time";
-  std::string root_x_key        = "X";
-  std::string root_y_key        = "Y";
-  std::string root_z_key        = "Z";
-  std::string root_detector_key = "Detector";
-  r4_point    collapse_size     = {0, 0, 0, 0};
-  Coordinate  layer_axis        = Coordinate::Z;
-  real        layer_depth       = 500;
-  real        line_width        = 1;
-  size_t      seed_size         = 3;
+  std::string    geometry_file     = "";
+  std::string    geometry_map_file = "";
+  std::string    root_directory    = "";
+  std::string    root_time_key     = "T";
+  std::string    root_x_key        = "X";
+  std::string    root_y_key        = "Y";
+  std::string    root_z_key        = "Z";
+  std::string    root_detector_key = "Detector";
+  CollectionMode mode              = CollectionMode::Detector;
+  r4_point       collapse_size     = {0, 0, 0, 0};
+  Coordinate     layer_axis        = Coordinate::Z;
+  real           layer_depth       = 500;
+  real           line_width        = 1;
+  size_t         seed_size         = 3;
 };
 //----------------------------------------------------------------------------------------------
 
