@@ -15,34 +15,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
-project(MATHUSLA_TRACKER)
+project(MATHUSLA_TRACKER VERSION 0.0.1 DESCRIPTION "MATHUSLA Particle Tracker")
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
-set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
 find_package(Geant4 REQUIRED gdml)
 find_package(ROOT   REQUIRED Minuit)
 
 add_executable(tracker
     src/tracker.cc
-
     src/analysis.cc
     src/geometry.cc
     src/plot.cc
     src/reader.cc
-
     src/util/command_line_parser.cc
 )
 
-# add_library(tracker
-#     src/analysis.cc
-#     src/geometry.cc
-#     src/plot.cc
-#     src/reader.cc
-#     src/util/command_line_parser.cc
-# )
+# TODO: make into library
+#add_library(tracker SHARED
+#    src/analysis.cc
+#    src/geometry.cc
+#    src/plot.cc
+#    src/reader.cc
+#    src/util/command_line_parser.cc
+#)
+
+# set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 
 target_link_libraries(tracker
     ${Geant4_LIBRARIES}

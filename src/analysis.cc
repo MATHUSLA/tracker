@@ -536,7 +536,6 @@ track::track(const event_points& event,
   const auto& event_begin = _event.cbegin();
   const auto& event_end = _event.cend();
 
-
   std::transform(event_begin, event_end, std::back_inserter(_delta_chi_squared),
     [&](const auto& point) {
       return _track_squared_residual(
@@ -623,15 +622,41 @@ real track::chi_squared_per_dof() const {
 //----------------------------------------------------------------------------------------------
 
 //__Output Stream Operator______________________________________________________________________
-std::ostream& operator<<(std::ostream& os, const track& t) {
-  return os << "Track Parameters: \n"
-    << "  T0: " << t.t0_value() << "  (+/- " << t.t0_error() << ")\n"
-    << "  X0: " << t.x0_value() << "  (+/- " << t.x0_error() << ")\n"
-    << "  Y0: " << t.y0_value() << "  (+/- " << t.y0_error() << ")\n"
-    << "  Z0: " << t.z0_value() << "  (+/- " << t.z0_error() << ")\n"
-    << "  VX: " << t.vx_value() << "  (+/- " << t.vx_error() << ")\n"
-    << "  VY: " << t.vy_value() << "  (+/- " << t.vy_error() << ")\n"
-    << "  VZ: " << t.vz_value() << "  (+/- " << t.vz_error() << ")\n";
+std::ostream& operator<<(std::ostream& os,
+                         const track& track) {
+  os.precision(7);
+  os << "Track Parameters: \n"
+     << "  T0: " << track.t0_value() << "  (+/- " << track.t0_error() << ")\n"
+     << "  X0: " << track.x0_value() << "  (+/- " << track.x0_error() << ")\n"
+     << "  Y0: " << track.y0_value() << "  (+/- " << track.y0_error() << ")\n"
+     << "  Z0: " << track.z0_value() << "  (+/- " << track.z0_error() << ")\n"
+     << "  VX: " << track.vx_value() << "  (+/- " << track.vx_error() << ")\n"
+     << "  VY: " << track.vy_value() << "  (+/- " << track.vy_error() << ")\n"
+     << "  VZ: " << track.vz_value() << "  (+/- " << track.vz_error() << ")\n";
+
+  os.precision(6);
+  os << "Event: \n";
+  const auto event = track.event();
+  const auto detectors = track.detectors();
+  const auto size = event.size();
+  for (size_t i = 0; i < size; ++i) {
+    os << "  " << detectors[i] << " " << event[i] << "\n";
+  }
+
+  os.precision(7);
+  os << "Statistics: \n"
+     << "  chi2:     " << track.chi_squared();
+  util::io::print_range(track.chi_squared_vector(), " + ", " = ", os) << "\n";
+  os << "  dof:      " << track.degrees_of_freedom()                  << "\n"
+     << "  chi2/dof: " << track.chi_squared_per_dof()                 << "\n";
+
+  os.precision(6);
+  os << "Dynamics: \n"
+     << "  beta:  " << track.beta()                   << "\n"
+     << "  front: " << track(track.event().front().z) << "\n"
+     << "  back:  " << track(track.event().back().z)  << "\n";
+
+  return os;
 }
 //----------------------------------------------------------------------------------------------
 

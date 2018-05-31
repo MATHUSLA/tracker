@@ -20,21 +20,9 @@
 #include "geometry.hh"
 #include "plot.hh"
 #include "reader.hh"
-#include "units.hh"
 
 #include "util/command_line_parser.hh"
-#include "util/error.hh"
 #include "util/io.hh"
-#include "util/string.hh"
-
-//__Missing Path Exit Command___________________________________________________________________
-void exit_on_missing_path(const std::string& path,
-                          const std::string& name) {
-  using namespace MATHUSLA::util;
-  error::exit_when(!io::path_exists(path),
-    "[FATAL ERROR] ", name, " Missing: The file ", path, " cannot be found.\n");
-}
-//----------------------------------------------------------------------------------------------
 
 //__Main Function: Tracker______________________________________________________________________
 int main(int argc, char* argv[]) {
@@ -43,40 +31,13 @@ int main(int argc, char* argv[]) {
 
   using util::cli::option;
 
-  option help_opt   ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
-  option geo_opt    ('g', "geometry", "Geometry Import",             option::required_arguments);
-  option map_opt    ('m', "map",      "Detector Map",                option::required_arguments);
-  option root_opt   ('d', "data",     "ROOT Data Directory",         option::required_arguments);
-  option script_opt ('s', "script",   "Tracking Script",             option::required_arguments);
-  option quiet_opt  ('q', "quiet",    "Quiet Mode",                  option::no_arguments);
+  option help_opt  ('h', "help",  "MATHUSLA Tracking Algorithm", option::no_arguments);
+  option quiet_opt ('q', "quiet", "Quiet Mode",                  option::no_arguments);
 
-  util::cli::parse(argv, {&help_opt, &geo_opt, &root_opt, &map_opt, &script_opt, &quiet_opt});
+  const auto options = reader::parse_input(argc, argv);
 
-  util::error::exit_when(argc == 1 || !(script_opt.count || geo_opt.count || root_opt.count),
-    "[FATAL ERROR] Insufficient Arguments: ",
-    "Must include arguments for geometry and ROOT directory or for a tracking script. \n",
-    "              Run \'./tracker --help\' for more details.\n");
+  argc = util::cli::parse(argv, {&help_opt, &quiet_opt});
 
-  if (script_opt.count) exit_on_missing_path(script_opt.argument, "Tracking Script");
-
-  reader::script::tracking_options options;
-
-  if (script_opt.count) {
-    options = reader::script::read(script_opt.argument);
-    geo_opt.count += !options.geometry_file.empty();
-    map_opt.count += !options.geometry_map_file.empty();
-    root_opt.count += !options.root_directory.empty();
-  } else {
-    options.geometry_file = geo_opt.count ? geo_opt.argument : "";
-    options.geometry_map_file = map_opt.count ? map_opt.argument : "";
-    options.root_directory = root_opt.count ? root_opt.argument : "";
-  }
-
-  if (geo_opt.count) exit_on_missing_path(options.geometry_file, "Geometry File");
-  if (map_opt.count) exit_on_missing_path(options.geometry_map_file, "Geometry Map");
-  if (root_opt.count) exit_on_missing_path(options.root_directory, "ROOT Directory");
-
-  units::define();
   plot::init();
   geometry::open(options.geometry_file);
   const auto& detector_map = reader::root::import_detector_map(options.geometry_map_file);
@@ -86,7 +47,7 @@ int main(int argc, char* argv[]) {
   for (const auto& path : paths) {
     std::cout << path << "\n";
 
-    const auto events = map_opt.count
+    const auto events = !options.geometry_map_file.empty()
       ? reader::root::import_events(path,
           options.root_time_key, options.root_detector_key, detector_map)
       : reader::root::import_events(path,
@@ -141,14 +102,14 @@ int main(int argc, char* argv[]) {
           canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);
         }
         canvas.add_line(event.front(), event.back());
-        std::cout << track(event.front().z) << " " << track(event.back().z) << " " << track.chi_squared_per_dof() << "\n";
+        std::cout << track << "\n";
         canvas.add_line(track(event.front().z), track(event.back().z), 1, plot::color::RED);
       }
 
       canvas.draw();
     }
   }
-  
+
   geometry::close();
   plot::end();
 

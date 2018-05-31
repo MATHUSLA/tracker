@@ -21,14 +21,16 @@
 #include <array>
 #include <fstream>
 
-#include "ROOT/TFile.h"
-#include "ROOT/TKey.h"
-#include "ROOT/TSystemDirectory.h"
-#include "ROOT/TTree.h"
+#include <ROOT/TFile.h>
+#include <ROOT/TKey.h>
+#include <ROOT/TSystemDirectory.h>
+#include <ROOT/TTree.h>
 
 #include "geometry.hh"
 #include "units.hh"
+#include "util/command_line_parser.hh"
 #include "util/error.hh"
+#include "util/io.hh"
 #include "util/string.hh"
 
 namespace MATHUSLA { namespace TRACKER {
@@ -304,6 +306,59 @@ const tracking_options read(const std::string& path) {
 //----------------------------------------------------------------------------------------------
 
 } /* namespace script */ ///////////////////////////////////////////////////////////////////////
+
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+//__Missing Path Exit Command___________________________________________________________________
+void _exit_on_missing_path(const std::string& path,
+                           const std::string& name) {
+  util::error::exit_when(!util::io::path_exists(path),
+    "[FATAL ERROR] ", name, " Missing: The file ", path, " cannot be found.\n");
+}
+//----------------------------------------------------------------------------------------------
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Parse Command Line Arguments________________________________________________________________
+const tracking_options parse_input(int& argc,
+                                   char* argv[]) {
+  using util::cli::option;
+
+  option geo_opt    ('g', "geometry", "Geometry Import",     option::required_arguments);
+  option map_opt    ('m', "map",      "Detector Map",        option::required_arguments);
+  option root_opt   ('d', "data",     "ROOT Data Directory", option::required_arguments);
+  option script_opt ('s', "script",   "Tracking Script",     option::required_arguments);
+
+  util::cli::parse(argv, {&geo_opt, &root_opt, &map_opt, &script_opt});
+
+  util::error::exit_when((geo_opt.count && !root_opt.count)
+                      || (root_opt.count && !geo_opt.count)
+                      || !(script_opt.count || geo_opt.count || root_opt.count)
+                      || argc == 1,
+    "[FATAL ERROR] Insufficient Arguments:\n",
+    "              Must include arguments for geometry ",
+    "and ROOT directory \"(-gd)\" or arguments for a tracking script \"(-s)\".\n");
+
+  if (script_opt.count) _exit_on_missing_path(script_opt.argument, "Tracking Script");
+
+  reader::tracking_options out;
+
+  if (script_opt.count) {
+    out = script::read(script_opt.argument);
+    geo_opt.count += !out.geometry_file.empty();
+    map_opt.count += !out.geometry_map_file.empty();
+    root_opt.count += !out.root_directory.empty();
+  } else {
+    out.geometry_file = geo_opt.count ? geo_opt.argument : "";
+    out.geometry_map_file = map_opt.count ? map_opt.argument : "";
+    out.root_directory = root_opt.count ? root_opt.argument : "";
+  }
+
+  if (geo_opt.count) _exit_on_missing_path(out.geometry_file, "Geometry File");
+  if (map_opt.count) _exit_on_missing_path(out.geometry_map_file, "Geometry Map");
+  if (root_opt.count) _exit_on_missing_path(out.root_directory, "ROOT Directory");
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
 
 } /* namespace reader */ ///////////////////////////////////////////////////////////////////////
 
