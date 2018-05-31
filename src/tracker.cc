@@ -21,7 +21,6 @@
 #include "plot.hh"
 #include "reader.hh"
 
-#include "util/command_line_parser.hh"
 #include "util/io.hh"
 
 //__Main Function: Tracker______________________________________________________________________
@@ -29,14 +28,7 @@ int main(int argc, char* argv[]) {
   using namespace MATHUSLA;
   using namespace MATHUSLA::TRACKER;
 
-  using util::cli::option;
-
-  option help_opt  ('h', "help",  "MATHUSLA Tracking Algorithm", option::no_arguments);
-  option quiet_opt ('q', "quiet", "Quiet Mode",                  option::no_arguments);
-
   const auto options = reader::parse_input(argc, argv);
-
-  argc = util::cli::parse(argv, {&help_opt, &quiet_opt});
 
   plot::init();
   geometry::open(options.geometry_file);

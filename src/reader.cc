@@ -324,12 +324,14 @@ const tracking_options parse_input(int& argc,
                                    char* argv[]) {
   using util::cli::option;
 
-  option geo_opt    ('g', "geometry", "Geometry Import",     option::required_arguments);
-  option map_opt    ('m', "map",      "Detector Map",        option::required_arguments);
-  option root_opt   ('d', "data",     "ROOT Data Directory", option::required_arguments);
-  option script_opt ('s', "script",   "Tracking Script",     option::required_arguments);
+  option help_opt    ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
+  option verbose_opt ('v', "",         "Verbosity",                   option::required_arguments);
+  option geo_opt     ('g', "geometry", "Geometry Import",             option::required_arguments);
+  option map_opt     ('m', "map",      "Detector Map",                option::required_arguments);
+  option root_opt    ('d', "data",     "ROOT Data Directory",         option::required_arguments);
+  option script_opt  ('s', "script",   "Tracking Script",             option::required_arguments);
 
-  util::cli::parse(argv, {&geo_opt, &root_opt, &map_opt, &script_opt});
+  util::cli::parse(argv, {&help_opt, &verbose_opt, &geo_opt, &root_opt, &map_opt, &script_opt});
 
   util::error::exit_when((geo_opt.count && !root_opt.count)
                       || (root_opt.count && !geo_opt.count)

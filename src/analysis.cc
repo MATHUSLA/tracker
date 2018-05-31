@@ -646,10 +646,10 @@ std::ostream& operator<<(std::ostream& os,
 
   os.precision(7);
   os << "Statistics: \n"
-     << "  chi2:     " << track.chi_squared();
-  util::io::print_range(track.chi_squared_vector(), " + ", " = ", os) << "\n";
-  os << "  dof:      " << track.degrees_of_freedom()                  << "\n"
-     << "  chi2/dof: " << track.chi_squared_per_dof()                 << "\n";
+     << "  chi2:     " << track.chi_squared() << " = ";
+  util::io::print_range(track.chi_squared_vector(), " + ", "", os) << "\n";
+  os << "  dof:      " << track.degrees_of_freedom()               << "\n"
+     << "  chi2/dof: " << track.chi_squared_per_dof()              << "\n";
 
   os.precision(6);
   os << "Dynamics: \n"
