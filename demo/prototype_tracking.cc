@@ -21,12 +21,37 @@
 #include <tracker/reader.hh>
 #include <tracker/plot.hh>
 
+// TODO: seed filter
+
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc, char* argv[]) {
   using namespace MATHUSLA;
   using namespace MATHUSLA::TRACKER;
 
-  
+  const auto options = reader::parse_input(argc, argv);
+  const auto detector_map = reader::root::import_detector_map(options.geometry_map_file);
+
+  plot::init();
+  geometry::open(options.geometry_file);
+  for (const auto& path : reader::root::search_directory(options.root_directory)) {
+    for (const auto& event : reader::root::import_events(path, options, detector_map)) {
+      plot::canvas canvas(path);
+
+      for (const auto& name : geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"})) {
+        const auto limits = geometry::limits_of(name);
+        canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
+      }
+      canvas.add_points(event, 1.5, {90, 90, 90});
+
+
+
+
+      canvas.draw();
+    }
+  }
+
+  geometry::close();
+  plot::end();
 
   return 0;
 }

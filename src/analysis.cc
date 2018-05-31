@@ -171,19 +171,26 @@ const event_vector seed(const size_t n,
                         const r4_point& collapse_ds,
                         const real layer_dz,
                         const real line_dr) {
-  if (n <= 2) return {};
+  if (n <= 2)
+    return {};
 
   const auto& points = collapse(event, collapse_ds);
   const auto size = points.size();
 
-  if (size <= n) return { points };
+  if (size <= n)
+    return { points };
 
   event_vector out;
-  out.reserve(std::pow(size, n) / std::pow(n/2.718, n));  // FIXME: work on this limit (Stirling's approximation)
+
+  // FIXME: work on this limit (Stirling's approximation)
+  out.reserve(std::pow(size, n) / std::pow(n/2.718, n));
 
   const auto& layers = partition(points, layer_dz).parts;
   const auto layer_count = layers.size();
-  if (layer_count < n) return {}; // FIXME: unsure what to do here
+
+  // FIXME: unsure what to do here
+  if (layer_count < n)
+    return {};
 
   util::bit_vector_sequence layer_sequence;
   for (const auto& layer : layers)
@@ -212,7 +219,9 @@ const event_vector seed(const size_t n,
 //----------------------------------------------------------------------------------------------
 
 //__Check if Seeds can be Joined________________________________________________________________
-bool seeds_compatible(const event_points& first, const event_points& second, const size_t difference) {
+bool seeds_compatible(const event_points& first,
+                      const event_points& second,
+                      const size_t difference) {
   return std::equal(first.cbegin() + difference, first.cend(), second.cbegin(), second.cend() - difference);
 }
 //----------------------------------------------------------------------------------------------

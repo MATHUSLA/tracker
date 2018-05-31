@@ -125,7 +125,7 @@ BinaryFunction _traverse_geometry(BinaryFunction f) {
   for (const auto& name : _geometry_insertion_order) {
     const auto& search = _geometry.find(name);
     if (search != _geometry.end())
-      f(search->first, search->second);
+      if (!f(search->first, search->second)) break;
   }
   return std::move(f);
 }
@@ -147,7 +147,10 @@ bool _in_volume(const r3_point& point,
 std::vector<_geometric_volume> _get_volume_hierarchy(const r3_point& point) {
   std::vector<_geometric_volume> out{};
   _traverse_geometry([&](const auto& _, const auto& gvolume) {
-    if (_in_volume(point, gvolume)) out.push_back(gvolume); });
+    if (_in_volume(point, gvolume))
+      out.push_back(gvolume);
+    return true;
+  });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -162,6 +165,7 @@ _geometric_volume _get_volume(const r3_point& point) {
     _traverse_geometry([&](const auto& _, const auto& gvolume) {
       if (_in_volume(point, gvolume))
         out = gvolume;
+      return true;
     });
     _precomputed_name[point] = _unsafe_get_name(out);
     return out;
@@ -209,6 +213,32 @@ const std::vector<std::string> full_structure() {
   out.reserve(_geometry.size());
   std::transform(_geometry.cbegin(), _geometry.cend(), std::back_inserter(out),
     [](const auto& element) { return element.first; });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__List of all Geometry Volumes Except those in the List_______________________________________
+const std::vector<std::string> full_structure_except(const std::vector<std::string>& names) {
+  std::vector<std::string> out;
+  out.reserve(_geometry.size());
+  const auto names_begin = names.cbegin();
+  const auto names_end = names.cend();
+  std::for_each(_geometry.cbegin(), _geometry.cend(),
+    [&](const auto& element) {
+      const auto& name = element.first;
+      if (std::find(names_begin, names_end, name) == names_end) out.push_back(name);
+    });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Volume Hierarchy of a Volume________________________________________________________________
+const std::vector<std::string> volume_hierarchy(const std::string& name) {
+  std::vector<std::string> out{};
+  _traverse_geometry([&](const auto& _, const auto& __) {
+    out.push_back(name);
+    return true;
+  });
   return out;
 }
 //----------------------------------------------------------------------------------------------

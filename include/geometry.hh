@@ -41,9 +41,19 @@ const std::string& current_geometry_path();
 const std::vector<std::string> full_structure();
 //----------------------------------------------------------------------------------------------
 
+//__List of all Geometry Volumes Except those in the List_______________________________________
+const std::vector<std::string> full_structure_except(const std::vector<std::string>& names);
+//----------------------------------------------------------------------------------------------
+
+//__Volume Hierarchy of a Volume________________________________________________________________
+const std::vector<std::string> volume_hierarchy(const std::string& name);
+//----------------------------------------------------------------------------------------------
+
 //__Volume Containment Check____________________________________________________________________
-bool is_inside_volume(const r3_point& point, const std::string& name);
-bool is_inside_volume(const r4_point& point, const std::string& name);
+bool is_inside_volume(const r3_point& point,
+                      const std::string& name);
+bool is_inside_volume(const r4_point& point,
+                      const std::string& name);
 //----------------------------------------------------------------------------------------------
 
 //__Volume Hierarchy Search_____________________________________________________________________

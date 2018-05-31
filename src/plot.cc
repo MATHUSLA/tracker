@@ -31,8 +31,6 @@
 #include <ROOT/TColor.h>
 #include <ROOT/TFile.h>
 
-#include <iostream>
-
 namespace MATHUSLA { namespace TRACKER {
 
 namespace plot { ///////////////////////////////////////////////////////////////////////////////
@@ -301,6 +299,15 @@ void canvas::add_point(const r4_point& point,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Add Points to Canvas________________________________________________________________________
+void canvas::add_points(const r4_point_vector& points,
+                        const real width,
+                        const color& color) {
+  for (const auto& point : points)
+    add_point(point, width, color);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Add Line to Canvas__________________________________________________________________________
 void canvas::add_line(const real x1,
                       const real y1,
@@ -336,6 +343,15 @@ void canvas::add_line(const r4_point& first,
                       const real width,
                       const color& color) {
   add_line(reduce_to_r3(first), reduce_to_r3(second), width, color);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Polyline to Canvas______________________________________________________________________
+void canvas::add_polyline(const r4_point_vector& points,
+                          const real width,
+                          const color& color) {
+  for (const auto& point : points)
+    add_point(point, width, color);
 }
 //----------------------------------------------------------------------------------------------
 

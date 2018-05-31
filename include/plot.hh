@@ -99,6 +99,10 @@ public:
                  const real size=1,
                  const color& color=color::BLACK);
 
+  void add_points(const r4_point_vector& points,
+                  const real width=1,
+                  const color& color=color::BLACK);
+
   void add_line(const real x1,
                 const real y1,
                 const real z1,
@@ -117,6 +121,10 @@ public:
                 const r4_point& second,
                 const real width=1,
                 const color& color=color::BLACK);
+
+  void add_polyline(const r4_point_vector& points,
+                    const real width=1,
+                    const color& color=color::BLACK);
 
   void add_box(const real min_x,
                const real min_y,

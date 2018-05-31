@@ -32,18 +32,14 @@ int main(int argc, char* argv[]) {
 
   plot::init();
   geometry::open(options.geometry_file);
-  const auto& detector_map = reader::root::import_detector_map(options.geometry_map_file);
+  const auto detector_map = reader::root::import_detector_map(options.geometry_map_file);
 
   const auto paths = reader::root::search_directory(options.root_directory);
   std::cout << "File Count: " << paths.size() << "\n";
   for (const auto& path : paths) {
     std::cout << path << "\n";
 
-    const auto events = options.mode == reader::CollectionMode::Detector
-      ? reader::root::import_events(path,
-          options.root_time_key, options.root_detector_key, detector_map)
-      : reader::root::import_events(path,
-          options.root_time_key, options.root_x_key, options.root_y_key, options.root_z_key);
+    const auto events = reader::root::import_events(path, options, detector_map);
 
     std::cout << "Processing " << events.size() << " Events\n";
 
@@ -51,8 +47,7 @@ int main(int argc, char* argv[]) {
       plot::canvas canvas(path);
 
       // demo for Prototype only
-      for (const auto& name : geometry::full_structure()) {
-        if (name == "world" || name == "Sandstone" || name == "Marl" || name == "Mix" || name == "Earth") continue;
+      for (const auto& name : geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"})) {
         const auto limits = geometry::limits_of(name);
         canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
       }
@@ -61,8 +56,7 @@ int main(int argc, char* argv[]) {
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
       const auto layered_event   = analysis::partition(collapsed_event, options.layer_depth, options.layer_axis).parts;
 
-      for (const auto& point : event)
-        canvas.add_point(point, 1.5, {90, 90, 90});
+      canvas.add_points(event, 1.5, {90, 90, 90});
 
       util::io::print_range(event, "\n", "OLD ") << "\n\n";
       util::io::print_range(collapsed_event, "\n", "NEW ") << "\n\n";
@@ -82,13 +76,12 @@ int main(int argc, char* argv[]) {
       for (const auto& seed : joined)
         util::io::print_range(seed) << "\n";
 
-      auto tracks = analysis::fit_seeds(joined, {"MIGRAD", {}, false, -1, 0.5, 150});
-
+      const auto tracks = analysis::fit_seeds(joined, {"MIGRAD", {}, false, -1, 0.5, 150});
       std::cout << "\nTRACK FITTING (" << tracks.size() << "):\n\n";
       for (const auto& track : tracks) {
         const auto& event = track.event();
+        canvas.add_points(event, 0.5);
         for (const auto& point : event) {
-          canvas.add_point(point, 0.5);
           const auto limits = geometry::limits_of_volume(point);
           canvas.add_point(limits.center, 0.25, plot::color::BLUE);
           canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);

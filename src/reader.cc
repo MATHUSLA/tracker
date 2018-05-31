@@ -175,6 +175,24 @@ analysis::event_vector import_events(const std::string& path,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Import Events from ROOT File________________________________________________________________
+analysis::event_vector import_events(const std::string& path,
+                                     const tracking_options& options,
+                                     const detector_map& map) {
+ return options.mode == reader::CollectionMode::Detector
+   ? import_events(path, options.root_time_key, options.root_detector_key, map)
+   : import_events(path, options.root_time_key, options.root_x_key, options.root_y_key, options.root_z_key);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Import Events from ROOT File________________________________________________________________
+analysis::event_vector import_events(const std::string& path,
+                                     const tracking_options& options) {
+ const auto map = import_detector_map(options.geometry_map_file);
+ return import_events(path, options, map);
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////
 
 namespace script { /////////////////////////////////////////////////////////////////////////////
