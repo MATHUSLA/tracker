@@ -108,14 +108,14 @@ const event_points collapse(const event_points& event,
 
 //__Partition Points by Coordinate______________________________________________________________
 const event_partition partition(const event_points& points,
-                                const real interval,
-                                const Coordinate coordinate) {
+                                const Coordinate coordinate,
+                                const real interval) {
   event_partition out{{}, coordinate};
   if (points.empty())
     return out;
 
   auto& parts = out.parts;
-  const auto& sorted_points = coordinate_stable_copy_sort(points, coordinate);
+  const auto sorted_points = coordinate_stable_copy_sort(coordinate, points);
   const auto size = sorted_points.size();
 
   event_points::size_type count = 0;
@@ -169,6 +169,7 @@ bool fast_line_check(const event_points& points,
 const event_vector seed(const size_t n,
                         const event_points& event,
                         const r4_point& collapse_ds,
+                        const Coordinate coordinate,
                         const real layer_dz,
                         const real line_dr) {
   if (n <= 2)
@@ -185,7 +186,7 @@ const event_vector seed(const size_t n,
   // FIXME: work on this limit (Stirling's approximation)
   out.reserve(std::pow(size, n) / std::pow(n/2.718, n));
 
-  const auto& layers = partition(points, layer_dz).parts;
+  const auto& layers = partition(points, coordinate, layer_dz).parts;
   const auto layer_count = layers.size();
 
   // FIXME: unsure what to do here

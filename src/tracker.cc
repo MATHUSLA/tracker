@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
 
       const auto event           = analysis::time_normalize(unsorted_event);
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
-      const auto layered_event   = analysis::partition(collapsed_event, options.layer_depth, options.layer_axis).parts;
+      const auto layered_event   = analysis::partition(collapsed_event, options.layer_axis, options.layer_depth).parts;
 
       canvas.add_points(event, 1.5, {90, 90, 90});
 
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
       for (const auto& layer : layered_event)
         util::io::print_range(layer, "\n", "LAYER ") << "\n\n\n";
 
-      const auto seeds = analysis::seed(options.seed_size, unsorted_event, options.collapse_size, options.layer_depth, options.line_width);
+      const auto seeds = analysis::seed(options.seed_size, unsorted_event, options.collapse_size, options.layer_axis, options.layer_depth, options.line_width);
       std::cout << "seeds (" << seeds.size() << "):\n\n";
       for (const auto& seed : seeds)
         util::io::print_range(seed) << "\n";

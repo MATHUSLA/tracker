@@ -52,8 +52,8 @@ struct event_partition { event_vector parts; Coordinate coordinate; };
 
 //__Partition Points by Coordinate______________________________________________________________
 const event_partition partition(const event_points& points,
-                                const real interval,
-                                const Coordinate coordinate=Coordinate::Z);
+                                const Coordinate coordinate,
+                                const real interval);
 //----------------------------------------------------------------------------------------------
 
 //__Center of Geometric Object for each Point___________________________________________________
@@ -69,6 +69,7 @@ bool fast_line_check(const event_points& points,
 const event_vector seed(const size_t n,
                         const event_points& event,
                         const r4_point& collapse_ds,
+                        const Coordinate coordinate,
                         const real layer_dz,
                         const real line_dr);
 //----------------------------------------------------------------------------------------------

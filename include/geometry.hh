@@ -79,10 +79,19 @@ const box_volume limits_of_volume(const r3_point& point);
 const box_volume limits_of_volume(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
+//__Box Volume Containment Check________________________________________________________________
+constexpr bool is_inside_volume(const r3_point& point,
+                                const box_volume& box);
+constexpr bool is_inside_volume(const r4_point& point,
+                                const box_volume& box);
+//----------------------------------------------------------------------------------------------
+
 //__Find Center of Geometry around Point________________________________________________________
 const r3_point find_center(const r3_point& point);
 const r4_point find_center(const r4_point& point);
 //----------------------------------------------------------------------------------------------
+
+
 
 } /* namespace geometry */ /////////////////////////////////////////////////////////////////////
 

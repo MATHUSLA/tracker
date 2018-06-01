@@ -21,12 +21,19 @@
 #include <tracker/reader.hh>
 #include <tracker/plot.hh>
 
-// TODO: seed filter
+namespace MATHUSLA {
+
+//__Combine Hits if they Occur in Overlapping RPCs______________________________________________
+const TRACKER::analysis::event_points combine_rpc_hits(const TRACKER::analysis::event_points& event) {
+  using namespace TRACKER;
+  
+  return event;
+}
+//----------------------------------------------------------------------------------------------
 
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc, char* argv[]) {
-  using namespace MATHUSLA;
-  using namespace MATHUSLA::TRACKER;
+  using namespace TRACKER;
 
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::root::import_detector_map(options.geometry_map_file);
@@ -56,3 +63,5 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 //----------------------------------------------------------------------------------------------
+
+} /* namespace MATHUSLA */

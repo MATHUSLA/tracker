@@ -27,6 +27,8 @@
 #include <Geant4/G4VoxelLimits.hh>
 #include <Geant4/G4AffineTransform.hh>
 
+#include "util/algorithm.hh"
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace geometry { ///////////////////////////////////////////////////////////////////////////
@@ -55,7 +57,8 @@ thread_local G4RunManager* _manager;
 thread_local G4VPhysicalVolume* _world;
 thread_local std::unordered_map<std::string, _geometric_volume> _geometry;
 thread_local std::vector<std::string> _geometry_insertion_order;
-thread_local std::unordered_map<r3_point, std::string, r3_point_hash> _precomputed_name;
+thread_local std::unordered_map<r3_point, std::string, r3_point_hash> _name_cache;
+//thread_local std::unordered_map<r3_point, box_volume, r3_point_hash> _box_cache;
 //----------------------------------------------------------------------------------------------
 
 //__Convert From G4ThreeVector to R3_Point______________________________________________________
@@ -157,8 +160,8 @@ std::vector<_geometric_volume> _get_volume_hierarchy(const r3_point& point) {
 
 //__Find Volume_________________________________________________________________________________
 _geometric_volume _get_volume(const r3_point& point) {
-  const auto& search = _precomputed_name.find(point);
-  if (search != _precomputed_name.end()) {
+  const auto& search = _name_cache.find(point);
+  if (search != _name_cache.end()) {
     return _geometry[search->second];
   } else {
     _geometric_volume out{};
@@ -167,7 +170,7 @@ _geometric_volume _get_volume(const r3_point& point) {
         out = gvolume;
       return true;
     });
-    _precomputed_name[point] = _unsafe_get_name(out);
+    _name_cache[point] = _unsafe_get_name(out);
     return out;
   }
 }
@@ -299,9 +302,9 @@ const box_volume limits_of(const std::string& name) {
   const auto& center = rotation * translation;
   out.center = _to_r3_point(center);
 
-  const auto& name_search = _precomputed_name.find(out.center);
-  if (name_search == _precomputed_name.end())
-    _precomputed_name[out.center] = name;
+  const auto& name_search = _name_cache.find(out.center);
+  if (name_search == _name_cache.end())
+    _name_cache[out.center] = name;
 
   G4double min, max;
   G4ThreeVector min_vector, max_vector;
@@ -330,6 +333,19 @@ const box_volume limits_of_volume(const r3_point& point) {
 }
 const box_volume limits_of_volume(const r4_point& point) {
   return limits_of(volume(point));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Box Volume Containment Check________________________________________________________________
+constexpr bool is_inside_volume(const r3_point& point,
+                                const box_volume& box) {
+  return util::algorithm::between(point.x, box.min.x, box.max.x)
+      && util::algorithm::between(point.y, box.min.y, box.max.y)
+      && util::algorithm::between(point.z, box.min.z, box.max.z);
+}
+constexpr bool is_inside_volume(const r4_point& point,
+                                const box_volume& box) {
+  return is_inside_volume(reduce_to_r3(point), box);
 }
 //----------------------------------------------------------------------------------------------
 
