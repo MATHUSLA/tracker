@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "reader.hh"
+#include <tracker/reader.hh>
 
 #include <array>
 #include <fstream>
@@ -26,12 +26,13 @@
 #include <ROOT/TSystemDirectory.h>
 #include <ROOT/TTree.h>
 
-#include "geometry.hh"
-#include "units.hh"
-#include "util/command_line_parser.hh"
-#include "util/error.hh"
-#include "util/io.hh"
-#include "util/string.hh"
+#include <tracker/geometry.hh>
+#include <tracker/units.hh>
+
+#include <tracker/util/command_line_parser.hh>
+#include <tracker/util/error.hh>
+#include <tracker/util/io.hh>
+#include <tracker/util/string.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 

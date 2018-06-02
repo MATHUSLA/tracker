@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "geometry.hh"
+#include <tracker/geometry.hh>
 
 #include <unordered_map>
 
@@ -26,8 +26,10 @@
 #include <Geant4/G4RunManager.hh>
 #include <Geant4/G4VoxelLimits.hh>
 #include <Geant4/G4AffineTransform.hh>
+#include <Geant4/G4IntersectionSolid.hh>
+#include <Geant4/G4UnionSolid.hh>
 
-#include "util/algorithm.hh"
+#include <tracker/util/algorithm.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -58,31 +60,43 @@ thread_local G4VPhysicalVolume* _world;
 thread_local std::unordered_map<std::string, _geometric_volume> _geometry;
 thread_local std::vector<std::string> _geometry_insertion_order;
 thread_local std::unordered_map<r3_point, std::string, r3_point_hash> _name_cache;
-//thread_local std::unordered_map<r3_point, box_volume, r3_point_hash> _box_cache;
+//thread_local std::unordered_map<std::string, box_volume> _box_cache;
+const G4VoxelLimits _blank_voxels;
+const G4AffineTransform _blank_transform;
 //----------------------------------------------------------------------------------------------
 
 //__Convert From G4ThreeVector to R3_Point______________________________________________________
-r3_point _to_r3_point(const G4ThreeVector& vector) {
+constexpr r3_point _to_r3_point(const G4ThreeVector& vector) {
   return { vector.x(), vector.y(), vector.z() };
 }
 //----------------------------------------------------------------------------------------------
 
 //__Convert From R3_Point to G4ThreeVector______________________________________________________
-G4ThreeVector _to_G4ThreeVector(const r3_point& point) {
+const G4ThreeVector _to_G4ThreeVector(const r3_point& point) {
   return G4ThreeVector(point.x, point.y, point.z);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Safely Get Name of Volume___________________________________________________________________
-const std::string _safe_get_name(const _geometric_volume& gvolume) {
+const std::string _get_name(const _geometric_volume& gvolume) {
   const auto& volume = gvolume.volume;
   return volume ? volume->GetName() : "";
 }
 //----------------------------------------------------------------------------------------------
 
-//__Unsafely Get Name of Volume_________________________________________________________________
-const std::string _unsafe_get_name(const _geometric_volume& gvolume) {
-  return gvolume.volume->GetName();
+//__Transform to Local Coordinates______________________________________________________________
+const G4ThreeVector _to_local_transform(const G4ThreeVector& vector,
+                                        const G4ThreeVector& translation,
+                                        const G4RotationMatrix& rotation) {
+  return (rotation.inverse() * vector) - translation;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Transform Vector by Translation then Rotation_______________________________________________
+const G4ThreeVector _to_global_transform(const G4ThreeVector& vector,
+                                         const G4ThreeVector& translation,
+                                         const G4RotationMatrix& rotation) {
+  return rotation * (vector + translation);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -127,7 +141,7 @@ template<class BinaryFunction>
 BinaryFunction _traverse_geometry(BinaryFunction f) {
   for (const auto& name : _geometry_insertion_order) {
     const auto& search = _geometry.find(name);
-    if (search != _geometry.end())
+    if (search != _geometry.cend())
       if (!f(search->first, search->second)) break;
   }
   return std::move(f);
@@ -161,7 +175,7 @@ std::vector<_geometric_volume> _get_volume_hierarchy(const r3_point& point) {
 //__Find Volume_________________________________________________________________________________
 _geometric_volume _get_volume(const r3_point& point) {
   const auto& search = _name_cache.find(point);
-  if (search != _name_cache.end()) {
+  if (search != _name_cache.cend()) {
     return _geometry[search->second];
   } else {
     _geometric_volume out{};
@@ -170,7 +184,7 @@ _geometric_volume _get_volume(const r3_point& point) {
         out = gvolume;
       return true;
     });
-    _name_cache[point] = _unsafe_get_name(out);
+    _name_cache[point] = _get_name(out);
     return out;
   }
 }
@@ -199,6 +213,8 @@ void close() {
   _path.clear();
   _geometry_insertion_order.clear();
   _geometry.clear();
+  _name_cache.clear();
+  // _box_cache.clear();
   delete _world;
   delete _manager;
 }
@@ -237,6 +253,7 @@ const std::vector<std::string> full_structure_except(const std::vector<std::stri
 
 //__Volume Hierarchy of a Volume________________________________________________________________
 const std::vector<std::string> volume_hierarchy(const std::string& name) {
+  // TODO: finish
   std::vector<std::string> out{};
   _traverse_geometry([&](const auto& _, const auto& __) {
     out.push_back(name);
@@ -250,7 +267,7 @@ const std::vector<std::string> volume_hierarchy(const std::string& name) {
 bool is_inside_volume(const r3_point& point,
                       const std::string& name) {
   const auto& search = _geometry.find(name);
-  return search != _geometry.end() && _in_volume(point, search->second);
+  return search != _geometry.cend() && _in_volume(point, search->second);
 }
 bool is_inside_volume(const r4_point& point,
                       const std::string& name) {
@@ -262,7 +279,7 @@ bool is_inside_volume(const r4_point& point,
 const std::vector<std::string> volume_hierarchy(const r3_point& point) {
   const auto& hierarchy = _get_volume_hierarchy(point);
   std::vector<std::string> out;
-  std::transform(hierarchy.cbegin(), hierarchy.cend(), std::back_inserter(out), _safe_get_name);
+  std::transform(hierarchy.cbegin(), hierarchy.cend(), std::back_inserter(out), _get_name);
   return out;
 }
 const std::vector<std::string> volume_hierarchy(const r4_point& point) {
@@ -272,44 +289,27 @@ const std::vector<std::string> volume_hierarchy(const r4_point& point) {
 
 //__Get Volume Name_____________________________________________________________________________
 const std::string volume(const r3_point& point) {
-  return _safe_get_name(_get_volume(point));
+  return _get_name(_get_volume(point));
 }
 const std::string volume(const r4_point& point) {
   return volume(reduce_to_r3(point));
 }
 //----------------------------------------------------------------------------------------------
 
-//__Check Volume Limits_________________________________________________________________________
-const box_volume limits_of(const std::string& name) {
-  static const G4VoxelLimits _blank_voxels;
-  static const G4AffineTransform _blank_transform;
+namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-  box_volume out{};
+//__Get Solid from Geometry Volume______________________________________________________________
+const G4VSolid* _get_solid(const _geometric_volume& gvolume) {
+  const auto volume = gvolume.volume;
+  return volume ? volume->GetLogicalVolume()->GetSolid() : nullptr;
+}
+//----------------------------------------------------------------------------------------------
 
-  const auto& geometry_search = _geometry.find(name);
-  if (geometry_search == _geometry.end())
-    return out;
-
-  const auto& gvolume = geometry_search->second;
-  const auto& volume = gvolume.volume;
-  if (!volume)
-    return out;
-
-  const auto& transform = gvolume.transform;
-  const auto& rotation = transform.NetRotation();
-  const auto& translation = transform.NetTranslation();
-
-  const auto& center = rotation * translation;
-  out.center = _to_r3_point(center);
-
-  const auto& name_search = _name_cache.find(out.center);
-  if (name_search == _name_cache.end())
-    _name_cache[out.center] = name;
-
+//__Calculate Local Bounding Box________________________________________________________________
+void _calculate_local_extent(const G4VSolid* solid,
+                             G4ThreeVector& min_vector,
+                             G4ThreeVector& max_vector) {
   G4double min, max;
-  G4ThreeVector min_vector, max_vector;
-
-  const auto& solid = volume->GetLogicalVolume()->GetSolid();
   solid->CalculateExtent(EAxis::kXAxis, _blank_voxels, _blank_transform, min, max);
   min_vector.setX(min);
   max_vector.setX(max);
@@ -319,10 +319,145 @@ const box_volume limits_of(const std::string& name) {
   solid->CalculateExtent(EAxis::kZAxis, _blank_voxels, _blank_transform, min, max);
   min_vector.setZ(min);
   max_vector.setZ(max);
+}
+//----------------------------------------------------------------------------------------------
 
-  out.min = _to_r3_point(rotation * (min_vector + translation));
-  out.max = _to_r3_point(rotation * (max_vector + translation));
+//__Transform Vector then Convert to R3 Point___________________________________________________
+const r3_point _convert_transform(const G4ThreeVector& vector,
+                                  const G4ThreeVector& translation,
+                                  const G4RotationMatrix& rotation) {
+  return _to_r3_point(_to_global_transform(vector, translation, rotation));
+}
+//----------------------------------------------------------------------------------------------
 
+//__Calculate Global Bounding Box_______________________________________________________________
+const box_volume _calculate_global_extent(const G4VSolid* solid,
+                                          const G4ThreeVector& translation,
+                                          const G4RotationMatrix& rotation) {
+  G4ThreeVector min_vector, max_vector;
+  _calculate_local_extent(solid, min_vector, max_vector);
+  return {
+    _convert_transform(G4ThreeVector(), translation, rotation),
+    _convert_transform(min_vector, translation, rotation),
+    _convert_transform(max_vector, translation, rotation)
+  };
+}
+//----------------------------------------------------------------------------------------------
+
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Check Volume Limits_________________________________________________________________________
+const box_volume limits_of(const std::string& name) {
+  const auto& geometry_search = _geometry.find(name);
+  if (geometry_search == _geometry.cend())
+    return {};
+
+  const auto& gvolume = geometry_search->second;
+  const auto solid = _get_solid(gvolume);
+  if (!solid)
+    return {};
+
+  const auto& transform = gvolume.transform;
+  const auto out = _calculate_global_extent(solid, transform.NetTranslation(), transform.NetRotation());
+
+  const auto& name_search = _name_cache.find(out.center);
+  if (name_search == _name_cache.cend())
+    _name_cache[out.center] = name;
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Compute Intersection of Volumes then Find Bounding Box______________________________________
+const box_volume intersection_volume(const std::string& first,
+                                     const std::string& second) {
+  // TODO: finish
+
+  const auto geometry_end = _geometry.cend();
+
+  const auto& geometry_search_1 = _geometry.find(first);
+  if (geometry_search_1 == geometry_end)
+    return {};
+
+  const auto& geometry_search_2 = _geometry.find(second);
+  if (geometry_search_2 == geometry_end)
+    return {};
+
+  const auto& gvolume_1 = geometry_search_1->second;
+  const auto solid_1 = _get_solid(gvolume_1);
+  if (!solid_1)
+    return {};
+
+  const auto& gvolume_2 = geometry_search_2->second;
+  const auto solid_2 = _get_solid(gvolume_2);
+  if (!solid_2)
+    return {};
+
+  return {};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Compute Union of Volumes then Find Bounding Box_____________________________________________
+const box_volume union_volume(const std::string& first,
+                              const std::string& second) {
+  // TODO: finish
+
+  const auto geometry_end = _geometry.cend();
+
+  const auto& geometry_search_1 = _geometry.find(first);
+  if (geometry_search_1 == geometry_end)
+    return {};
+
+  const auto& geometry_search_2 = _geometry.find(second);
+  if (geometry_search_2 == geometry_end)
+    return {};
+
+  const auto& gvolume_1 = geometry_search_1->second;
+  const auto solid_1 = _get_solid(gvolume_1);
+  if (!solid_1)
+    return {};
+
+  const auto& gvolume_2 = geometry_search_2->second;
+  const auto solid_2 = _get_solid(gvolume_2);
+  if (!solid_2)
+    return {};
+
+  return {};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Compute Intersection of Box Volumes_________________________________________________________
+const box_volume intersection_volume(const box_volume& first,
+                                     const box_volume& second) {
+  box_volume out{};
+  if (!(first.max.x < second.min.x || second.max.x < first.min.x)) {
+    out.min.x = std::max(first.min.x, second.min.x);
+    out.max.x = std::min(first.max.x, second.max.x);
+  }
+  if (!(first.max.y < second.min.y || second.max.y < first.min.y)) {
+    out.min.y = std::max(first.min.y, second.min.y);
+    out.max.y = std::min(first.max.y, second.max.y);
+  }
+  if (!(first.max.z < second.min.z || second.max.z < first.min.z)) {
+    out.min.z = std::max(first.min.z, second.min.z);
+    out.max.z = std::min(first.max.z, second.max.z);
+  }
+  out.center = 0.5L * (out.min + out.max);
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Compute Union of Box Volumes________________________________________________________________
+const box_volume union_volume(const box_volume& first,
+                              const box_volume& second) {
+  box_volume out{};
+  out.min.x = std::min(first.min.x, second.min.x);
+  out.max.x = std::max(first.max.x, second.max.x);
+  out.min.y = std::min(first.min.y, second.min.y);
+  out.max.y = std::max(first.max.y, second.max.y);
+  out.min.z = std::min(first.min.z, second.min.z);
+  out.max.z = std::max(first.max.z, second.max.z);
+  out.center = 0.5L * (out.min + out.max);
   return out;
 }
 //----------------------------------------------------------------------------------------------

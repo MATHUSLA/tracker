@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "plot.hh"
+#include <tracker/plot.hh>
 
 #include <iomanip>
 #include <sstream>
@@ -117,6 +117,8 @@ void init() {
 //__End Plotting Environment____________________________________________________________________
 void end() {
   try { _app->Run(true); } catch(...) {}
+  delete _app;
+  _app = nullptr;
 }
 //----------------------------------------------------------------------------------------------
 

@@ -44,7 +44,7 @@ done
 
 if [[ "$CONFIG_CMAKE" -eq 1 && "$CLEAN_BUILD" -eq 1 ]]; then
     rm -rf build;
-    rm tracker;
+    rm prototype;
 fi
 
 mkdir -p build
@@ -58,6 +58,6 @@ make -j8
 if [[ ! "$?" -eq 0 ]]; then
     echo -e "\nBuild Failed!\n"
 else
-    mv tracker ../tracker
-    if [[ "$RUN_BUILD" -eq 1 ]]; then cd ..; ./tracker $OTHER_ARGS; fi;
+    mv demo/prototype ../prototype
+    if [[ "$RUN_BUILD" -eq 1 ]]; then cd ..; ./prototype $OTHER_ARGS; fi;
 fi

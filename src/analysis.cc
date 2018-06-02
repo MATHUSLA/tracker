@@ -16,19 +16,22 @@
  * limitations under the License.
  */
 
-#include "analysis.hh"
+#include <tracker/analysis.hh>
 
 #include <numeric>
 #include <queue>
 
 #include <ROOT/TMinuit.h>
 
-#include "geometry.hh"
-#include "units.hh"
+#include <ROOT/Minuit2/FCNBase.h>
+#include <ROOT/Minuit2/MnMigrad.h>
+#include <ROOT/Minuit2/FunctionMinimum.h>
 
-#include "util/bit_vector.hh"
-#include "util/io.hh"
-#include "util/math.hh"
+#include <tracker/units.hh>
+
+#include <tracker/util/bit_vector.hh>
+#include <tracker/util/io.hh>
+#include <tracker/util/math.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -41,11 +44,12 @@ const r4_point mean(const event_points& points) {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Time Normalize Events_______________________________________________________________________
-const event_points time_normalize(const event_points& event) {
+//__Centralize Events by Coordinate_____________________________________________________________
+const event_points centralize(const event_points& event,
+                              const Coordinate coordinate) {
   const auto size = event.size();
   if (size == 0) return {};
-  auto out = t_copy_sort(event);
+  auto out = coordinate_copy_sort(coordinate, event);
   const auto min = r4_point{event.front().t, 0, 0, 0};
   std::transform(out.cbegin(), out.cend(), out.begin(),
     [&](const auto& point) { return point - min; });
@@ -62,7 +66,7 @@ const event_points collapse(const event_points& event,
   event_points out;
   out.reserve(size);
 
-  const auto& sorted_event = time_normalize(event);
+  const auto& sorted_event = centralize(event, Coordinate::T);
 
   using size_type = event_points::size_type;
 
@@ -110,7 +114,7 @@ const event_points collapse(const event_points& event,
 const event_partition partition(const event_points& points,
                                 const Coordinate coordinate,
                                 const real interval) {
-  event_partition out{{}, coordinate};
+  event_partition out{{}, coordinate, interval};
   if (points.empty())
     return out;
 
@@ -167,27 +171,16 @@ bool fast_line_check(const event_points& points,
 
 //__Seeding Algorithm___________________________________________________________________________
 const event_vector seed(const size_t n,
-                        const event_points& event,
-                        const r4_point& collapse_ds,
-                        const Coordinate coordinate,
-                        const real layer_dz,
-                        const real line_dr) {
+                        const event_partition& partition,
+                        const real line_threshold) {
   if (n <= 2)
     return {};
 
-  const auto& points = collapse(event, collapse_ds);
-  const auto size = points.size();
-
-  if (size <= n)
-    return { points };
-
-  event_vector out;
-
-  // FIXME: work on this limit (Stirling's approximation)
-  out.reserve(std::pow(size, n) / std::pow(n/2.718, n));
-
-  const auto& layers = partition(points, coordinate, layer_dz).parts;
+  const auto& layers = partition.parts;
   const auto layer_count = layers.size();
+
+  // FIXME: find an close upper bound for out.reserve
+  event_vector out{};
 
   // FIXME: unsure what to do here
   if (layer_count < n)
@@ -211,7 +204,7 @@ const event_vector seed(const size_t n,
       }
     }
 
-    if (fast_line_check(t_sort(tuple), line_dr))
+    if (fast_line_check(t_sort(tuple), line_threshold))
       out.push_back(tuple);
   });
 
@@ -223,7 +216,7 @@ const event_vector seed(const size_t n,
 bool seeds_compatible(const event_points& first,
                       const event_points& second,
                       const size_t difference) {
-  return std::equal(first.cbegin() + difference, first.cend(), second.cbegin(), second.cend() - difference);
+  return std::equal(first.cbegin() + difference, first.cend(), second.cbegin());
 }
 //----------------------------------------------------------------------------------------------
 
@@ -231,9 +224,8 @@ bool seeds_compatible(const event_points& first,
 const event_points join(const event_points& first,
                         const event_points& second,
                         const size_t difference) {
-  const auto first_size = first.size();
   const auto second_size = second.size();
-  const auto overlap = first_size - difference;
+  const auto overlap = first.size() - difference;
 
   if (overlap <= 0 || second_size < overlap)
     return {};
@@ -388,8 +380,7 @@ real _track_squared_residual(const real t0,
                              const real vy,
                              const real vz,
                              const r4_point& point) {
-  const auto volume = geometry::volume(point);
-  const auto limits = geometry::limits_of(volume);
+  const auto limits = geometry::limits_of_volume(point);
   const auto& center = limits.center;
   const auto& min = limits.min;
   const auto& max = limits.max;
@@ -410,13 +401,13 @@ _track_parameters _guess_track(const event_points& event) {
   const auto& first = event.front();
   const auto& last = event.back();
   const auto dt = last.t - first.t;
-  return {{first.t, 2*units::time, 0, 0},
-          {first.x, 100*units::length, 0, 0},
-          {first.y, 100*units::length, 0, 0},
-          {first.z, 100*units::length, 0, 0},
-          {(last.x - first.x) / dt, 0.1*units::speed_of_light, 0, 0},
-          {(last.y - first.y) / dt, 0.1*units::speed_of_light, 0, 0},
-          {(last.z - first.z) / dt, 0.1*units::speed_of_light, 0, 0}};
+  return {{first.t,                   2*units::time,     0, 0},
+          {first.x,                 100*units::length,   0, 0},
+          {first.y,                 100*units::length,   0, 0},
+          {first.z,                 100*units::length,   0, 0},
+          {(last.x - first.x) / dt,  50*units::velocity, 0, 0},
+          {(last.y - first.y) / dt,  50*units::velocity, 0, 0},
+          {(last.z - first.z) / dt,  50*units::velocity, 0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -438,10 +429,10 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
-_track_parameters& _fit_event(const event_points& event,
-                              _track_parameters& parameters,
-                              const fit_settings& settings,
-                              const Coordinate fixed=Coordinate::Z) {
+_track_parameters& _fit_event_old(const event_points& event,
+                                  _track_parameters& parameters,
+                                  const fit_settings& settings,
+                                  const Coordinate fixed=Coordinate::Z) {
   TMinuit minuit;
   minuit.SetGraphicsMode(settings.graphics_on);
   minuit.SetPrintLevel(settings.print_level);
@@ -526,6 +517,117 @@ _track_parameters& _fit_event(const event_points& event,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Negative Log Likelihood Functor_____________________________________________________________
+class _track_nll : public ROOT::Minuit2::FCNBase {
+public:
+  _track_nll(double error_def, const event_points& event)
+      : _event(event), _error_def(error_def) {}
+
+  double Up() const { return _error_def; }
+  void SetErrorDef(double error_def) { _error_def = error_def; }
+
+  double operator()(const std::vector<double>& x) const {
+    return 0.5L * std::accumulate(_event.cbegin(), _event.cend(), 0.0L,
+      [&](const auto& sum, const auto& point) {
+        return sum + _track_squared_residual(x[0], x[1], x[2], x[3], x[4], x[5], x[6], point); });
+  }
+
+private:
+  event_points _event;
+  double _error_def = 0.5;
+};
+//----------------------------------------------------------------------------------------------
+
+//__MINUIT MIGRAD Fitter________________________________________________________________________
+_track_parameters& _fit_event_new(const event_points& event,
+                                  _track_parameters& parameters,
+                                  const fit_settings& settings,
+                                  const Coordinate fixed=Coordinate::Z) {
+
+  ROOT::Minuit2::MnUserParameters minuit_parameters;
+
+  auto& t0 = parameters.t0;
+  if (!t0.min && !t0.max) {
+    minuit_parameters.Add("T0", t0.value, t0.error);
+  } else {
+    minuit_parameters.Add("T0", t0.value, t0.error, t0.min, t0.max);
+  }
+
+  auto& x0 = parameters.x0;
+  if (!x0.min && !x0.max) {
+    minuit_parameters.Add("X0", x0.value, x0.error);
+  } else {
+    minuit_parameters.Add("X0", x0.value, x0.error, x0.min, x0.max);
+  }
+
+  auto& y0 = parameters.y0;
+  if (!y0.min && !y0.max) {
+    minuit_parameters.Add("Y0", y0.value, y0.error);
+  } else {
+    minuit_parameters.Add("Y0", y0.value, y0.error, y0.min, y0.max);
+  }
+
+  auto& z0 = parameters.z0;
+  if (!z0.min && !z0.max) {
+    minuit_parameters.Add("Z0", z0.value, z0.error);
+  } else {
+    minuit_parameters.Add("Z0", z0.value, z0.error, z0.min, z0.max);
+  }
+
+  auto& vx = parameters.vx;
+  if (!vx.min && !vx.max) {
+    minuit_parameters.Add("VX", vx.value, vx.error);
+  } else {
+    minuit_parameters.Add("VX", vx.value, vx.error, vx.min, vx.max);
+  }
+
+  auto& vy = parameters.vy;
+  if (!vy.min && !vy.max) {
+    minuit_parameters.Add("VY", vy.value, vy.error);
+  } else {
+    minuit_parameters.Add("VY", vy.value, vy.error, vy.min, vy.max);
+  }
+
+  auto& vz = parameters.vz;
+  if (!vz.min && !vz.max) {
+    minuit_parameters.Add("VZ", vz.value, vz.error);
+  } else {
+    minuit_parameters.Add("VZ", vz.value, vz.error, vz.min, vz.max);
+  }
+
+  switch (fixed) {
+    case Coordinate::T: minuit_parameters.Fix("T0"); break;
+    case Coordinate::X: minuit_parameters.Fix("X0"); break;
+    case Coordinate::Y: minuit_parameters.Fix("Y0"); break;
+    case Coordinate::Z: minuit_parameters.Fix("Z0"); break;
+  }
+
+  ROOT::Minuit2::MnMigrad migrad(_track_nll(settings.error_def, event), minuit_parameters);
+
+  const auto min = migrad();
+  const auto minimum_parameters = min.UserState();
+
+  t0.value = minimum_parameters.Value("T0");
+  t0.error = minimum_parameters.Error("T0");
+  x0.value = minimum_parameters.Value("X0");
+  x0.error = minimum_parameters.Error("X0");
+  y0.value = minimum_parameters.Value("Y0");
+  y0.error = minimum_parameters.Error("Y0");
+  z0.value = minimum_parameters.Value("Z0");
+  z0.error = minimum_parameters.Error("Z0");
+  vx.value = minimum_parameters.Value("VX");
+  vx.error = minimum_parameters.Error("VX");
+  vy.value = minimum_parameters.Value("VY");
+  vy.error = minimum_parameters.Error("VY");
+  vz.value = minimum_parameters.Value("VZ");
+  vz.error = minimum_parameters.Error("VZ");
+
+  const auto hessian = minimum_parameters.Hessian();
+
+  return parameters;
+}
+//----------------------------------------------------------------------------------------------
+
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Track Constructor___________________________________________________________________________
@@ -534,7 +636,7 @@ track::track(const event_points& event,
     : _event(event), _settings(settings) {
 
   auto fit_track = _guess_track(_event);
-  _fit_event(_event, fit_track, _settings);
+  _fit_event_old(_event, fit_track, _settings);
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);
@@ -663,9 +765,9 @@ std::ostream& operator<<(std::ostream& os,
 
   os.precision(6);
   os << "Dynamics: \n"
-     << "  beta:  " << track.beta()                   << "\n"
-     << "  front: " << track(track.event().front().z) << "\n"
-     << "  back:  " << track(track.event().back().z)  << "\n";
+     << "  beta:  " << track.beta()  << "\n"
+     << "  front: " << track.front() << "\n"
+     << "  back:  " << track.back()  << "\n";
 
   return os;
 }

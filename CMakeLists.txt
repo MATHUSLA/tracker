@@ -21,37 +21,26 @@ project(MATHUSLA_TRACKER VERSION 0.0.1 DESCRIPTION "MATHUSLA Particle Tracker")
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
-find_package(Geant4 REQUIRED gdml)
-find_package(ROOT   REQUIRED Minuit)
+find_package(Geant4 REQUIRED COMPONENTS gdml)
+find_package(ROOT   REQUIRED COMPONENTS Minuit Minuit2)
 
-add_executable(tracker
-    src/tracker.cc
+add_library(tracker SHARED
     src/analysis.cc
     src/geometry.cc
     src/plot.cc
     src/reader.cc
     src/util/command_line_parser.cc
 )
-
-# TODO: make into library
-#add_library(tracker SHARED
-#    src/analysis.cc
-#    src/geometry.cc
-#    src/plot.cc
-#    src/reader.cc
-#    src/util/command_line_parser.cc
-#)
+target_compile_features(tracker PUBLIC cxx_std_14)
 
 # set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 
-target_link_libraries(tracker
-    ${Geant4_LIBRARIES}
-    ${ROOT_LIBRARIES})
-
-target_compile_features(tracker PUBLIC cxx_std_14)
-
+target_link_libraries(tracker PUBLIC ${Geant4_LIBRARIES} ${ROOT_LIBRARIES})
+target_include_directories(tracker PRIVATE ${ROOT_INCLUDE_DIRS})
 target_include_directories(tracker PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
 
-install(TARGETS tracker DESTINATION bin)
+install(TARGETS tracker DESTINATION lib)
+
+add_subdirectory(demo)
