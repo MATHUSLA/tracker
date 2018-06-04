@@ -21,7 +21,6 @@
 #pragma once
 
 #include <tracker/geometry.hh>
-#include <tracker/point.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -29,45 +28,55 @@ namespace analysis { ///////////////////////////////////////////////////////////
 
 using namespace type;
 
-//__Extended Event Type_________________________________________________________________________
-struct hit { r4_point point, error; };
+//__Event Types_________________________________________________________________________________
+using hit = r4_point;
+using event = std::vector<hit>;
+using event_vector = std::vector<event>;
 //----------------------------------------------------------------------------------------------
 
-//__Event Types_________________________________________________________________________________
-using event_points = r4_point_vector;
-using event_vector = std::vector<event_points>;
+//__Extended Event Types________________________________________________________________________
+struct full_hit { r4_point point, error; };
+using full_event = std::vector<full_hit>;
+using full_event_vector = std::vector<full_event>;
 //----------------------------------------------------------------------------------------------
 
 //__Average Point_______________________________________________________________________________
-const r4_point mean(const event_points& points);
+const hit mean(const event& points);
+const full_hit mean(const full_event& points);
 //----------------------------------------------------------------------------------------------
 
 //__Center Events by Coordinate_________________________________________________________________
-const event_points centralize(const event_points& event,
-                              const Coordinate coordinate);
+const event centralize(const event& points,
+                       const Coordinate coordinate);
+const full_event centralize(const full_event& points,
+                            const Coordinate coordinate);
 //----------------------------------------------------------------------------------------------
 
 //__Collapse Points by R4 Interval______________________________________________________________
-const event_points collapse(const event_points& event,
-                            const r4_point& ds);
+const event collapse(const event& points,
+                     const r4_point& ds);
+const full_event collapse(const full_event& points,
+                          const r4_point& ds);
 //----------------------------------------------------------------------------------------------
 
 //__Event Partition Type________________________________________________________________________
 struct event_partition { event_vector parts; Coordinate coordinate; real interval; };
+struct full_event_partition { full_event_vector parts; Coordinate coordinate; real interval; };
 //----------------------------------------------------------------------------------------------
 
 //__Partition Points by Coordinate______________________________________________________________
-const event_partition partition(const event_points& points,
+const event_partition partition(const event& points,
                                 const Coordinate coordinate,
                                 const real interval);
-//----------------------------------------------------------------------------------------------
-
-//__Center of Geometric Object for each Point___________________________________________________
-const event_points find_centers(const event_points& points);
+const full_event_partition partition(const full_event& points,
+                                     const Coordinate coordinate,
+                                     const real interval);
 //----------------------------------------------------------------------------------------------
 
 //__Fast Check if Points Form a Line____________________________________________________________
-bool fast_line_check(const event_points& points,
+bool fast_line_check(const event& points,
+                     const real threshold);
+bool fast_line_check(const full_event& points,
                      const real threshold);
 //----------------------------------------------------------------------------------------------
 
@@ -75,22 +84,32 @@ bool fast_line_check(const event_points& points,
 const event_vector seed(const size_t n,
                         const event_partition& partition,
                         const real line_threshold);
+const full_event_vector seed(const size_t n,
+                             const full_event_partition& partition,
+                             const real line_threshold);
 //----------------------------------------------------------------------------------------------
 
 //__Check if Seeds can be Joined________________________________________________________________
-bool seeds_compatible(const event_points& first,
-                      const event_points& second,
+bool seeds_compatible(const event& first,
+                      const event& second,
+                      const size_t difference);
+bool seeds_compatible(const full_event& first,
+                      const full_event& second,
                       const size_t difference);
 //----------------------------------------------------------------------------------------------
 
 //__Join Two Seeds______________________________________________________________________________
-const event_points join(const event_points& first,
-                        const event_points& second,
-                        const size_t difference);
+const event join(const event& first,
+                 const event& second,
+                 const size_t difference);
+const full_event join(const full_event& first,
+                      const full_event& second,
+                      const size_t difference);
 //----------------------------------------------------------------------------------------------
 
 //__Seed Join___________________________________________________________________________________
 const event_vector join_all(const event_vector& seeds);
+const full_event_vector join_all(const full_event_vector& seeds);
 //----------------------------------------------------------------------------------------------
 
 //__Fitting Parameter Type______________________________________________________________________
@@ -111,7 +130,10 @@ struct fit_settings {
 //__Track Object________________________________________________________________________________
 class track {
 public:
-  track(const event_points& event,
+  track(const event& points,
+        const fit_settings& settings={});
+
+  track(const full_event& points,
         const fit_settings& settings={});
 
   track(const track& rhs) = default;
@@ -119,7 +141,7 @@ public:
   track& operator=(const track& rhs) = default;
   track& operator=(track&& rhs)      = default;
 
-  const r4_point operator()(const real z) const;
+  const hit operator()(const real z) const;
 
   const fit_parameter t0() const { return _t0; }
   const fit_parameter x0() const { return _x0; }
@@ -157,16 +179,16 @@ public:
   real chi_squared_per_dof() const;
   const real_vector& chi_squared_vector() const { return _delta_chi_squared; }
 
-  const event_points& event() const { return _event; }
+  const event& event() const { return _event; }
   const fit_settings& settings() const { return _settings; }
   const std::vector<std::string>& detectors() const { return _detectors; }
 
-  const r4_point front() const { return operator()(_event.front().z); }
-  const r4_point back() const { return operator()(_event.back().z); }
+  const hit front() const { return operator()(_event.front().z); }
+  const hit back() const { return operator()(_event.back().z); }
 
 private:
   fit_parameter _t0, _x0, _y0, _z0, _vx, _vy, _vz;
-  event_points _event;
+  std::vector<hit> _event;
   real_vector _squared_residuals, _delta_chi_squared;
   std::vector<std::string> _detectors;
   fit_settings _settings;
@@ -184,11 +206,15 @@ using track_vector = std::vector<track>;
 
 //__Add Track from Seed to Track Vector_________________________________________________________
 track_vector& operator+=(track_vector& tracks,
-                         const event_points& seed);
+                         const event& seed);
+track_vector& operator+=(track_vector& tracks,
+                         const full_event& seed);
 //----------------------------------------------------------------------------------------------
 
 //__Fit all Seeds to Tracks_____________________________________________________________________
 const track_vector fit_seeds(const event_vector& seeds,
+                             const fit_settings& settings={});
+const track_vector fit_seeds(const full_event_vector& seeds,
                              const fit_settings& settings={});
 //----------------------------------------------------------------------------------------------
 

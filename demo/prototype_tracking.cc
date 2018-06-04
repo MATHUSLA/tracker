@@ -57,31 +57,31 @@ const TRACKER::geometry::box_volume get_rpc(const TRACKER::analysis::r4_point& p
 */
 
 //__Combine Hits if they Occur in Overlapping RPCs______________________________________________
-const TRACKER::geometry::box_volume_vector combine_rpc_hits(const TRACKER::analysis::event_points& event,
+const TRACKER::geometry::box_volume_vector combine_rpc_hits(const TRACKER::analysis::event& points,
                                                             const TRACKER::analysis::real time_threshold) {
   using namespace TRACKER;
 
   static const analysis::real z_threshold = 97 * units::length;
 
-  const auto size = event.size();
+  const auto size = points.size();
   geometry::box_volume_vector boxes;
   boxes.reserve(size);
 
   size_t index = 0;
   for (; index < size - 1; ++index) {
-    if ((std::abs(event[index].z - event[index + 1].z) <= z_threshold)
-        && (std::abs(event[index].t - event[index + 1].t) <= time_threshold)) {
+    if ((std::abs(points[index].z - points[index + 1].z) <= z_threshold)
+        && (std::abs(points[index].t - points[index + 1].t) <= time_threshold)) {
       boxes.push_back(geometry::intersection_volume(
-        geometry::limits_of_volume(event[index]),
-        geometry::limits_of_volume(event[++index])
+        geometry::limits_of_volume(points[index]),
+        geometry::limits_of_volume(points[++index])
       ));
     } else {
-      boxes.push_back(geometry::limits_of_volume(event[index]));
+      boxes.push_back(geometry::limits_of_volume(points[index]));
     }
   }
 
   if (index == size) {
-    boxes.push_back(geometry::limits_of_volume(event[index - 1]));
+    boxes.push_back(geometry::limits_of_volume(points[index - 1]));
   }
 
   return boxes;
@@ -97,8 +97,6 @@ int main(int argc, char* argv[]) {
 
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
-
-  //exit(1);
 
   plot::init();
   geometry::open(options.geometry_file);
@@ -116,7 +114,7 @@ int main(int argc, char* argv[]) {
 
       // const auto box_volumes = combine_rpc_hits(collapsed_event, 2 * units::time);
 
-      const auto layered_event   = analysis::partition(collapsed_event, options.layer_axis, options.layer_depth);
+      const auto layered_event = analysis::partition(collapsed_event, options.layer_axis, options.layer_depth);
 
       canvas.add_points(collapsed_event, 1.5, {90, 90, 90});
 
@@ -153,7 +151,7 @@ int main(int argc, char* argv[]) {
         }
         canvas.add_line(event.front(), event.back());
         std::cout << track << "\n";
-        canvas.add_line(track(event.front().z), track(event.back().z), 1, plot::color::RED);
+        canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
       }
 
       canvas.draw();

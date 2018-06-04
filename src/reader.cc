@@ -66,9 +66,8 @@ detector_map import_detector_map(const std::string& path) {
   detector_map out{};
   std::string line;
   uint_fast64_t line_counter{};
-  while (std::getline(file, line)) {
+  while (std::getline(file, line))
     _parse_detector_map_entry(++line_counter, line, out);
-  }
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -109,6 +108,38 @@ BinaryFunction _traverse_file(const std::string& path,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get TKey Classname__________________________________________________________________________
+const std::string _get_TKey_classname(const TKey* key) {
+  return key->GetClassName();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get TTree Object From File Without Checking Type____________________________________________
+TTree* _unchecked_get_TTree(TFile* file,
+                            const TKey* key) {
+  return static_cast<TTree*>(file->Get(key->GetName()));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set TTree Branch Base Function______________________________________________________________
+void _set_TTree_branches(TTree* tree,
+                         const std::string& name,
+                         Double_t* value) {
+  tree->SetBranchAddress(name.c_str(), value);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Recursively Set TTree Branches______________________________________________________________
+template<class... Args>
+void _set_TTree_branches(TTree* tree,
+                         const std::string& name,
+                         Double_t* value,
+                         Args ...args) {
+  _set_TTree_branches(tree, name, value);
+  _set_TTree_branches(tree, args...);
+}
+//----------------------------------------------------------------------------------------------
+
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Search and Collect ROOT File Paths__________________________________________________________
@@ -128,23 +159,16 @@ analysis::event_vector import_events(const std::string& path,
   analysis::event_vector out{};
   TTree* tree = nullptr;
   _traverse_file(path, [&](const auto& file, const auto& key) {
-    if (std::string(key->GetClassName()) == "TTree") {
+    if (_get_TKey_classname(key) == "TTree") {
       Double_t t, x, y, z;
-      tree = static_cast<TTree*>(file->Get(key->GetName()));
-      tree->SetBranchAddress(t_key.c_str(), &t);
-      tree->SetBranchAddress(x_key.c_str(), &x);
-      tree->SetBranchAddress(y_key.c_str(), &y);
-      tree->SetBranchAddress(z_key.c_str(), &z);
+      tree = _unchecked_get_TTree(file, key);
+      _set_TTree_branches(tree, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
       const auto size = tree->GetEntries();
-      analysis::event_points points;
+      analysis::event points;
       points.reserve(size);
       for (auto i = 0; i < size; ++i) {
         tree->GetEntry(i);
-        points.push_back({
-          t * units::time,
-          x * units::length,
-          y * units::length,
-          z * units::length});
+        points.push_back({t * units::time, x * units::length, y * units::length, z * units::length});
       }
       out.push_back(points);
     }
@@ -162,20 +186,19 @@ analysis::event_vector import_events(const std::string& path,
   analysis::event_vector out{};
   TTree* tree = nullptr;
   _traverse_file(path, [&](const auto& file, const auto& key) {
-    if (std::string(key->GetClassName()) == "TTree") {
+    if (_get_TKey_classname(key) == "TTree") {
       Double_t t, detector;
-      tree = static_cast<TTree*>(file->Get(key->GetName()));
-      tree->SetBranchAddress(t_key.c_str(), &t);
-      tree->SetBranchAddress(detector_key.c_str(), &detector);
+      tree = _unchecked_get_TTree(file, key);
+      _set_TTree_branches(tree, t_key, &t, detector_key, &detector);
       const auto size = tree->GetEntries();
-      analysis::event_points points;
+      analysis::event points;
       points.reserve(size);
       for (auto i = 0; i < size; ++i) {
         tree->GetEntry(i);
         const auto& search = map.find(detector);
         const auto& name = search != map.end() ? search->second : std::to_string(std::llround(std::trunc(detector)));
         const auto center = geometry::limits_of(name).center;
-        points.push_back({t, center.x, center.y, center.z});
+        points.push_back({t * units::time, center.x, center.y, center.z});
       }
       out.push_back(points);
     }
@@ -189,17 +212,19 @@ analysis::event_vector import_events(const std::string& path,
 analysis::event_vector import_events(const std::string& path,
                                      const tracking_options& options,
                                      const detector_map& map) {
- return options.mode == reader::CollectionMode::Detector
-   ? import_events(path, options.root_t_key, options.root_detector_key, map)
-   : import_events(path, options.root_t_key, options.root_x_key, options.root_y_key, options.root_z_key);
+  return options.mode == reader::CollectionMode::Detector
+    ? import_events(path, options.root_t_key, options.root_detector_key, map)
+    : import_events(path, options.root_t_key, options.root_x_key, options.root_y_key, options.root_z_key);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
 analysis::event_vector import_events(const std::string& path,
                                      const tracking_options& options) {
- const auto map = import_detector_map(options.geometry_map_file);
- return import_events(path, options, map);
+  return options.mode == reader::CollectionMode::Detector
+    ? import_events(path, options.root_t_key, options.root_detector_key,
+        import_detector_map(options.geometry_map_file))
+    : import_events(path, options.root_t_key, options.root_x_key, options.root_y_key, options.root_z_key);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -210,9 +235,10 @@ namespace script { /////////////////////////////////////////////////////////////
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Allowed Keys for Tracking Script Options Map________________________________________________
-const std::array<std::string, 10> _allowed_keys{{
+const std::array<std::string, 11> _allowed_keys{{
   "geometry-file",
   "geometry-map-file",
+  "geometry-map",
   "root-data",
   "root-position-keys",
   "root-detector-key",
@@ -248,6 +274,170 @@ void _parse_script_line(const std::string& line,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Parse Key Value Pair into File Path_________________________________________________________
+void _parse_key_value_file_path(const std::string& key,
+                                const std::string& value,
+                                std::string& out) {
+  util::error::exit_when(!util::io::path_exists(value),
+    "[FATAL ERROR] Missing File Path \"", value, "\" for Key \"", key, "\" in Tracking Script.\n");
+  out = value;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parse Data Key Value Pair___________________________________________________________________
+void _parse_key_value_data_keys(const std::string& key,
+                                const std::string& value,
+                                CollectionMode& mode,
+                                std::string& t_key,
+                                std::string& x_key,
+                                std::string& y_key,
+                                std::string& z_key) {
+  std::vector<std::string> data_keys;
+  util::string::split(value, data_keys, ",;");
+  const auto size = data_keys.size();
+  const auto& end = data_keys.cend();
+  util::error::exit_when(std::find(data_keys.cbegin(), end, "") != end,
+    "[FATAL ERROR] Invalid Data Argument for \"", key, "\" in Tracking Script.\n"
+    "              Expected 1 argument \"T\" or 4 arguments \"T, X, Y, Z\".\n");
+  if (size == 1) {
+    t_key = data_keys[0];
+    mode = CollectionMode::Detector;
+  } else if (size == 4) {
+    t_key = data_keys[0];
+    x_key = data_keys[1];
+    y_key = data_keys[2];
+    z_key = data_keys[3];
+    mode = CollectionMode::Position;
+  } else {
+    util::error::exit(
+      "[FATAL ERROR] Invalid Data Argument for \"", key, "\" in Tracking Script.\n"
+      "              Expected 1 argument \"T\" or 4 arguments \"T, X, Y, Z\" "
+                    "but received ", size, ".\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parse Real Key Value________________________________________________________________________
+void _parse_key_value_real(const std::string& key,
+                           const std::string& value,
+                           real& out) {
+  try {
+    out = static_cast<real>(std::stold(value));
+  } catch (...) {
+    util::error::exit(
+      "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
+      "              Expected argument convertible to floating point value.\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parse Positive Real Key Value________________________________________________________________________
+void _parse_key_value_positive_real(const std::string& key,
+                                    const std::string& value,
+                                    real& out) {
+  try {
+    out = static_cast<real>(std::stold(value));
+    if (out < 0) {
+      out = 0;
+      throw std::invalid_argument{"Real Number Must be Greater than or Equal to Zero."};
+    }
+  } catch (...) {
+    util::error::exit(
+      "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
+      "              Expected argument convertible to positive floating point value.\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parse Integer Key Value_____________________________________________________________________
+void _parse_key_value_integer(const std::string& key,
+                              const std::string& value,
+                              integer& out) {
+  try {
+    out = static_cast<integer>(std::stoll(value));
+  } catch (...) {
+    util::error::exit(
+      "[FATAL ERROR] Invalid Integer Argument for \"", key, "\" in Tracking Script.\n"
+      "              Expected argument convertible to integral value.\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parse Size Type Key Value___________________________________________________________________
+void _parse_key_value_size_type(const std::string& key,
+                                const std::string& value,
+                                std::size_t& out) {
+  try {
+    out = static_cast<std::size_t>(std::stoull(value));
+  } catch (...) {
+    util::error::exit(
+      "[FATAL ERROR] Invalid Size Type Argument for \"", key, "\" in Tracking Script.\n"
+      "              Expected argument convertible to positive integral value.\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parse R4 Key Value__________________________________________________________________________
+void _parse_key_value_r4_point(const std::string& key,
+                               const std::string& value,
+                               r4_point& out) {
+  std::vector<std::string> point;
+  util::string::split(value, point, ",;");
+  const auto size = point.size();
+  const auto& end = point.cend();
+  util::error::exit_when(size != 4 || (std::find(point.cbegin(), end, "") != end),
+    "[FATAL ERROR] Invalid R4 Point Argument for \"", key, "\" in Tracking Script.\n"
+    "              Expected 4 arguments \"T, X, Y, Z\" but received ", size, ".\n");
+  try {
+    out = {
+      static_cast<real>(std::stold(point[0])),
+      static_cast<real>(std::stold(point[1])),
+      static_cast<real>(std::stold(point[2])),
+      static_cast<real>(std::stold(point[3])) };
+  } catch (...) {
+    util::error::exit(
+      "[FATAL ERROR] Invalid R4 Point Argument for \"", key, "\" in Tracking Script.\n"
+      "              Expected 4 arguments \"T, X, Y, Z\" convertible to floating point values.\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parse R3 Coordinate Key Value_______________________________________________________________
+void _parse_key_value_r3_coordinate(const std::string& key,
+                                    const std::string& value,
+                                    Coordinate& coordinate) {
+  if (value == "x" || value == "X") {
+    coordinate = Coordinate::X;
+  } else if (value == "y" || value == "Y") {
+    coordinate = Coordinate::Y;
+  } else if (value == "z" || value == "Z") {
+    coordinate = Coordinate::Z;
+  } else {
+    util::error::exit("[FATAL ERROR] Invalid R3 Coordinate Argument for \"", key, "\" in Tracking Script.\n",
+                      "              Expected X/x, Y/y, or Z/z but received \"", value, "\".\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parse R4 Coordinate Key Value_______________________________________________________________
+void _parse_key_value_r4_coordinate(const std::string& key,
+                                    const std::string& value,
+                                    Coordinate& coordinate) {
+  if (value == "t" || value == "T") {
+    coordinate = Coordinate::T;
+  } else if (value == "x" || value == "X") {
+    coordinate = Coordinate::X;
+  } else if (value == "y" || value == "Y") {
+    coordinate = Coordinate::Y;
+  } else if (value == "z" || value == "Z") {
+    coordinate = Coordinate::Z;
+  } else {
+    util::error::exit("[FATAL ERROR] Invalid R4 Coordinate Argument for \"", key, "\" in Tracking Script.\n",
+                      "              Expected T/t, X/x, Y/y, or Z/z but received \"", value, "\".\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Tracking Script Options Parser______________________________________________________________
@@ -256,6 +446,7 @@ const tracking_options read(const std::string& path) {
   tracking_options out;
 
   std::string line;
+  uint_fast64_t line_counter{};
   while (std::getline(file, line)) {
     if (line.empty()) continue;
 
@@ -268,73 +459,36 @@ const tracking_options read(const std::string& path) {
       util::error::exit("[FATAL ERROR] Missing Value For Key: \"", key, "\".\n");
     } else {
       if (key == "geometry-file") {
-        out.geometry_file = value;
+        _parse_key_value_file_path(key, value, out.geometry_file);
       } else if (key == "geometry-map-file") {
-        out.geometry_map_file = value;
-      } else if (key == "root-data") {
-        out.root_directory = value;
-      } else if (key == "root-position-keys") {
-        std::vector<std::string> root_keys;
-        util::string::split(value, root_keys, ",;");
-        const auto size = root_keys.size();
-        const auto& end = root_keys.cend();
-        util::error::exit_when(std::find(root_keys.cbegin(), end, "") != end,
-          "[FATAL ERROR] \"ROOT Keys\" argument in Tracking Script is invalid.\n"
-          "              Expected 1 arguments \"T\" or 4 arguments \"T, X, Y, Z\".\n");
+        _parse_key_value_file_path(key, value, out.geometry_map_file);
+      } else if (key == "geometry-map") {
+        util::error::exit_when(value != _continuation_string,
+          "[FATAL ERROR] \"Geometry Map\" Key Requires Continuation String \"",
+          _continuation_string, "\" Before Map Entries.\n");
 
-        if (size == 1) {
-          out.root_t_key = root_keys[0];
-          out.mode = CollectionMode::Detector;
-        } else if (size == 4) {
-          out.root_t_key = root_keys[0];
-          out.root_x_key = root_keys[1];
-          out.root_y_key = root_keys[2];
-          out.root_z_key = root_keys[3];
-          out.mode = CollectionMode::Position;
-        } else {
-          util::error::exit(
-            "[FATAL ERROR] \"ROOT Keys\" argument in Tracking Script is invalid.\n"
-            "              Expected 1 arguments \"T\" or 4 arguments \"T, X, Y, Z\" "
-                          "but received \"", size, "\".\n");
-        }
+      } else if (key == "root-data") {
+        _parse_key_value_file_path(key, value, out.root_directory);
+      } else if (key == "root-position-keys") {
+        _parse_key_value_data_keys(key, value,
+          out.mode, out.root_t_key, out.root_x_key, out.root_y_key, out.root_z_key);
+      } else if (key == "root-position-error-keys") {
+        _parse_key_value_data_keys(key, value,
+          out.mode, out.root_dt_key, out.root_dx_key, out.root_dy_key, out.root_dz_key);
       } else if (key == "root-detector-key") {
         out.root_detector_key = value;
+      } else if (key == "geometry-default-time-error") {
+        _parse_key_value_positive_real(key, value, out.default_time_error);
       } else if (key == "collapse-size") {
-        std::vector<std::string> point;
-        util::string::split(value, point, ",;");
-        const auto size = point.size();
-        const auto& end = point.cend();
-
-        util::error::exit_when(size != 4,
-          "[FATAL ERROR] \"Collapse Size\" argument in Tracking Script is invalid.\n"
-          "              Expected 4 arguments \"dt, dx, dy, dz\" but received \"", size, "\".\n");
-
-        util::error::exit_when(std::find(point.cbegin(), end, "") != end,
-          "[FATAL ERROR] \"Collapse Size\" argument in Tracking Script is invalid.\n"
-          "              Expected 4 arguments \"dt, dx, dy, dz\".\n");
-
-        out.collapse_size = {
-          static_cast<real>(std::stold(point[0])),
-          static_cast<real>(std::stold(point[1])),
-          static_cast<real>(std::stold(point[2])),
-          static_cast<real>(std::stold(point[3])) };
+        _parse_key_value_r4_point(key, value, out.collapse_size);
       } else if (key == "layer-axis") {
-        if (value == "x" || value == "X") {
-          out.layer_axis = Coordinate::X;
-        } else if (value == "y" || value == "Y") {
-          out.layer_axis = Coordinate::Y;
-        } else if (value == "z" || value == "Z") {
-          out.layer_axis = Coordinate::Z;
-        } else {
-          util::error::exit("[FATAL ERROR] \"Layer Axis\" argument in Tracking Script is invalid.\n",
-                            "              Expected X/x, Y/y, or Z/z but received \"", value, "\".\n");
-        }
+        _parse_key_value_r3_coordinate(key, value, out.layer_axis);
       } else if (key == "layer-depth") {
-        out.layer_depth = static_cast<real>(std::stold(value));
+        _parse_key_value_positive_real(key, value, out.layer_depth);
       } else if (key == "line-width") {
-        out.line_width = static_cast<real>(std::stold(value));
+        _parse_key_value_positive_real(key, value, out.line_width);
       } else if (key == "seed-size") {
-        out.seed_size = static_cast<size_t>(std::stoull(value));
+        _parse_key_value_size_type(key, value, out.seed_size);
       } else {
         util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n");
       }
@@ -376,7 +530,7 @@ const tracking_options parse_input(int& argc,
                       || argc == 1,
     "[FATAL ERROR] Insufficient Arguments:\n",
     "              Must include arguments for geometry ",
-    "and ROOT directory \"(-gd)\" or arguments for a tracking script \"(-s)\".\n");
+                  "and ROOT directory (-gd) or arguments for a tracking script (-s).\n");
 
   if (script_opt.count) _exit_on_missing_path(script_opt.argument, "Tracking Script");
 

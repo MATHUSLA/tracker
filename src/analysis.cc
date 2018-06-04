@@ -30,6 +30,7 @@
 #include <tracker/units.hh>
 
 #include <tracker/util/bit_vector.hh>
+#include <tracker/util/error.hh>
 #include <tracker/util/io.hh>
 #include <tracker/util/math.hh>
 
@@ -38,19 +39,19 @@ namespace MATHUSLA { namespace TRACKER {
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 //__Average Point_______________________________________________________________________________
-const r4_point mean(const event_points& points) {
+const hit mean(const event& points) {
   const auto size = points.size();
-  return (size == 0) ? r4_point{} : std::accumulate(points.cbegin(), points.cend(), r4_point{}) / size;
+  return (size == 0) ? hit{} : std::accumulate(points.cbegin(), points.cend(), hit{}) / size;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Centralize Events by Coordinate_____________________________________________________________
-const event_points centralize(const event_points& event,
-                              const Coordinate coordinate) {
-  const auto size = event.size();
+const event centralize(const event& points,
+                       const Coordinate coordinate) {
+  const auto size = points.size();
   if (size == 0) return {};
-  auto out = coordinate_copy_sort(coordinate, event);
-  const auto min = r4_point{event.front().t, 0, 0, 0};
+  auto out = coordinate_copy_sort(coordinate, points);
+  const auto min = hit{points.front().t, 0, 0, 0};
   std::transform(out.cbegin(), out.cend(), out.begin(),
     [&](const auto& point) { return point - min; });
   return out;
@@ -58,17 +59,17 @@ const event_points centralize(const event_points& event,
 //----------------------------------------------------------------------------------------------
 
 //__Collapse Points by R4 Interval______________________________________________________________
-const event_points collapse(const event_points& event,
-                            const r4_point& ds) {
-  const auto size = event.size();
+const event collapse(const event& points,
+                     const r4_point& ds) {
+  const auto size = points.size();
   if (size == 0) return {};
 
-  event_points out;
+  event out;
   out.reserve(size);
 
-  const auto& sorted_event = centralize(event, Coordinate::T);
+  const auto& sorted_event = centralize(points, Coordinate::T);
 
-  using size_type = event_points::size_type;
+  using size_type = event::size_type;
 
   size_type index = 0;
   std::queue<size_type> marked_indicies;
@@ -111,7 +112,7 @@ const event_points collapse(const event_points& event,
 //----------------------------------------------------------------------------------------------
 
 //__Partition Points by Coordinate______________________________________________________________
-const event_partition partition(const event_points& points,
+const event_partition partition(const event& points,
                                 const Coordinate coordinate,
                                 const real interval) {
   event_partition out{{}, coordinate, interval};
@@ -122,11 +123,11 @@ const event_partition partition(const event_points& points,
   const auto sorted_points = coordinate_stable_copy_sort(coordinate, points);
   const auto size = sorted_points.size();
 
-  event_points::size_type count = 0;
+  event::size_type count = 0;
   auto point_iter = sorted_points.cbegin();
   while (count < size) {
     const auto& point = *point_iter;
-    event_points current_layer{point};
+    event current_layer{point};
     ++count;
 
     while (count < size) {
@@ -148,18 +149,8 @@ const event_partition partition(const event_points& points,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Center of Geometric Object for each Point___________________________________________________
-const event_points find_centers(const event_points& points) {
-  event_points out;
-  out.reserve(points.size());
-  std::transform(points.cbegin(), points.cend(), std::back_inserter(out),
-    [&](const auto& point) { return geometry::find_center(point); });
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Fast Check if Points Form a Line____________________________________________________________
-bool fast_line_check(const event_points& points,
+bool fast_line_check(const event& points,
                      const real threshold) {
   const auto& line_begin = points.front();
   const auto& line_end = points.back();
@@ -191,7 +182,7 @@ const event_vector seed(const size_t n,
     layer_sequence.emplace_back(1, layer.size());
 
   util::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
-    event_points tuple;
+    event tuple;
     tuple.reserve(n);
 
     for (size_t index = 0; index < layer_count; ++index) {
@@ -213,17 +204,17 @@ const event_vector seed(const size_t n,
 //----------------------------------------------------------------------------------------------
 
 //__Check if Seeds can be Joined________________________________________________________________
-bool seeds_compatible(const event_points& first,
-                      const event_points& second,
+bool seeds_compatible(const event& first,
+                      const event& second,
                       const size_t difference) {
   return std::equal(first.cbegin() + difference, first.cend(), second.cbegin());
 }
 //----------------------------------------------------------------------------------------------
 
 //__Join Two Seeds______________________________________________________________________________
-const event_points join(const event_points& first,
-                        const event_points& second,
-                        const size_t difference) {
+const event join(const event& first,
+                 const event& second,
+                 const size_t difference) {
   const auto second_size = second.size();
   const auto overlap = first.size() - difference;
 
@@ -231,7 +222,7 @@ const event_points join(const event_points& first,
     return {};
 
   const auto size = difference + second_size;
-  event_points out;
+  event out;
   out.reserve(size);
 
   size_t index = 0;
@@ -397,7 +388,7 @@ struct _track_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 //----------------------------------------------------------------------------------------------
 
 //__Fast Guess of Initial Track Parameters______________________________________________________
-_track_parameters _guess_track(const event_points& event) {
+_track_parameters _guess_track(const event& event) {
   const auto& first = event.front();
   const auto& last = event.back();
   const auto dt = last.t - first.t;
@@ -412,7 +403,7 @@ _track_parameters _guess_track(const event_points& event) {
 //----------------------------------------------------------------------------------------------
 
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
-thread_local event_points&& _nll_fit_event = {};
+thread_local event&& _nll_fit_event = {};
 void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t) {
   out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
     [&](const auto& sum, const auto& point) {
@@ -429,10 +420,10 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
-_track_parameters& _fit_event_old(const event_points& event,
-                                  _track_parameters& parameters,
-                                  const fit_settings& settings,
-                                  const Coordinate fixed=Coordinate::Z) {
+_track_parameters& _fit_event_minuit(const event& event,
+                                     _track_parameters& parameters,
+                                     const fit_settings& settings,
+                                     const Coordinate fixed=Coordinate::Z) {
   TMinuit minuit;
   minuit.SetGraphicsMode(settings.graphics_on);
   minuit.SetPrintLevel(settings.print_level);
@@ -475,19 +466,12 @@ _track_parameters& _fit_event_old(const event_points& event,
     error_flag);
 
   switch (error_flag) {
-    case  0: break;
-
-    case  1:
-    case  2:
-    case  3:
-
-    case  4:
-
-    case  9:
-
-    case 10:
-    case 11:
-    case 12: break;
+    case 1:
+    case 2:
+    case 3:
+    case 4: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"",
+                              settings.command_name, "\".\n");
+    default: break;
   }
 
   Double_t value, error;
@@ -520,7 +504,7 @@ _track_parameters& _fit_event_old(const event_points& event,
 //__Negative Log Likelihood Functor_____________________________________________________________
 class _track_nll : public ROOT::Minuit2::FCNBase {
 public:
-  _track_nll(double error_def, const event_points& event)
+  _track_nll(double error_def, const event& event)
       : _event(event), _error_def(error_def) {}
 
   double Up() const { return _error_def; }
@@ -533,16 +517,16 @@ public:
   }
 
 private:
-  event_points _event;
+  event _event;
   double _error_def = 0.5;
 };
 //----------------------------------------------------------------------------------------------
 
-//__MINUIT MIGRAD Fitter________________________________________________________________________
-_track_parameters& _fit_event_new(const event_points& event,
-                                  _track_parameters& parameters,
-                                  const fit_settings& settings,
-                                  const Coordinate fixed=Coordinate::Z) {
+//__MINUIT2 MIGRAD Fitter_______________________________________________________________________
+_track_parameters& _fit_event_minuit2(const event& event,
+                                      _track_parameters& parameters,
+                                      const fit_settings& settings,
+                                      const Coordinate fixed=Coordinate::Z) {
 
   ROOT::Minuit2::MnUserParameters minuit_parameters;
 
@@ -622,7 +606,7 @@ _track_parameters& _fit_event_new(const event_points& event,
   vz.value = minimum_parameters.Value("VZ");
   vz.error = minimum_parameters.Error("VZ");
 
-  const auto hessian = minimum_parameters.Hessian();
+  // const auto hessian = minimum_parameters.Hessian();
 
   return parameters;
 }
@@ -631,12 +615,12 @@ _track_parameters& _fit_event_new(const event_points& event,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Track Constructor___________________________________________________________________________
-track::track(const event_points& event,
+track::track(const std::vector<hit>& points,
              const fit_settings& settings)
-    : _event(event), _settings(settings) {
+    : _event(points), _settings(settings) {
 
   auto fit_track = _guess_track(_event);
-  _fit_event_old(_event, fit_track, _settings);
+  _fit_event_minuit(_event, fit_track, _settings);
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);
@@ -681,7 +665,7 @@ track::track(const event_points& event,
 //----------------------------------------------------------------------------------------------
 
 //__Get Position of Track at Fixed Z____________________________________________________________
-const r4_point track::operator()(const real z) const {
+const hit track::operator()(const real z) const {
   const auto dt = (z - _z0.value) / _vz.value;
   return { dt + _t0.value, std::fma(dt, _vx.value, _x0.value), std::fma(dt, _vy.value, _y0.value), z };
 }
@@ -749,11 +733,11 @@ std::ostream& operator<<(std::ostream& os,
 
   os.precision(6);
   os << "Event: \n";
-  const auto event = track.event();
+  const auto points = track.event();
   const auto detectors = track.detectors();
-  const auto size = event.size();
+  const auto size = points.size();
   for (size_t i = 0; i < size; ++i) {
-    os << "  " << detectors[i] << " " << event[i] << "\n";
+    os << "  " << detectors[i] << " " << points[i] << "\n";
   }
 
   os.precision(7);
@@ -774,7 +758,8 @@ std::ostream& operator<<(std::ostream& os,
 //----------------------------------------------------------------------------------------------
 
 //__Add Track from Seed to Track Vector_________________________________________________________
-track_vector& operator+=(track_vector& tracks, const event_points& seed) {
+track_vector& operator+=(track_vector& tracks,
+                         const event& seed) {
   if (tracks.empty()) tracks.emplace_back(seed);
   else tracks.emplace_back(seed, tracks.front().settings());
   return tracks;
