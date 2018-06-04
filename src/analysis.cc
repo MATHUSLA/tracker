@@ -38,13 +38,6 @@ namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
-//__Average Point_______________________________________________________________________________
-const hit mean(const event& points) {
-  const auto size = points.size();
-  return (size == 0) ? hit{} : std::accumulate(points.cbegin(), points.cend(), hit{}) / size;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Centralize Events by Coordinate_____________________________________________________________
 const event centralize(const event& points,
                        const Coordinate coordinate) {

@@ -40,11 +40,6 @@ using full_event = std::vector<full_hit>;
 using full_event_vector = std::vector<full_event>;
 //----------------------------------------------------------------------------------------------
 
-//__Average Point_______________________________________________________________________________
-const hit mean(const event& points);
-const full_hit mean(const full_event& points);
-//----------------------------------------------------------------------------------------------
-
 //__Center Events by Coordinate_________________________________________________________________
 const event centralize(const event& points,
                        const Coordinate coordinate);
