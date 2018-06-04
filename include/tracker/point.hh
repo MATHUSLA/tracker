@@ -27,7 +27,7 @@
 #include <numeric>
 #include <vector>
 
-#include "util/math.hh"
+#include <tracker/util/math.hh>
 
 namespace MATHUSLA {
 

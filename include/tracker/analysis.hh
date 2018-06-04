@@ -20,8 +20,8 @@
 #define TRACKER__ANALYSIS_HH
 #pragma once
 
-#include "geometry.hh"
-#include "point.hh"
+#include <tracker/geometry.hh>
+#include <tracker/point.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 

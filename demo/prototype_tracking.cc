@@ -73,7 +73,7 @@ const TRACKER::geometry::box_volume_vector combine_rpc_hits(const TRACKER::analy
         && (std::abs(event[index].t - event[index + 1].t) <= time_threshold)) {
       boxes.push_back(geometry::intersection_volume(
         geometry::limits_of_volume(event[index]),
-        geometry::limits_of_volume(event[index += 1])
+        geometry::limits_of_volume(event[++index])
       ));
     } else {
       boxes.push_back(geometry::limits_of_volume(event[index]));
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
 
-  exit(1);
+  //exit(1);
 
   plot::init();
   geometry::open(options.geometry_file);
