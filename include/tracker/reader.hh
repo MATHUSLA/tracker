@@ -39,14 +39,14 @@ struct tracking_options {
   std::string    geometry_file     = "";
   std::string    geometry_map_file = "";
   std::string    root_directory    = "";
-  std::string    root_time_key     = "T";
+  std::string    root_t_key        = "T";
   std::string    root_x_key        = "X";
   std::string    root_y_key        = "Y";
   std::string    root_z_key        = "Z";
-  //std::string    root_dt_key       = "dT";
-  //std::string    root_dx_key       = "dX";
-  //std::string    root_dy_key       = "dY";
-  //std::string    root_dz_key       = "dZ";
+  std::string    root_dt_key       = "dT";
+  std::string    root_dx_key       = "dX";
+  std::string    root_dy_key       = "dY";
+  std::string    root_dz_key       = "dZ";
   std::string    root_detector_key = "Detector";
   CollectionMode mode              = CollectionMode::Detector;
   r4_point       collapse_size     = {0, 0, 0, 0};
@@ -57,29 +57,28 @@ struct tracking_options {
 };
 //----------------------------------------------------------------------------------------------
 
+//__Detector Map________________________________________________________________________________
+using detector_map = std::unordered_map<integer, std::string>;
+//----------------------------------------------------------------------------------------------
+
+//__Detector Map Import_________________________________________________________________________
+detector_map import_detector_map(const std::string& path);
+//----------------------------------------------------------------------------------------------
+
 namespace root { ///////////////////////////////////////////////////////////////////////////////
 
 //__ROOT Directory Search_______________________________________________________________________
 std::vector<std::string> search_directory(const std::string& path);
 //----------------------------------------------------------------------------------------------
 
-//__ROOT Detector Map___________________________________________________________________________
-using detector_map = std::unordered_map<integer, std::string>;
-//----------------------------------------------------------------------------------------------
-
-//__ROOT Detector Map Import____________________________________________________________________
-detector_map import_detector_map(const std::string& path,
-                                 bool silence_errors=false);
-//----------------------------------------------------------------------------------------------
-
 //__ROOT Event Import___________________________________________________________________________
 analysis::event_vector import_events(const std::string& path,
-                                     const std::string& time_key,
+                                     const std::string& t_key,
                                      const std::string& x_key,
                                      const std::string& y_key,
                                      const std::string& z_key);
 analysis::event_vector import_events(const std::string& path,
-                                     const std::string& time_key,
+                                     const std::string& t_key,
                                      const std::string& detector_key,
                                      const detector_map& map);
 analysis::event_vector import_events(const std::string& path,

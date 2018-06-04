@@ -2,7 +2,7 @@
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/bbbe2cb1269e4de68a9780534652a3d2)](https://app.codacy.com/app/MATHUSLA/tracker?utm_source=github.com&utm_medium=referral&utm_content=MATHUSLA/tracker&utm_campaign=badger)
 
-_tracking algorithm for particle detector_
+_time-based tracking library for particle detection experiments_
 
 ## Build and Run
 

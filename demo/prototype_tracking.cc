@@ -23,6 +23,7 @@
 #include <tracker/units.hh>
 
 #include <tracker/util/algorithm.hh>
+#include <tracker/util/io.hh>
 
 namespace MATHUSLA {
 
@@ -95,7 +96,9 @@ int main(int argc, char* argv[]) {
   using namespace MATHUSLA::TRACKER;
 
   const auto options = reader::parse_input(argc, argv);
-  const auto detector_map = reader::root::import_detector_map(options.geometry_map_file);
+  const auto detector_map = reader::import_detector_map(options.geometry_map_file);
+
+  exit(1);
 
   plot::init();
   geometry::open(options.geometry_file);
@@ -111,55 +114,8 @@ int main(int argc, char* argv[]) {
         canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
       }
 
-      const auto box_volumes = combine_rpc_hits(collapsed_event, 2 * units::time);
+      // const auto box_volumes = combine_rpc_hits(collapsed_event, 2 * units::time);
 
-
-
-
-      canvas.draw();
-    }
-  }
-
-  geometry::close();
-  plot::end();
-
-  return 0;
-}
-//----------------------------------------------------------------------------------------------
-
-/* ALTERNATIVE:
-
-//__Main Function: Tracker______________________________________________________________________
-int main(int argc, char* argv[]) {
-  using namespace MATHUSLA;
-  using namespace MATHUSLA::TRACKER;
-
-  const auto options = reader::parse_input(argc, argv);
-
-  plot::init();
-  geometry::open(options.geometry_file);
-  const auto detector_map = reader::root::import_detector_map(options.geometry_map_file);
-
-  const auto paths = reader::root::search_directory(options.root_directory);
-  std::cout << "File Count: " << paths.size() << "\n";
-  for (const auto& path : paths) {
-    std::cout << path << "\n";
-
-    const auto events = reader::root::import_events(path, options, detector_map);
-
-    std::cout << "Processing " << events.size() << " Events\n";
-
-    for (const auto& unsorted_event : events) {
-      plot::canvas canvas(path);
-
-      // demo for Prototype only
-      for (const auto& name : geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"})) {
-        const auto limits = geometry::limits_of(name);
-        canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
-      }
-
-      const auto event           = analysis::centralize(unsorted_event, analysis::Coordinate::T);
-      const auto collapsed_event = analysis::collapse(event, options.collapse_size);
       const auto layered_event   = analysis::partition(collapsed_event, options.layer_axis, options.layer_depth);
 
       canvas.add_points(collapsed_event, 1.5, {90, 90, 90});
@@ -207,10 +163,6 @@ int main(int argc, char* argv[]) {
   geometry::close();
   plot::end();
 
-  std::cout << "Done!\n";
-
   return 0;
 }
 //----------------------------------------------------------------------------------------------
-
- */

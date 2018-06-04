@@ -40,6 +40,43 @@ namespace reader { /////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
+//__Parse Line for Detector Map_________________________________________________________________
+void _parse_detector_map_entry(const uint_fast64_t line_count,
+                               std::string& line,
+                               detector_map& out) {
+  const auto space = util::string::strip(line).find(" ");
+  if (space == std::string::npos || line[0] == '#') {
+    return;
+  } else {
+    try {
+      out.insert({std::stoll(line.substr(1 + space)), line.substr(0, space)});
+    } catch (...) {
+      util::error::exit("[FATAL ERROR] Detector Map has an invalid ID.\n",
+                        "              See Line ", line_count, ".\n");
+    }
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Import Detector Map from File_______________________________________________________________
+detector_map import_detector_map(const std::string& path) {
+  std::ifstream file(path);
+  detector_map out{};
+  std::string line;
+  uint_fast64_t line_counter{};
+  while (std::getline(file, line)) {
+    _parse_detector_map_entry(++line_counter, line, out);
+  }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+namespace root { ///////////////////////////////////////////////////////////////////////////////
+
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+
 //__Recursive TSystemFile Traversal_____________________________________________________________
 void _collect_paths(TSystemDirectory* dir,
                     std::vector<std::string>& paths,
@@ -74,8 +111,6 @@ BinaryFunction _traverse_file(const std::string& path,
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
-namespace root { ///////////////////////////////////////////////////////////////////////////////
-
 //__Search and Collect ROOT File Paths__________________________________________________________
 std::vector<std::string> search_directory(const std::string& path) {
   std::vector<std::string> paths{};
@@ -84,35 +119,9 @@ std::vector<std::string> search_directory(const std::string& path) {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Import Detector Map from File_______________________________________________________________
-detector_map import_detector_map(const std::string& path,
-                                 bool silence_errors) {
-  std::ifstream file(path);
-  detector_map out{};
-  std::string line;
-  uint_fast64_t line_counter;
-  while (std::getline(file, line)) {
-    ++line_counter;
-    const auto& space = line.find(" ");
-    if (space == std::string::npos || line[0] == '#') {
-      continue;
-    } else {
-      try {
-        out.insert({std::stoll(line.substr(1 + space)), line.substr(0, space)});
-      } catch (...) {
-        util::error::exit_when(!silence_errors,
-          "[FATAL ERROR] Detector Map has an invalid ID.\n",
-          "              See Line ", line_counter, ".\n");
-      }
-    }
-  }
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Import Events from ROOT File________________________________________________________________
 analysis::event_vector import_events(const std::string& path,
-                                     const std::string& time_key,
+                                     const std::string& t_key,
                                      const std::string& x_key,
                                      const std::string& y_key,
                                      const std::string& z_key) {
@@ -122,7 +131,7 @@ analysis::event_vector import_events(const std::string& path,
     if (std::string(key->GetClassName()) == "TTree") {
       Double_t t, x, y, z;
       tree = static_cast<TTree*>(file->Get(key->GetName()));
-      tree->SetBranchAddress(time_key.c_str(), &t);
+      tree->SetBranchAddress(t_key.c_str(), &t);
       tree->SetBranchAddress(x_key.c_str(), &x);
       tree->SetBranchAddress(y_key.c_str(), &y);
       tree->SetBranchAddress(z_key.c_str(), &z);
@@ -147,7 +156,7 @@ analysis::event_vector import_events(const std::string& path,
 
 //__Import Events from ROOT File________________________________________________________________
 analysis::event_vector import_events(const std::string& path,
-                                     const std::string& time_key,
+                                     const std::string& t_key,
                                      const std::string& detector_key,
                                      const detector_map& map) {
   analysis::event_vector out{};
@@ -156,7 +165,7 @@ analysis::event_vector import_events(const std::string& path,
     if (std::string(key->GetClassName()) == "TTree") {
       Double_t t, detector;
       tree = static_cast<TTree*>(file->Get(key->GetName()));
-      tree->SetBranchAddress(time_key.c_str(), &t);
+      tree->SetBranchAddress(t_key.c_str(), &t);
       tree->SetBranchAddress(detector_key.c_str(), &detector);
       const auto size = tree->GetEntries();
       analysis::event_points points;
@@ -181,8 +190,8 @@ analysis::event_vector import_events(const std::string& path,
                                      const tracking_options& options,
                                      const detector_map& map) {
  return options.mode == reader::CollectionMode::Detector
-   ? import_events(path, options.root_time_key, options.root_detector_key, map)
-   : import_events(path, options.root_time_key, options.root_x_key, options.root_y_key, options.root_z_key);
+   ? import_events(path, options.root_t_key, options.root_detector_key, map)
+   : import_events(path, options.root_t_key, options.root_x_key, options.root_y_key, options.root_z_key);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -203,7 +212,7 @@ namespace { ////////////////////////////////////////////////////////////////////
 //__Allowed Keys for Tracking Script Options Map________________________________________________
 const std::array<std::string, 10> _allowed_keys{{
   "geometry-file",
-  "geometry-map",
+  "geometry-map-file",
   "root-data",
   "root-position-keys",
   "root-detector-key",
@@ -214,13 +223,28 @@ const std::array<std::string, 10> _allowed_keys{{
   "seed-size"}};
 //----------------------------------------------------------------------------------------------
 
-//__Tracking Script Allowed Keys End Iterator___________________________________________________
-const auto _allowed_keys_end = _allowed_keys.cend();
+//__Reserved Symbols____________________________________________________________________________
+const char _comment_character           = '#';
+const char _space_character             = ' ';
+const char _key_value_separator         = ':';
+const std::string& _continuation_string = "...";
 //----------------------------------------------------------------------------------------------
 
-//__Tracking Script Key Check___________________________________________________________________
-bool _is_key_allowed(const std::string& key) {
-  return _allowed_keys_end != std::find(_allowed_keys.cbegin(), _allowed_keys_end, key);
+//__Parse Line from Script Into Key-Value Pair__________________________________________________
+void _parse_script_line(const std::string& line,
+                        std::string& key,
+                        std::string& value) {
+  bool on_key = true;
+  for (const auto& ch : line) {
+    if (ch == _comment_character) break;
+    if (ch == _space_character) continue;
+    if (ch == _key_value_separator) {
+      on_key = false;
+      continue;
+    }
+    if (on_key) key.push_back(ch);
+    else value.push_back(ch);
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -236,26 +260,19 @@ const tracking_options read(const std::string& path) {
     if (line.empty()) continue;
 
     std::string key, value;
-    bool on_key = true;
-    for (const auto& ch : line) {
-      if (ch == '#') break;
-      if (ch == ' ') continue;
-      if (ch == ':') {
-        on_key = false;
-        continue;
-      }
-      if (on_key) key.push_back(ch);
-      else value.push_back(ch);
-    }
+    _parse_script_line(line, key, value);
 
-    if (!value.empty() && _is_key_allowed(key)) {
+    if (key.empty()) continue;
+
+    if (value.empty()) {
+      util::error::exit("[FATAL ERROR] Missing Value For Key: \"", key, "\".\n");
+    } else {
       if (key == "geometry-file") {
         out.geometry_file = value;
-      } else if (key == "geometry-map") {
+      } else if (key == "geometry-map-file") {
         out.geometry_map_file = value;
       } else if (key == "root-data") {
         out.root_directory = value;
-
       } else if (key == "root-position-keys") {
         std::vector<std::string> root_keys;
         util::string::split(value, root_keys, ",;");
@@ -266,10 +283,10 @@ const tracking_options read(const std::string& path) {
           "              Expected 1 arguments \"T\" or 4 arguments \"T, X, Y, Z\".\n");
 
         if (size == 1) {
-          out.root_time_key = root_keys[0];
+          out.root_t_key = root_keys[0];
           out.mode = CollectionMode::Detector;
         } else if (size == 4) {
-          out.root_time_key = root_keys[0];
+          out.root_t_key = root_keys[0];
           out.root_x_key = root_keys[1];
           out.root_y_key = root_keys[2];
           out.root_z_key = root_keys[3];
@@ -278,12 +295,11 @@ const tracking_options read(const std::string& path) {
           util::error::exit(
             "[FATAL ERROR] \"ROOT Keys\" argument in Tracking Script is invalid.\n"
             "              Expected 1 arguments \"T\" or 4 arguments \"T, X, Y, Z\" "
-                          "but received ", size, ".\n");
+                          "but received \"", size, "\".\n");
         }
       } else if (key == "root-detector-key") {
         out.root_detector_key = value;
       } else if (key == "collapse-size") {
-
         std::vector<std::string> point;
         util::string::split(value, point, ",;");
         const auto size = point.size();
@@ -291,7 +307,7 @@ const tracking_options read(const std::string& path) {
 
         util::error::exit_when(size != 4,
           "[FATAL ERROR] \"Collapse Size\" argument in Tracking Script is invalid.\n"
-          "              Expected 4 arguments \"dt, dx, dy, dz\" but received ", size, ".\n");
+          "              Expected 4 arguments \"dt, dx, dy, dz\" but received \"", size, "\".\n");
 
         util::error::exit_when(std::find(point.cbegin(), end, "") != end,
           "[FATAL ERROR] \"Collapse Size\" argument in Tracking Script is invalid.\n"
@@ -311,7 +327,7 @@ const tracking_options read(const std::string& path) {
           out.layer_axis = Coordinate::Z;
         } else {
           util::error::exit("[FATAL ERROR] \"Layer Axis\" argument in Tracking Script is invalid.\n",
-                            "              Expected X/x, Y/y, or Z/z but received ", value, ".\n");
+                            "              Expected X/x, Y/y, or Z/z but received \"", value, "\".\n");
         }
       } else if (key == "layer-depth") {
         out.layer_depth = static_cast<real>(std::stold(value));
@@ -319,6 +335,8 @@ const tracking_options read(const std::string& path) {
         out.line_width = static_cast<real>(std::stold(value));
       } else if (key == "seed-size") {
         out.seed_size = static_cast<size_t>(std::stoull(value));
+      } else {
+        util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n");
       }
     }
   }
@@ -333,7 +351,7 @@ namespace { ////////////////////////////////////////////////////////////////////
 void _exit_on_missing_path(const std::string& path,
                            const std::string& name) {
   util::error::exit_when(!util::io::path_exists(path),
-    "[FATAL ERROR] ", name, " Missing: The file ", path, " cannot be found.\n");
+    "[FATAL ERROR] ", name, " Missing: The file \"", path, "\" cannot be found.\n");
 }
 //----------------------------------------------------------------------------------------------
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
