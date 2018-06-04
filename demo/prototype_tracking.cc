@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
         canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
       }
 
-      const auto box_volumes = combine_rpc_hits(collapsed_event, 10 * units::time);
+      const auto box_volumes = combine_rpc_hits(collapsed_event, 2 * units::time);
 
 
 
