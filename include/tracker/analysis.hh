@@ -43,7 +43,7 @@ using full_event_vector = std::vector<full_event>;
 //__Full Hit Stream Operator Overload___________________________________________________________
 inline std::ostream& operator<<(std::ostream& os,
                                 const full_hit& point) {
-  return os << "[(" << point.t << point.x << point.y << point.z
+  return os << "[(" << point.t << ", " << point.x << ", " << point.y << ", " << point.z
             << ") +/- " << point.error << "]";
 }
 //----------------------------------------------------------------------------------------------

@@ -336,10 +336,15 @@ const box_volume _calculate_global_extent(const G4VSolid* solid,
                                           const G4RotationMatrix& rotation) {
   G4ThreeVector min_vector, max_vector;
   _calculate_local_extent(solid, min_vector, max_vector);
+  const auto min = _convert_transform(min_vector, translation, rotation);
+  const auto max = _convert_transform(max_vector, translation, rotation);
+  const auto minmax_x = std::minmax(min.x, max.x);
+  const auto minmax_y = std::minmax(min.y, max.y);
+  const auto minmax_z = std::minmax(min.z, max.z);
   return {
     _convert_transform(G4ThreeVector(), translation, rotation),
-    _convert_transform(min_vector, translation, rotation),
-    _convert_transform(max_vector, translation, rotation)
+    {minmax_x.first, minmax_y.first, minmax_z.first},
+    {minmax_x.second, minmax_y.second, minmax_z.second}
   };
 }
 //----------------------------------------------------------------------------------------------

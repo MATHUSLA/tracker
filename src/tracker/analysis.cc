@@ -520,10 +520,11 @@ _track_parameters _guess_track(const full_event& points) {
   const auto& last = points.back();
   const auto dt = last.t - first.t;
   const auto time_error = first.error.t;
+  std::cout << first << "\n";
   return {{first.t,                 time_error,         0, 0},
-          {first.x,                 first.error.x,      0, 0},
-          {first.y,                 first.error.y,      0, 0},
-          {first.z,                 first.error.z,      0, 0},
+          {first.x,                 100*units::length,  0, 0},
+          {first.y,                 100*units::length,  0, 0},
+          {first.z,                 100*units::length,  0, 0},
           {(last.x - first.x) / dt, 50*units::velocity, 0, 0},
           {(last.y - first.y) / dt, 50*units::velocity, 0, 0},
           {(last.z - first.z) / dt, 50*units::velocity, 0, 0}};
