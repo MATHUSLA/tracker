@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <numeric>
 #include <ostream>
 #include <type_traits>
@@ -158,9 +159,145 @@ constexpr bool are_both_same_rN_type_v = are_both_same_rN_type<C1, C2>::value;
 //----------------------------------------------------------------------------------------------
 
 //__Point-Wise Reduction of Dimension___________________________________________________________
-inline constexpr r2_point reduce_to_r2(const r3_point& point) { return { point.x, point.y          }; }
-inline constexpr r2_point reduce_to_r2(const r4_point& point) { return { point.x, point.y          }; }
-inline constexpr r3_point reduce_to_r3(const r4_point& point) { return { point.x, point.y, point.z }; }
+template<class T, typename = std::enable_if_t<is_r3_type_v<T> || is_r4_type_v<T>>>
+inline constexpr r2_point reduce_to_r2(const T& point) {
+  return {point.x, point.y};
+}
+template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
+inline constexpr r3_point reduce_to_r3(const T& point) {
+  return {point.x, point.y, point.z};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Select Coordinate Subset of Point___________________________________________________________
+template<class T>
+inline constexpr std::enable_if_t<is_r3_type_v<T>, r2_point>
+select_r2(const T& point,
+          const Coordinate x1,
+          const Coordinate x2) {
+  r2_point out{};
+  switch (x1) {
+    case Coordinate::T: break;
+    case Coordinate::X: out.x = point.x; break;
+    case Coordinate::Y: out.x = point.y; break;
+    case Coordinate::Z: out.x = point.z; break;
+  }
+  switch (x2) {
+    case Coordinate::T: break;
+    case Coordinate::X: out.y = point.x; break;
+    case Coordinate::Y: out.y = point.y; break;
+    case Coordinate::Z: out.y = point.z; break;
+  }
+  return out;
+}
+template<class T>
+inline constexpr std::enable_if_t<is_r4_type_v<T>, r2_point>
+select_r2(const T& point,
+          const Coordinate x1,
+          const Coordinate x2) {
+  r2_point out{};
+  switch (x1) {
+    case Coordinate::T: out.x = point.t; break;
+    case Coordinate::X: out.x = point.x; break;
+    case Coordinate::Y: out.x = point.y; break;
+    case Coordinate::Z: out.x = point.z; break;
+  }
+  switch (x2) {
+    case Coordinate::T: out.y = point.t; break;
+    case Coordinate::X: out.y = point.x; break;
+    case Coordinate::Y: out.y = point.y; break;
+    case Coordinate::Z: out.y = point.z; break;
+  }
+  return out;
+}
+template<class T>
+inline constexpr std::enable_if_t<is_r3_type_v<T>, r3_point>
+select_r3(const T& point,
+          const Coordinate x1,
+          const Coordinate x2,
+          const Coordinate x3) {
+  r3_point out{};
+  switch (x1) {
+    case Coordinate::T: break;
+    case Coordinate::X: out.x = point.x; break;
+    case Coordinate::Y: out.x = point.y; break;
+    case Coordinate::Z: out.x = point.z; break;
+  }
+  switch (x2) {
+    case Coordinate::T: break;
+    case Coordinate::X: out.y = point.x; break;
+    case Coordinate::Y: out.y = point.y; break;
+    case Coordinate::Z: out.y = point.z; break;
+  }
+  switch (x3) {
+    case Coordinate::T: break;
+    case Coordinate::X: out.z = point.x; break;
+    case Coordinate::Y: out.z = point.y; break;
+    case Coordinate::Z: out.z = point.z; break;
+  }
+  return out;
+}
+template<class T>
+inline constexpr std::enable_if_t<is_r4_type_v<T>, r3_point>
+select_r3(const T& point,
+          const Coordinate x1,
+          const Coordinate x2,
+          const Coordinate x3) {
+  r3_point out{};
+  switch (x1) {
+    case Coordinate::T: out.x = point.t; break;
+    case Coordinate::X: out.x = point.x; break;
+    case Coordinate::Y: out.x = point.y; break;
+    case Coordinate::Z: out.x = point.z; break;
+  }
+  switch (x2) {
+    case Coordinate::T: out.y = point.t; break;
+    case Coordinate::X: out.y = point.x; break;
+    case Coordinate::Y: out.y = point.y; break;
+    case Coordinate::Z: out.y = point.z; break;
+  }
+  switch (x3) {
+    case Coordinate::T: out.z = point.t; break;
+    case Coordinate::X: out.z = point.x; break;
+    case Coordinate::Y: out.z = point.y; break;
+    case Coordinate::Z: out.z = point.z; break;
+  }
+  return out;
+}
+template<class T>
+inline constexpr std::enable_if_t<is_r4_type_v<T>, r4_point>
+select_r4(const T& point,
+          const Coordinate x1,
+          const Coordinate x2,
+          const Coordinate x3,
+          const Coordinate x4) {
+  r4_point out{};
+  switch (x1) {
+    case Coordinate::T: out.t = point.t; break;
+    case Coordinate::X: out.t = point.x; break;
+    case Coordinate::Y: out.t = point.y; break;
+    case Coordinate::Z: out.t = point.z; break;
+  }
+  switch (x2) {
+    case Coordinate::T: out.x = point.t; break;
+    case Coordinate::X: out.x = point.x; break;
+    case Coordinate::Y: out.x = point.y; break;
+    case Coordinate::Z: out.x = point.z; break;
+  }
+  switch (x3) {
+    case Coordinate::T: out.y = point.t; break;
+    case Coordinate::X: out.y = point.x; break;
+    case Coordinate::Y: out.y = point.y; break;
+    case Coordinate::Z: out.y = point.z; break;
+  }
+  switch (x4) {
+    case Coordinate::T: out.z = point.t; break;
+    case Coordinate::X: out.z = point.x; break;
+    case Coordinate::Y: out.z = point.y; break;
+    case Coordinate::Z: out.z = point.z; break;
+  }
+  return out;
+}
 //----------------------------------------------------------------------------------------------
 
 //__Stream Convenience Printing_________________________________________________________________
@@ -284,21 +421,27 @@ inline T1 operator-(T1 left,
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Scalar Multiplication___________________________________________
-inline r2_point& operator*=(r2_point& left,
-                            const real right) {
+template<class T, class A>
+inline std::enable_if_t<is_r2_type_v<T> && std::is_arithmetic<A>::value, T>&
+operator*=(T& left,
+           const A right) {
   left.x *= right;
   left.y *= right;
   return left;
 }
-inline r3_point& operator*=(r3_point& left,
-                            const real right) {
+template<class T, class A>
+inline std::enable_if_t<is_r3_type_v<T> && std::is_arithmetic<A>::value, T>&
+operator*=(T& left,
+           const A right) {
   left.x *= right;
   left.y *= right;
   left.z *= right;
   return left;
 }
-inline r4_point& operator*=(r4_point& left,
-                            const real right) {
+template<class T, class A>
+inline std::enable_if_t<is_r4_type_v<T> && std::is_arithmetic<A>::value, T>&
+operator*=(T& left,
+           const A right) {
   left.t *= right;
   left.x *= right;
   left.y *= right;
@@ -325,21 +468,27 @@ inline T operator*(const A left,
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Scalar Division_________________________________________________
-inline r2_point& operator/=(r2_point& left,
-                            const real right) {
+template<class T, class A>
+inline std::enable_if_t<is_r2_type_v<T> && std::is_arithmetic<A>::value, T>&
+operator/=(T& left,
+           const A right) {
   left.x /= right;
   left.y /= right;
   return left;
 }
-inline r3_point& operator/=(r3_point& left,
-                            const real right) {
+template<class T, class A>
+inline std::enable_if_t<is_r3_type_v<T> && std::is_arithmetic<A>::value, T>&
+operator/=(T& left,
+           const A right) {
   left.x /= right;
   left.y /= right;
   left.z /= right;
   return left;
 }
-inline r4_point& operator/=(r4_point& left,
-                            const real right) {
+template<class T, class A>
+inline std::enable_if_t<is_r4_type_v<T> && std::is_arithmetic<A>::value, T>&
+operator/=(T& left,
+           const A right) {
   left.t /= right;
   left.x /= right;
   left.y /= right;
@@ -429,50 +578,39 @@ inline r3_point cross(const r3_point& left,
 }
 //----------------------------------------------------------------------------------------------
 
-//__R3 Point-Line Distance______________________________________________________________________
-inline real point_line_distance(const r3_point& point,
-                                const r3_point& begin,
-                                const r3_point& end) {
-  const auto denominator = norm(begin - end);
-  return !denominator ? -1 : norm(cross(point - begin, point - end)) / denominator;
-}
-inline real point_line_distance(const r4_point& point,
-                                const r4_point& begin,
-                                const r4_point& end) {
-  return point_line_distance(reduce_to_r3(point), reduce_to_r3(begin), reduce_to_r3(end));
-}
-//----------------------------------------------------------------------------------------------
-
-/*
-inline real point_line_distance(const r4_point& point,
-                                const r4_point& begin,
-                                const r4_point& end,
-                                const Coordinate x1,
-                                const Coordinate x2) {
-  return -1;
-}
-//----------------------------------------------------------------------------------------------
-
-inline real point_line_distance(const r4_point& point,
-                                const r4_point& begin,
-                                const r4_point& end,
-                                const Coordinate x1,
-                                const Coordinate x2,
-                                const Coordinate x3) {
-  return -1;
-}
-//----------------------------------------------------------------------------------------------
-
-inline real point_line_distance(const r4_point& point,
-                                const r4_point& begin,
-                                const r4_point& end) {
+//__RN Point-Line Distance______________________________________________________________________
+template<class T, typename = std::enable_if_t<is_rN_type_v<T>>>
+inline real point_line_distance(const T& point,
+                                const T& begin,
+                                const T& end) {
   const auto delta = begin - point;
   const auto line = end - begin;
   const auto norm2_line = line * line;
-  return !norm2_line ? -1 : norm(delta - (delta * line) * line / norm2_line);
+  return !norm2_line ? std::numeric_limits<real>::max()
+                     : norm(delta - (delta * line) * line / norm2_line);
+}
+template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
+inline real point_line_distance(const T& point,
+                                const T& begin,
+                                const T& end,
+                                const Coordinate x1,
+                                const Coordinate x2) {
+  return point_line_distance(select_r2(point, x1, x2),
+                             select_r2(begin, x1, x2),
+                             select_r2(end, x1, x2));
+}
+template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
+inline real point_line_distance(const T& point,
+                                const T& begin,
+                                const T& end,
+                                const Coordinate x1,
+                                const Coordinate x2,
+                                const Coordinate x3) {
+  return point_line_distance(select_r3(point, x1, x2, x3),
+                             select_r3(begin, x1, x2, x3),
+                             select_r3(end, x1, x2, x3));
 }
 //----------------------------------------------------------------------------------------------
-*/
 
 //__R3 Interval Check___________________________________________________________________________
 template<class T, class I,

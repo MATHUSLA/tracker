@@ -40,8 +40,10 @@ namespace MATHUSLA { namespace TRACKER {
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 //__Centralize Events by Coordinate_____________________________________________________________
-template<class T, typename = std::enable_if_t<is_r4_type_v<typename T::value_type>>>
-const T centralize(const T& points, const Coordinate coordinate) {
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const Event centralize(const Event& points,
+                       const Coordinate coordinate) {
   const auto size = points.size();
   if (size == 0) return {};
   auto out = coordinate_copy_sort(coordinate, points);
@@ -61,17 +63,19 @@ const full_event centralize(const full_event& points,
 //----------------------------------------------------------------------------------------------
 
 //__Collapse Points by R4 Interval______________________________________________________________
-const event collapse(const event& points,
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const Event collapse(const Event& points,
                      const r4_point& ds) {
   const auto size = points.size();
   if (size == 0) return {};
 
-  event out;
+  Event out;
   out.reserve(size);
 
   const auto& sorted_event = centralize(points, Coordinate::T);
 
-  using size_type = event::size_type;
+  using size_type = typename Event::size_type;
 
   size_type index = 0;
   std::queue<size_type> marked_indicies;
@@ -80,7 +84,7 @@ const event collapse(const event& points,
     const auto& point = sorted_event[index];
     const auto time_interval = point.t + ds.t;
 
-    r4_point sum = point;
+    auto sum = point;
 
     auto skipped = false;
     while (++index < size) {
@@ -111,15 +115,24 @@ const event collapse(const event& points,
 
   return out;
 }
+const event collapse(const event& points,
+                     const r4_point& ds) {
+  return collapse<>(points, ds);
+}
+const full_event collapse(const full_event& points,
+                          const r4_point& ds) {
+  return collapse<>(points, ds);
+}
 //----------------------------------------------------------------------------------------------
 
 //__Partition Points by Coordinate______________________________________________________________
-template<class T, typename E = typename T::parts::value_type,
-                  typename = std::enable_if_t<is_r4_type_v<typename E::value_type>>>
-const T partition(const E& points,
-                  const Coordinate coordinate,
-                  const real interval) {
-  T out{{}, coordinate, interval};
+template<class EventPartition,
+  typename Event = typename EventPartition::parts::value_type,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const EventPartition partition(const Event& points,
+                               const Coordinate coordinate,
+                               const real interval) {
+  EventPartition out{{}, coordinate, interval};
   if (points.empty())
     return out;
 
@@ -127,11 +140,11 @@ const T partition(const E& points,
   const auto sorted_points = coordinate_stable_copy_sort(coordinate, points);
   const auto size = sorted_points.size();
 
-  std::size_t count = 0;
+  typename Event::size_type count = 0;
   auto point_iter = sorted_points.cbegin();
   while (count < size) {
     const auto& point = *point_iter;
-    E current_layer{point};
+    Event current_layer{point};
     ++count;
 
     while (count < size) {
@@ -164,20 +177,67 @@ const full_event_partition partition(const full_event& points,
 //----------------------------------------------------------------------------------------------
 
 //__Fast Check if Points Form a Line____________________________________________________________
-bool fast_line_check(const event& points,
-                     const real threshold) {
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+bool fast_line_check_2d(const Event& points,
+                        const real threshold,
+                        const Coordinate x1,
+                        const Coordinate x2) {
   const auto& line_begin = points.front();
   const auto& line_end = points.back();
   return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,
     [&](const auto& max, const auto& point) {
-        return std::max(max, point_line_distance(point, line_begin, line_end)); });
+        return std::max(max, point_line_distance(point, line_begin, line_end, x1, x2)); });
+}
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+bool fast_line_check_3d(const Event& points,
+                        const real threshold,
+                        const Coordinate x1,
+                        const Coordinate x2,
+                        const Coordinate x3) {
+  const auto& line_begin = points.front();
+  const auto& line_end = points.back();
+  return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,
+    [&](const auto& max, const auto& point) {
+        return std::max(max, point_line_distance(point, line_begin, line_end, x1, x2, x3)); });
+}
+bool fast_line_check(const event& points,
+                     const real threshold,
+                     const Coordinate x1,
+                     const Coordinate x2) {
+  return fast_line_check_2d<>(points, threshold, x1, x2);
+}
+bool fast_line_check(const full_event& points,
+                     const real threshold,
+                     const Coordinate x1,
+                     const Coordinate x2) {
+  return fast_line_check_2d<>(points, threshold, x1, x2);
+}
+bool fast_line_check(const event& points,
+                     const real threshold,
+                     const Coordinate x1,
+                     const Coordinate x2,
+                     const Coordinate x3) {
+  return fast_line_check_3d<>(points, threshold, x1, x2, x3);
+}
+bool fast_line_check(const full_event& points,
+                     const real threshold,
+                     const Coordinate x1,
+                     const Coordinate x2,
+                     const Coordinate x3) {
+  return fast_line_check_3d<>(points, threshold, x1, x2, x3);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Seeding Algorithm___________________________________________________________________________
-const event_vector seed(const size_t n,
-                        const event_partition& partition,
-                        const real line_threshold) {
+template<class EventPartition,
+  typename EventVector = typename EventPartition::parts,
+  typename Event = typename EventVector::value_type,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const EventVector seed(const size_t n,
+                       const EventPartition& partition,
+                       const real line_threshold) {
   if (n <= 2)
     return {};
 
@@ -185,7 +245,7 @@ const event_vector seed(const size_t n,
   const auto layer_count = layers.size();
 
   // FIXME: find a close upper bound for out.reserve
-  event_vector out{};
+  EventVector out{};
 
   // FIXME: unsure what to do here
   if (layer_count < n)
@@ -196,7 +256,7 @@ const event_vector seed(const size_t n,
     layer_sequence.emplace_back(1, layer.size());
 
   util::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
-    event tuple;
+    Event tuple;
     tuple.reserve(n);
 
     for (size_t index = 0; index < layer_count; ++index) {
@@ -209,11 +269,21 @@ const event_vector seed(const size_t n,
       }
     }
 
-    if (fast_line_check(t_sort(tuple), line_threshold))
+    if (fast_line_check(t_sort(tuple), line_threshold, Coordinate::X, Coordinate::Y, Coordinate::Z))
       out.push_back(tuple);
   });
 
   return out;
+}
+const event_vector seed(const size_t n,
+                        const event_partition& partition,
+                        const real line_threshold) {
+  return seed<event_partition, event_vector>(n, partition, line_threshold);
+}
+const full_event_vector seed(const size_t n,
+                             const full_event_partition& partition,
+                             const real line_threshold) {
+  return seed<full_event_partition, full_event_vector>(n, partition, line_threshold);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -226,10 +296,11 @@ bool seeds_compatible(const event& first,
 //----------------------------------------------------------------------------------------------
 
 //__Join Two Seeds______________________________________________________________________________
-template<class T, typename = std::enable_if_t<is_r4_type_v<typename T::value_type>>>
-const T join(const T& first,
-             const T& second,
-             const size_t difference) {
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const Event join(const Event& first,
+                 const Event& second,
+                 const size_t difference) {
   const auto second_size = second.size();
   const auto overlap = first.size() - difference;
 
@@ -237,7 +308,7 @@ const T join(const T& first,
     return {};
 
   const auto size = difference + second_size;
-  T out;
+  Event out;
   out.reserve(size);
 
   size_t index = 0;
@@ -271,9 +342,11 @@ using index_vector = std::vector<std::size_t>;
 //----------------------------------------------------------------------------------------------
 
 //__Join All Secondaries matching Seed__________________________________________________________
+template<class EventVector,
+  typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 void _join_secondaries(const size_t seed_index,
                        const size_t difference,
-                       event_vector& seed_buffer,
+                       EventVector& seed_buffer,
                        const index_vector& indicies,
                        util::bit_vector& join_list,
                        index_vector& out) {
@@ -297,12 +370,14 @@ using seed_queue = std::queue<index_vector>;
 //----------------------------------------------------------------------------------------------
 
 //__Partial Join Seeds from Seed Buffer_________________________________________________________
-bool _partial_join(event_vector& seed_buffer,
+template<class EventVector,
+  typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
+bool _partial_join(EventVector& seed_buffer,
                    const index_vector& indicies,
                    const size_t difference,
                    seed_queue& joined,
                    seed_queue& singular,
-                   event_vector& out) {
+                   EventVector& out) {
   const auto size = indicies.size();
   if (size <= 1) return false;
 
@@ -332,12 +407,14 @@ bool _partial_join(event_vector& seed_buffer,
 //----------------------------------------------------------------------------------------------
 
 //__Join Seeds from Seed Queues_________________________________________________________________
+template<class EventVector,
+  typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 void _join_next_in_queue(seed_queue& queue,
-                         event_vector& seed_buffer,
+                         EventVector& seed_buffer,
                          const size_t difference,
                          seed_queue& joined,
                          seed_queue& singular,
-                         event_vector& out) {
+                         EventVector& out) {
   if (!queue.empty()) {
     const auto indicies = std::move(queue.front());
     queue.pop();
@@ -347,12 +424,14 @@ void _join_next_in_queue(seed_queue& queue,
 //----------------------------------------------------------------------------------------------
 
 //__Seed Join Loop______________________________________________________________________________
-void _full_join(event_vector& seed_buffer,
+template<class EventVector,
+  typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
+void _full_join(EventVector& seed_buffer,
                 const size_t difference,
                 const size_t max_difference,
                 seed_queue& joined,
                 seed_queue& singular,
-                event_vector& out) {
+                EventVector& out) {
   do {
     _join_next_in_queue(joined, seed_buffer, difference, joined, singular, out);
     _join_next_in_queue(singular, seed_buffer, difference + 1, joined, singular, out);
@@ -363,13 +442,15 @@ void _full_join(event_vector& seed_buffer,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Seed Join___________________________________________________________________________________
-const event_vector join_all(const event_vector& seeds) {
+template<class EventVector,
+  typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
+const EventVector join_all(const EventVector& seeds) {
   const auto size = seeds.size();
 
-  event_vector out;
-  out.reserve(size);  // FIXME: bad estimate?
+  EventVector out;
+  out.reserve(size); // FIXME: bad estimate?
 
-  event_vector seed_buffer;
+  EventVector seed_buffer;
   std::copy(seeds.cbegin(), seeds.cend(), std::back_inserter(seed_buffer));
 
   seed_queue joined, singular;
@@ -383,28 +464,32 @@ const event_vector join_all(const event_vector& seeds) {
   _full_join(seed_buffer, 1, 2, joined, singular, out);
   return out;
 }
+const event_vector join_all(const event_vector& seeds) {
+  return join_all<>(seeds);
+}
+const full_event_vector join_all(const full_event_vector& seeds) {
+  return join_all<>(seeds);
+}
 //----------------------------------------------------------------------------------------------
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-//__Calculate Squared Residual of Track Through a Volume________________________________________
-real _track_squared_residual(const real t0,
-                             const real x0,
-                             const real y0,
-                             const real z0,
-                             const real vx,
-                             const real vy,
-                             const real vz,
-                             const hit& point) {
-  const auto limits = geometry::limits_of_volume(point);
-  const auto& center = limits.center;
-  const auto& min = limits.min;
-  const auto& max = limits.max;
-  const auto dt = (center.z - z0) / vz;
-  const auto t_res = (dt + t0 - point.t) / (2 * units::time);
-  const auto x_res = (std::fma(dt, vx, x0) - center.x) / (max.x - min.x);
-  const auto y_res = (std::fma(dt, vy, y0) - center.y) / (max.y - min.y);
-  return t_res*t_res + 12*x_res*x_res + 12*y_res*y_res;
+//__Transform Event Vector to Full Event Vector_________________________________________________
+const full_event _transform(const event& points) {
+  full_event out;
+  out.reserve(points.size());
+  std::transform(points.cbegin(), points.cend(), std::back_inserter(out), [](const auto& point) {
+    const auto limits = geometry::limits_of_volume(point);
+    const auto& center = limits.center;
+    const auto& min = limits.min;
+    const auto& max = limits.max;
+    return full_hit{point.t, center.x, center.y, center.z,
+      {2*units::time,
+       limits.max.x - limits.min.x,
+       limits.max.y - limits.min.y,
+       limits.max.z - limits.min.z}};
+  });
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -430,35 +515,23 @@ struct _track_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 //----------------------------------------------------------------------------------------------
 
 //__Fast Guess of Initial Track Parameters______________________________________________________
-_track_parameters _guess_track(const event& points) {
-  const auto& first = points.front();
-  const auto& last = points.back();
-  const auto dt = last.t - first.t;
-  return {{first.t,                   2*units::time,     0, 0},
-          {first.x,                 100*units::length,   0, 0},
-          {first.y,                 100*units::length,   0, 0},
-          {first.z,                 100*units::length,   0, 0},
-          {(last.x - first.x) / dt,  50*units::velocity, 0, 0},
-          {(last.y - first.y) / dt,  50*units::velocity, 0, 0},
-          {(last.z - first.z) / dt,  50*units::velocity, 0, 0}};
-}
 _track_parameters _guess_track(const full_event& points) {
   const auto& first = points.front();
   const auto& last = points.back();
   const auto dt = last.t - first.t;
   const auto time_error = first.error.t;
-  return {{first.t,                 time_error,                                  0, 0},
-          {first.x,                 first.error.x,                               0, 0},
-          {first.y,                 first.error.y,                               0, 0},
-          {first.z,                 first.error.z,                               0, 0},
-          {(last.x - first.x) / dt, (last.error.x - first.error.x) / time_error, 0, 0},
-          {(last.y - first.y) / dt, (last.error.y - first.error.y) / time_error, 0, 0},
-          {(last.z - first.z) / dt, (last.error.z - first.error.z) / time_error, 0, 0}};
+  return {{first.t,                 time_error,         0, 0},
+          {first.x,                 first.error.x,      0, 0},
+          {first.y,                 first.error.y,      0, 0},
+          {first.z,                 first.error.z,      0, 0},
+          {(last.x - first.x) / dt, 50*units::velocity, 0, 0},
+          {(last.y - first.y) / dt, 50*units::velocity, 0, 0},
+          {(last.z - first.z) / dt, 50*units::velocity, 0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
-thread_local event&& _nll_fit_event = {};
+thread_local full_event&& _nll_fit_event = {};
 void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
     [&](const auto& sum, const auto& point) {
@@ -467,7 +540,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
-_track_parameters& _fit_event_minuit(const event& points,
+_track_parameters& _fit_event_minuit(const full_event& points,
                                      _track_parameters& parameters,
                                      const fit_settings& settings,
                                      const Coordinate fixed=Coordinate::Z) {
@@ -551,26 +624,26 @@ _track_parameters& _fit_event_minuit(const event& points,
 //__Negative Log Likelihood Functor_____________________________________________________________
 class _track_nll : public ROOT::Minuit2::FCNBase {
 public:
-  _track_nll(double error_def, const event& points)
-      : _event(points), _error_def(error_def) {}
+  _track_nll(double error_def, const full_event& points)
+      : _full_event(points), _error_def(error_def) {}
 
   double Up() const { return _error_def; }
   void SetErrorDef(double error_def) { _error_def = error_def; }
 
   double operator()(const std::vector<double>& x) const {
-    return 0.5L * std::accumulate(_event.cbegin(), _event.cend(), 0.0L,
+    return 0.5L * std::accumulate(_full_event.cbegin(), _full_event.cend(), 0.0L,
       [&](const auto& sum, const auto& point) {
         return sum + _track_squared_residual(x[0], x[1], x[2], x[3], x[4], x[5], x[6], point); });
   }
 
 private:
-  event _event;
+  full_event _full_event;
   double _error_def = 0.5;
 };
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT2 MIGRAD Fitter_______________________________________________________________________
-_track_parameters& _fit_event_minuit2(const event& points,
+_track_parameters& _fit_event_minuit2(const full_event& points,
                                       _track_parameters& parameters,
                                       const fit_settings& settings,
                                       const Coordinate fixed=Coordinate::Z) {
@@ -661,13 +734,17 @@ _track_parameters& _fit_event_minuit2(const event& points,
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
-//__Track Constructor___________________________________________________________________________
 track::track(const std::vector<hit>& points,
              const fit_settings& settings)
-    : _event(points), _settings(settings) {
+    : track(_transform(points), settings) {}
 
-  auto fit_track = _guess_track(_event);
-  _fit_event_minuit(_event, fit_track, _settings);
+//__Track Constructor___________________________________________________________________________
+track::track(const std::vector<full_hit>& points,
+             const fit_settings& settings)
+    : _full_event(points), _settings(settings) {
+
+  auto fit_track = _guess_track(_full_event);
+  _fit_event_minuit(_full_event, fit_track, _settings);
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);
@@ -677,35 +754,23 @@ track::track(const std::vector<hit>& points,
   _vy = std::move(fit_track.vy);
   _vz = std::move(fit_track.vz);
 
-  const auto& event_begin = _event.cbegin();
-  const auto& event_end = _event.cend();
+  const auto& full_event_begin = _full_event.cbegin();
+  const auto& full_event_end = _full_event.cend();
 
-  std::transform(event_begin, event_end, std::back_inserter(_delta_chi_squared),
+  std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi_squared),
     [&](const auto& point) {
       return _track_squared_residual(
-        _t0.value,
-        _x0.value,
-        _y0.value,
-        _z0.value,
-        _vx.value,
-        _vy.value,
-        _vz.value,
+        _t0.value, _x0.value, _y0.value, _z0.value, _vx.value, _vy.value, _vz.value,
         point);
     });
 
-  std::transform(event_begin, event_end, std::back_inserter(_detectors),
-    [&](const auto& point) { return geometry::volume(point); });
+  std::transform(full_event_begin, full_event_end, std::back_inserter(_detectors),
+    [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
 
-  std::transform(event_begin, event_end, std::back_inserter(_squared_residuals),
+  std::transform(full_event_begin, full_event_end, std::back_inserter(_squared_residuals),
     [&](const auto& point) {
       return _track_squared_residual(
-        _t0.value,
-        _x0.value,
-        _y0.value,
-        _z0.value,
-        _vx.value,
-        _vy.value,
-        _vz.value,
+        _t0.value, _x0.value, _y0.value, _z0.value, _vx.value, _vy.value, _vz.value,
         point);
     });
 }
@@ -755,13 +820,35 @@ real track::chi_squared() const {
 
 //__Track Degrees of Freedom____________________________________________________________________
 size_t track::degrees_of_freedom() const {
-  return 3 * _event.size() - 6;
+  return 3 * _full_event.size() - 6;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Chi-Squared per Degree of Freedom___________________________________________________________
 real track::chi_squared_per_dof() const {
   return chi_squared() / degrees_of_freedom();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Event from Track________________________________________________________________________
+const event track::event() const {
+  std::vector<hit> out;
+  out.reserve(_full_event.size());
+  std::transform(_full_event.cbegin(), _full_event.cend(), std::back_inserter(out),
+    [](const auto& full_point) { return hit{full_point.t, full_point.x, full_point.y, full_point.z}; });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Front of Event from Track_______________________________________________________________
+const hit track::front() const {
+  return (*this)(_full_event.front().z);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Back of Event from Track________________________________________________________________
+const hit track::back() const {
+  return (*this)(_full_event.back().z);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -804,23 +891,24 @@ std::ostream& operator<<(std::ostream& os,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Add Track from Seed to Track Vector_________________________________________________________
-track_vector& operator+=(track_vector& tracks,
-                         const event& seed) {
-  if (tracks.empty()) tracks.emplace_back(seed);
-  else tracks.emplace_back(seed, tracks.front().settings());
-  return tracks;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Fit all Seeds to Tracks_____________________________________________________________________
-const track_vector fit_seeds(const event_vector& seeds,
+template<class EventVector,
+    typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
+const track_vector fit_seeds(const EventVector& seeds,
                              const fit_settings& settings) {
   track_vector out;
   out.reserve(seeds.size());
   for (const auto& seed : seeds)
     out.emplace_back(seed, settings);
   return out;
+}
+const track_vector fit_seeds(const event_vector& seeds,
+                             const fit_settings& settings) {
+  return fit_seeds<>(seeds, settings);
+}
+const track_vector fit_seeds(const full_event_vector& seeds,
+                             const fit_settings& settings) {
+  return fit_seeds<>(seeds, settings);
 }
 //----------------------------------------------------------------------------------------------
 

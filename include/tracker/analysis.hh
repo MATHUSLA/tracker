@@ -43,14 +43,18 @@ using full_event_vector = std::vector<full_event>;
 //__Full Hit Stream Operator Overload___________________________________________________________
 inline std::ostream& operator<<(std::ostream& os,
                                 const full_hit& point) {
-  return os << "[(" << point.t << point.x << point.y << point.z << ") +/- " << point.error << "]";
+  return os << "[(" << point.t << point.x << point.y << point.z
+            << ") +/- " << point.error << "]";
 }
 //----------------------------------------------------------------------------------------------
 
 //__Full Hit Equality___________________________________________________________________________
 inline constexpr bool operator==(const full_hit& left,
                                  const full_hit& right) {
-  return left.t == right.t && left.x == left.x && left.y == left.y && left.z == left.z
+  return left.t == right.t
+      && left.x == right.x
+      && left.y == right.y
+      && left.z == right.z
       && left.error == right.error;
 }
 //----------------------------------------------------------------------------------------------
@@ -85,9 +89,23 @@ const full_event_partition partition(const full_event& points,
 
 //__Fast Check if Points Form a Line____________________________________________________________
 bool fast_line_check(const event& points,
-                     const real threshold);
+                     const real threshold,
+                     const Coordinate x1,
+                     const Coordinate x2);
 bool fast_line_check(const full_event& points,
-                     const real threshold);
+                     const real threshold,
+                     const Coordinate x1,
+                     const Coordinate x2);
+bool fast_line_check(const event& points,
+                     const real threshold,
+                     const Coordinate x1,
+                     const Coordinate x2,
+                     const Coordinate x3);
+bool fast_line_check(const full_event& points,
+                     const real threshold,
+                     const Coordinate x1,
+                     const Coordinate x2,
+                     const Coordinate x3);
 //----------------------------------------------------------------------------------------------
 
 //__Seeding Algorithm___________________________________________________________________________
@@ -189,16 +207,17 @@ public:
   real chi_squared_per_dof() const;
   const real_vector& chi_squared_vector() const { return _delta_chi_squared; }
 
-  const event& event() const { return _event; }
+  const event event() const;
+  const full_event& full_event() const { return _full_event; }
   const fit_settings& settings() const { return _settings; }
   const std::vector<std::string>& detectors() const { return _detectors; }
 
-  const hit front() const { return operator()(_event.front().z); }
-  const hit back() const { return operator()(_event.back().z); }
+  const hit front() const;
+  const hit back() const;
 
 private:
   fit_parameter _t0, _x0, _y0, _z0, _vx, _vy, _vz;
-  std::vector<hit> _event;
+  std::vector<full_hit> _full_event;
   real_vector _squared_residuals, _delta_chi_squared;
   std::vector<std::string> _detectors;
   fit_settings _settings;
@@ -212,13 +231,6 @@ std::ostream& operator<<(std::ostream& os,
 
 //__Vector of Tracks____________________________________________________________________________
 using track_vector = std::vector<track>;
-//----------------------------------------------------------------------------------------------
-
-//__Add Track from Seed to Track Vector_________________________________________________________
-track_vector& operator+=(track_vector& tracks,
-                         const event& seed);
-track_vector& operator+=(track_vector& tracks,
-                         const full_event& seed);
 //----------------------------------------------------------------------------------------------
 
 //__Fit all Seeds to Tracks_____________________________________________________________________
