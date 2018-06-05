@@ -25,11 +25,11 @@ find_package(Geant4 REQUIRED COMPONENTS gdml)
 find_package(ROOT   REQUIRED COMPONENTS Minuit Minuit2)
 
 add_library(tracker SHARED
-    src/analysis.cc
-    src/geometry.cc
-    src/plot.cc
-    src/reader.cc
-    src/util/command_line_parser.cc
+    src/tracker/analysis.cc
+    src/tracker/geometry.cc
+    src/tracker/plot.cc
+    src/tracker/reader.cc
+    src/tracker/util/command_line_parser.cc
 )
 target_compile_features(tracker PUBLIC cxx_std_14)
 
