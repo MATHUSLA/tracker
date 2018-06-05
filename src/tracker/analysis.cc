@@ -483,6 +483,7 @@ const full_event _transform(const event& points) {
     const auto& center = limits.center;
     const auto& min = limits.min;
     const auto& max = limits.max;
+    std::cout << min << "::" << max << "\n";
     return full_hit{point.t, center.x, center.y, center.z,
       {2*units::time,
        limits.max.x - limits.min.x,
