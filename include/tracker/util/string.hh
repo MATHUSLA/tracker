@@ -28,7 +28,7 @@ namespace util { ///////////////////////////////////////////////////////////////
 
 namespace string { /////////////////////////////////////////////////////////////////////////////
 
-//__Split on Delimeters_________________________________________________________________________
+//__Split String on Delimeters__________________________________________________________________
 template <class Range>
 void split(const std::string& string,
            Range& tokens,
@@ -49,6 +49,22 @@ template <class Range>
 void splitlines(const std::string& string,
                 Range& tokens) {
   split(string, tokens, "\n\r");
+}
+//----------------------------------------------------------------------------------------------
+
+//__Join Range of Strings on Delimeters_________________________________________________________
+template <class Range>
+std::string join(const Range& tokens,
+                 const std::string& delimeter="") {
+  const auto begin = tokens.cbegin();
+  const auto end = tokens.cend();
+  if (begin == end)
+    return "";
+
+  std::string out;
+  out.append(*begin);
+  std::for_each(begin + 1, end, [&](const auto& string) { out += delimeter + string; });
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 

@@ -27,6 +27,7 @@
 #include <ROOT/Minuit2/MnMigrad.h>
 #include <ROOT/Minuit2/FunctionMinimum.h>
 
+#include <tracker/geometry.hh>
 #include <tracker/units.hh>
 
 #include <tracker/util/bit_vector.hh>
@@ -39,15 +40,23 @@ namespace MATHUSLA { namespace TRACKER {
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 //__Centralize Events by Coordinate_____________________________________________________________
-const event centralize(const event& points,
-                       const Coordinate coordinate) {
+template<class T, typename = std::enable_if_t<is_r4_type_v<typename T::value_type>>>
+const T centralize(const T& points, const Coordinate coordinate) {
   const auto size = points.size();
   if (size == 0) return {};
   auto out = coordinate_copy_sort(coordinate, points);
-  const auto min = hit{points.front().t, 0, 0, 0};
+  const hit min{points.front().t, 0, 0, 0};
   std::transform(out.cbegin(), out.cend(), out.begin(),
     [&](const auto& point) { return point - min; });
   return out;
+}
+const event centralize(const event& points,
+                       const Coordinate coordinate) {
+  return centralize<>(points, coordinate);
+}
+const full_event centralize(const full_event& points,
+                            const Coordinate coordinate) {
+  return centralize<>(points, coordinate);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -105,10 +114,12 @@ const event collapse(const event& points,
 //----------------------------------------------------------------------------------------------
 
 //__Partition Points by Coordinate______________________________________________________________
-const event_partition partition(const event& points,
-                                const Coordinate coordinate,
-                                const real interval) {
-  event_partition out{{}, coordinate, interval};
+template<class T, typename E = typename T::parts::value_type,
+                  typename = std::enable_if_t<is_r4_type_v<typename E::value_type>>>
+const T partition(const E& points,
+                  const Coordinate coordinate,
+                  const real interval) {
+  T out{{}, coordinate, interval};
   if (points.empty())
     return out;
 
@@ -116,11 +127,11 @@ const event_partition partition(const event& points,
   const auto sorted_points = coordinate_stable_copy_sort(coordinate, points);
   const auto size = sorted_points.size();
 
-  event::size_type count = 0;
+  std::size_t count = 0;
   auto point_iter = sorted_points.cbegin();
   while (count < size) {
     const auto& point = *point_iter;
-    event current_layer{point};
+    E current_layer{point};
     ++count;
 
     while (count < size) {
@@ -139,6 +150,16 @@ const event_partition partition(const event& points,
   }
 
   return out;
+}
+const event_partition partition(const event& points,
+                                const Coordinate coordinate,
+                                const real interval) {
+  return partition<event_partition>(points, coordinate, interval);
+}
+const full_event_partition partition(const full_event& points,
+                                     const Coordinate coordinate,
+                                     const real interval) {
+  return partition<full_event_partition>(points, coordinate, interval);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -163,7 +184,7 @@ const event_vector seed(const size_t n,
   const auto& layers = partition.parts;
   const auto layer_count = layers.size();
 
-  // FIXME: find an close upper bound for out.reserve
+  // FIXME: find a close upper bound for out.reserve
   event_vector out{};
 
   // FIXME: unsure what to do here
@@ -205,9 +226,10 @@ bool seeds_compatible(const event& first,
 //----------------------------------------------------------------------------------------------
 
 //__Join Two Seeds______________________________________________________________________________
-const event join(const event& first,
-                 const event& second,
-                 const size_t difference) {
+template<class T, typename = std::enable_if_t<is_r4_type_v<typename T::value_type>>>
+const T join(const T& first,
+             const T& second,
+             const size_t difference) {
   const auto second_size = second.size();
   const auto overlap = first.size() - difference;
 
@@ -215,7 +237,7 @@ const event join(const event& first,
     return {};
 
   const auto size = difference + second_size;
-  event out;
+  T out;
   out.reserve(size);
 
   size_t index = 0;
@@ -229,6 +251,16 @@ const event join(const event& first,
   for (; index < size; ++index) out.push_back(second[index - difference]);
 
   return out;
+}
+const event join(const event& first,
+                 const event& second,
+                 const size_t difference) {
+  return join<>(first, second, difference);
+}
+const full_event join(const full_event& first,
+                      const full_event& second,
+                      const size_t difference) {
+  return join<>(first, second, difference);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -363,7 +395,7 @@ real _track_squared_residual(const real t0,
                              const real vx,
                              const real vy,
                              const real vz,
-                             const r4_point& point) {
+                             const hit& point) {
   const auto limits = geometry::limits_of_volume(point);
   const auto& center = limits.center;
   const auto& min = limits.min;
@@ -376,14 +408,31 @@ real _track_squared_residual(const real t0,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Calculate Squared Residual of Track wrt Full Hit____________________________________________
+real _track_squared_residual(const real t0,
+                             const real x0,
+                             const real y0,
+                             const real z0,
+                             const real vx,
+                             const real vy,
+                             const real vz,
+                             const full_hit& point) {
+  const auto dt = (point.z - z0) / vz;
+  const auto t_res = (dt + t0 - point.t) / point.error.t;
+  const auto x_res = (std::fma(dt, vx, x0) - point.x) / point.error.x;
+  const auto y_res = (std::fma(dt, vy, y0) - point.y) / point.error.y;
+  return t_res*t_res + 12*x_res*x_res + 12*y_res*y_res;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Track Parameter Type________________________________________________________________________
 struct _track_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 //----------------------------------------------------------------------------------------------
 
 //__Fast Guess of Initial Track Parameters______________________________________________________
-_track_parameters _guess_track(const event& event) {
-  const auto& first = event.front();
-  const auto& last = event.back();
+_track_parameters _guess_track(const event& points) {
+  const auto& first = points.front();
+  const auto& last = points.back();
   const auto dt = last.t - first.t;
   return {{first.t,                   2*units::time,     0, 0},
           {first.x,                 100*units::length,   0, 0},
@@ -393,27 +442,32 @@ _track_parameters _guess_track(const event& event) {
           {(last.y - first.y) / dt,  50*units::velocity, 0, 0},
           {(last.z - first.z) / dt,  50*units::velocity, 0, 0}};
 }
+_track_parameters _guess_track(const full_event& points) {
+  const auto& first = points.front();
+  const auto& last = points.back();
+  const auto dt = last.t - first.t;
+  const auto time_error = first.error.t;
+  return {{first.t,                 time_error,                                  0, 0},
+          {first.x,                 first.error.x,                               0, 0},
+          {first.y,                 first.error.y,                               0, 0},
+          {first.z,                 first.error.z,                               0, 0},
+          {(last.x - first.x) / dt, (last.error.x - first.error.x) / time_error, 0, 0},
+          {(last.y - first.y) / dt, (last.error.y - first.error.y) / time_error, 0, 0},
+          {(last.z - first.z) / dt, (last.error.z - first.error.z) / time_error, 0, 0}};
+}
 //----------------------------------------------------------------------------------------------
 
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
 thread_local event&& _nll_fit_event = {};
-void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* parameters, Int_t) {
+void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
     [&](const auto& sum, const auto& point) {
-      return sum + _track_squared_residual(
-        parameters[0],
-        parameters[1],
-        parameters[2],
-        parameters[3],
-        parameters[4],
-        parameters[5],
-        parameters[6],
-        point); });
+      return sum + _track_squared_residual(x[0], x[1], x[2], x[3], x[4], x[5], x[6], point); });
 }
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
-_track_parameters& _fit_event_minuit(const event& event,
+_track_parameters& _fit_event_minuit(const event& points,
                                      _track_parameters& parameters,
                                      const fit_settings& settings,
                                      const Coordinate fixed=Coordinate::Z) {
@@ -447,7 +501,7 @@ _track_parameters& _fit_event_minuit(const event& event,
     case Coordinate::Z: minuit.FixParameter(3); break;
   }
 
-  _nll_fit_event = event;
+  _nll_fit_event = points;
   minuit.SetFCN(_gaussian_nll);
 
   Int_t error_flag;
@@ -497,8 +551,8 @@ _track_parameters& _fit_event_minuit(const event& event,
 //__Negative Log Likelihood Functor_____________________________________________________________
 class _track_nll : public ROOT::Minuit2::FCNBase {
 public:
-  _track_nll(double error_def, const event& event)
-      : _event(event), _error_def(error_def) {}
+  _track_nll(double error_def, const event& points)
+      : _event(points), _error_def(error_def) {}
 
   double Up() const { return _error_def; }
   void SetErrorDef(double error_def) { _error_def = error_def; }
@@ -516,7 +570,7 @@ private:
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT2 MIGRAD Fitter_______________________________________________________________________
-_track_parameters& _fit_event_minuit2(const event& event,
+_track_parameters& _fit_event_minuit2(const event& points,
                                       _track_parameters& parameters,
                                       const fit_settings& settings,
                                       const Coordinate fixed=Coordinate::Z) {
@@ -579,7 +633,7 @@ _track_parameters& _fit_event_minuit2(const event& event,
     case Coordinate::Z: minuit_parameters.Fix("Z0"); break;
   }
 
-  ROOT::Minuit2::MnMigrad migrad(_track_nll(settings.error_def, event), minuit_parameters);
+  ROOT::Minuit2::MnMigrad migrad(_track_nll(settings.error_def, points), minuit_parameters);
 
   const auto min = migrad();
   const auto minimum_parameters = min.UserState();
@@ -711,7 +765,7 @@ real track::chi_squared_per_dof() const {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Output Stream Operator______________________________________________________________________
+//__Track Output Stream Operator________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const track& track) {
   os.precision(7);

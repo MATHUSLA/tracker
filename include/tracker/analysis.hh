@@ -20,7 +20,7 @@
 #define TRACKER__ANALYSIS_HH
 #pragma once
 
-#include <tracker/geometry.hh>
+#include <tracker/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -35,9 +35,24 @@ using event_vector = std::vector<event>;
 //----------------------------------------------------------------------------------------------
 
 //__Extended Event Types________________________________________________________________________
-struct full_hit { r4_point point, error; };
+struct full_hit { real t, x, y, z; r4_point error; };
 using full_event = std::vector<full_hit>;
 using full_event_vector = std::vector<full_event>;
+//----------------------------------------------------------------------------------------------
+
+//__Full Hit Stream Operator Overload___________________________________________________________
+inline std::ostream& operator<<(std::ostream& os,
+                                const full_hit& point) {
+  return os << "[(" << point.t << point.x << point.y << point.z << ") +/- " << point.error << "]";
+}
+//----------------------------------------------------------------------------------------------
+
+//__Full Hit Equality___________________________________________________________________________
+inline constexpr bool operator==(const full_hit& left,
+                                 const full_hit& right) {
+  return left.t == right.t && left.x == left.x && left.y == left.y && left.z == left.z
+      && left.error == right.error;
+}
 //----------------------------------------------------------------------------------------------
 
 //__Center Events by Coordinate_________________________________________________________________
@@ -190,7 +205,7 @@ private:
 };
 //----------------------------------------------------------------------------------------------
 
-//__Output Stream Operator______________________________________________________________________
+//__Track Output Stream Operator________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const track& track);
 //----------------------------------------------------------------------------------------------

@@ -20,7 +20,7 @@
 #define TRACKER__GEOMETRY_HH
 #pragma once
 
-#include <tracker/point.hh>
+#include <tracker/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 

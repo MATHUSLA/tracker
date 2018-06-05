@@ -1,5 +1,5 @@
 /*
- * include/point.hh
+ * include/type.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__POINT_HH
-#define TRACKER__POINT_HH
+#ifndef TRACKER__TYPE_HH
+#define TRACKER__TYPE_HH
 #pragma once
 
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <ostream>
 #include <numeric>
+#include <ostream>
+#include <type_traits>
 #include <vector>
 
 #include <tracker/util/math.hh>
@@ -42,7 +43,118 @@ using real = long double;
 struct r2_point { real    x, y;    };
 struct r3_point { real    x, y, z; };
 struct r4_point { real t, x, y, z; };
+
 enum class Coordinate { T, X, Y, Z };
+//----------------------------------------------------------------------------------------------
+
+//__RN Point Type Reflection____________________________________________________________________
+template<class C, typename = void>
+struct has_t_member : std::false_type {};
+template<class C>
+struct has_t_member<C, decltype(C::t, void())> : std::true_type {};
+template<class C>
+constexpr bool has_t_member_v = has_t_member<C>::value;
+
+template<class C, typename = void>
+struct has_x_member : std::false_type {};
+template<class C>
+struct has_x_member<C, decltype(C::x, void())> : std::true_type {};
+template<class C>
+constexpr bool has_x_member_v = has_x_member<C>::value;
+
+template<class C, typename = void>
+struct has_y_member : std::false_type {};
+template<class C>
+struct has_y_member<C, decltype(C::y, void())> : std::true_type {};
+template<class C>
+constexpr bool has_y_member_v = has_y_member<C>::value;
+
+template<class C, typename = void>
+struct has_z_member : std::false_type {};
+template<class C>
+struct has_z_member<C, decltype(C::z, void())> : std::true_type {};
+template<class C>
+constexpr bool has_z_member_v = has_z_member<C>::value;
+
+template<class C,
+  bool = !has_t_member_v<C>
+      &&  has_x_member_v<C>
+      &&  has_y_member_v<C>
+      && !has_z_member_v<C>>
+struct is_r2_type : std::true_type {};
+template<class C>
+struct is_r2_type<C, false> : std::false_type {};
+template<class C>
+constexpr bool is_r2_type_v = is_r2_type<C>::value;
+
+template<class C,
+  bool = !has_t_member_v<C>
+      &&  has_x_member_v<C>
+      &&  has_y_member_v<C>
+      &&  has_z_member_v<C>>
+struct is_r3_type : std::true_type {};
+template<class C>
+struct is_r3_type<C, false> : std::false_type {};
+template<class C>
+constexpr bool is_r3_type_v = is_r3_type<C>::value;
+
+template<class C,
+  bool = has_t_member_v<C>
+      && has_x_member_v<C>
+      && has_y_member_v<C>
+      && has_z_member_v<C>>
+struct is_r4_type : std::true_type {};
+template<class C>
+struct is_r4_type<C, false> : std::false_type {};
+template<class C>
+constexpr bool is_r4_type_v = is_r4_type<C>::value;
+
+template<class C,
+  bool = is_r2_type_v<C>
+      || is_r3_type_v<C>
+      || is_r4_type_v<C>>
+struct is_rN_type : std::true_type {};
+template<class C>
+struct is_rN_type<C, false> : std::false_type {};
+template<class C>
+constexpr bool is_rN_type_v = is_rN_type<C>::value;
+
+template<class C1, class C2,
+  bool = is_r2_type_v<C1>
+      && is_r2_type_v<C2>>
+struct are_both_r2_type : std::true_type {};
+template<class C1, class C2>
+struct are_both_r2_type<C1, C2, false> : std::false_type {};
+template<class C1, class C2>
+constexpr bool are_both_r2_type_v = are_both_r2_type<C1, C2>::value;
+
+template<class C1, class C2,
+  bool = is_r3_type_v<C1>
+      && is_r3_type_v<C2>>
+struct are_both_r3_type : std::true_type {};
+template<class C1, class C2>
+struct are_both_r3_type<C1, C2, false> : std::false_type {};
+template<class C1, class C2>
+constexpr bool are_both_r3_type_v = are_both_r3_type<C1, C2>::value;
+
+template<class C1, class C2,
+  bool = is_r4_type_v<C1>
+      && is_r4_type_v<C2>>
+struct are_both_r4_type : std::true_type {};
+template<class C1, class C2>
+struct are_both_r4_type<C1, C2, false> : std::false_type {};
+template<class C1, class C2>
+constexpr bool are_both_r4_type_v = are_both_r4_type<C1, C2>::value;
+
+template<class C1, class C2,
+  bool = are_both_r2_type_v<C1, C2>
+      || are_both_r3_type_v<C1, C2>
+      || are_both_r4_type_v<C1, C2>>
+struct are_both_same_rN_type : std::true_type {};
+template<class C1, class C2>
+struct are_both_same_rN_type<C1, C2, false> : std::false_type {};
+template<class C1, class C2>
+constexpr bool are_both_same_rN_type_v = are_both_same_rN_type<C1, C2>::value;
 //----------------------------------------------------------------------------------------------
 
 //__Point-Wise Reduction of Dimension___________________________________________________________
@@ -67,27 +179,54 @@ inline std::ostream& operator<<(std::ostream& os,
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Negation_________________________________________________________________
-inline r2_point operator-(const r2_point& point) { return {           -point.x, -point.y           }; }
-inline r3_point operator-(const r3_point& point) { return {           -point.x, -point.y, -point.z }; }
-inline r4_point operator-(const r4_point& point) { return { -point.t, -point.x, -point.y, -point.z }; }
+template<class T>
+inline std::enable_if_t<is_r2_type_v<T>, T>
+operator-(T point) {
+  point.x = -point.x;
+  point.y = -point.y;
+  return point;
+}
+template<class T>
+inline std::enable_if_t<is_r3_type_v<T>, T>
+operator-(T point) {
+  point.x = -point.x;
+  point.y = -point.y;
+  point.z = -point.z;
+  return point;
+}
+template<class T>
+inline std::enable_if_t<is_r4_type_v<T>, T>
+operator-(T point) {
+  point.t = -point.t;
+  point.x = -point.x;
+  point.y = -point.y;
+  point.z = -point.z;
+  return point;
+}
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Addition________________________________________________________
-inline r2_point& operator+=(r2_point& left,
-                            const r2_point& right) {
+template<class T1, class T2>
+inline std::enable_if_t<are_both_r2_type_v<T1, T2>, T1>&
+operator+=(T1& left,
+           const T2& right) {
   left.x += right.x;
   left.y += right.y;
   return left;
 }
-inline r3_point& operator+=(r3_point& left,
-                            const r3_point& right) {
+template<class T1, class T2>
+inline std::enable_if_t<are_both_r3_type_v<T1, T2>, T1>&
+operator+=(T1& left,
+           const T2& right) {
   left.x += right.x;
   left.y += right.y;
   left.z += right.z;
   return left;
 }
-inline r4_point& operator+=(r4_point& left,
-                            const r4_point& right) {
+template<class T1, class T2>
+inline std::enable_if_t<are_both_r4_type_v<T1, T2>, T1>&
+operator+=(T1& left,
+           const T2& right) {
   left.t += right.t;
   left.x += right.x;
   left.y += right.y;
@@ -97,36 +236,36 @@ inline r4_point& operator+=(r4_point& left,
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Addition_________________________________________________________________
-inline r2_point operator+(r2_point left,
-                          const r2_point& right) {
-  return left += right;
-}
-inline r3_point operator+(r3_point left,
-                          const r3_point& right) {
-  return left += right;
-}
-inline r4_point operator+(r4_point left,
-                          const r4_point& right) {
+template<class T1, class T2,
+  typename = std::enable_if_t<are_both_same_rN_type_v<T1, T2>>>
+inline T1 operator+(T1 left,
+                    const T2& right) {
   return left += right;
 }
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Subtraction_____________________________________________________
-inline r2_point& operator-=(r2_point& left,
-                            const r2_point& right) {
+template<class T1, class T2>
+inline std::enable_if_t<are_both_r2_type_v<T1, T2>, T1>&
+operator-=(T1& left,
+           const T2& right) {
   left.x -= right.x;
   left.y -= right.y;
   return left;
 }
-inline r3_point& operator-=(r3_point& left,
-                            const r3_point& right) {
+template<class T1, class T2>
+inline std::enable_if_t<are_both_r3_type_v<T1, T2>, T1>&
+operator-=(T1& left,
+           const T2& right) {
   left.x -= right.x;
   left.y -= right.y;
   left.z -= right.z;
   return left;
 }
-inline r4_point& operator-=(r4_point& left,
-                            const r4_point& right) {
+template<class T1, class T2>
+inline std::enable_if_t<are_both_r4_type_v<T1, T2>, T1>&
+operator-=(T1& left,
+           const T2& right) {
   left.t -= right.t;
   left.x -= right.x;
   left.y -= right.y;
@@ -136,16 +275,10 @@ inline r4_point& operator-=(r4_point& left,
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Subtraction______________________________________________________________
-inline r2_point operator-(r2_point left,
-                          const r2_point& right) {
-  return left -= right;
-}
-inline r3_point operator-(r3_point left,
-                          const r3_point& right) {
-  return left -= right;
-}
-inline r4_point operator-(r4_point left,
-                          const r4_point& right) {
+template<class T1, class T2,
+  typename = std::enable_if_t<are_both_same_rN_type_v<T1, T2>>>
+inline T1 operator-(T1 left,
+                    const T2& right) {
   return left -= right;
 }
 //----------------------------------------------------------------------------------------------
@@ -175,28 +308,18 @@ inline r4_point& operator*=(r4_point& left,
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Scalar Multiplication____________________________________________________
-inline r2_point operator*(r2_point left,
-                          const real right) {
+template<class T, class A,
+  typename = std::enable_if_t<is_rN_type_v<T>
+                              && std::is_arithmetic<A>::value>>
+inline T operator*(T left,
+                   const A right) {
   return left *= right;
 }
-inline r2_point operator*(const real left,
-                          r2_point right) {
-  return right *= left;
-}
-inline r3_point operator*(r3_point left,
-                          const real right) {
-  return left *= right;
-}
-inline r3_point operator*(const real left,
-                          r3_point right) {
-  return right *= left;
-}
-inline r4_point operator*(r4_point left,
-                          const real right) {
-  return left *= right;
-}
-inline r4_point operator*(const real left,
-                          r4_point right) {
+template<class T, class A,
+  typename = std::enable_if_t<is_rN_type_v<T>
+                              && std::is_arithmetic<A>::value>>
+inline T operator*(const A left,
+                   T right) {
   return right *= left;
 }
 //----------------------------------------------------------------------------------------------
@@ -226,28 +349,18 @@ inline r4_point& operator/=(r4_point& left,
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Scalar Division__________________________________________________________
-inline r2_point operator/(r2_point left,
-                          const real right) {
+template<class T, class A,
+  typename = std::enable_if_t<is_rN_type_v<T>
+                              && std::is_arithmetic<A>::value>>
+inline T operator/(T left,
+                   const A right) {
   return left /= right;
 }
-inline r2_point operator/(const real left,
-                          r2_point right) {
-  return right /= left;
-}
-inline r3_point operator/(r3_point left,
-                          const real right) {
-  return left /= right;
-}
-inline r3_point operator/(const real left,
-                          r3_point right) {
-  return right /= left;
-}
-inline r4_point operator/(r4_point left,
-                          const real right) {
-  return left /= right;
-}
-inline r4_point operator/(const real left,
-                          r4_point right) {
+template<class T, class A,
+  typename = std::enable_if_t<is_rN_type_v<T>
+                              && std::is_arithmetic<A>::value>>
+inline T operator/(const A left,
+                   T right) {
   return right /= left;
 }
 //----------------------------------------------------------------------------------------------
@@ -268,16 +381,10 @@ inline constexpr bool operator==(const r4_point& left,
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise Inequality_________________________________________________________________
-inline constexpr bool operator!=(const r2_point& left,
-                                 const r2_point& right) {
-  return !(left == right);
-}
-inline constexpr bool operator!=(const r3_point& left,
-                                 const r3_point& right) {
-  return !(left == right);
-}
-inline constexpr bool operator!=(const r4_point& left,
-                                 const r4_point& right) {
+template<class T,
+  typename = std::enable_if_t<is_rN_type_v<T>>>
+inline constexpr bool operator!=(const T& left,
+                                 const T& right) {
   return !(left == right);
 }
 //----------------------------------------------------------------------------------------------
@@ -368,28 +475,26 @@ inline real point_line_distance(const r4_point& point,
 */
 
 //__R3 Interval Check___________________________________________________________________________
-inline constexpr bool within_dr(const r3_point& a,
-                                const r3_point& b,
-                                const r3_point& dr) {
-  return util::math::abs(a.x - b.x) <= dr.x
-      && util::math::abs(a.y - b.y) <= dr.y
-      && util::math::abs(a.z - b.z) <= dr.z;
-}
-inline constexpr bool within_dr(const r4_point& a,
-                                const r4_point& b,
-                                const r4_point& dr) {
-  return util::math::abs(a.x - b.x) <= dr.x
-      && util::math::abs(a.y - b.y) <= dr.y
-      && util::math::abs(a.z - b.z) <= dr.z;
+template<class T, class I,
+  typename = std::enable_if_t<(is_r3_type_v<T> || is_r4_type_v<T>)
+                           && (is_r3_type_v<I> || is_r4_type_v<I>)>>
+inline constexpr bool within_dr(const T& first,
+                                const T& second,
+                                const I& interval) {
+  return util::math::abs(first.x - second.x) <= interval.x
+      && util::math::abs(first.y - second.y) <= interval.y
+      && util::math::abs(first.z - second.z) <= interval.z;
 }
 //----------------------------------------------------------------------------------------------
 
 //__R4 Interval Check___________________________________________________________________________
-inline constexpr bool within_ds(const r4_point& a,
-                                const r4_point& b,
-                                const r4_point& ds) {
-  return util::math::abs(a.t - b.t) <= ds.t
-      && within_dr(a, b, ds);
+template<class T,
+  typename = std::enable_if_t<is_r4_type_v<T>>>
+inline constexpr bool within_ds(const T& first,
+                                const T& second,
+                                const T& interval) {
+  return util::math::abs(first.t - second.t) <= interval.t
+      && within_dr(first, second, interval);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -1085,4 +1190,4 @@ inline Range coordinate_stable_copy_sort(const Coordinate coordinate,
 
 } /* namespace MATHUSLA */
 
-#endif /* TRACKER__POINT_HH */
+#endif /* TRACKER__TYPE_HH */

@@ -22,7 +22,7 @@
 
 #include <memory>
 
-#include <tracker/point.hh>
+#include <tracker/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 

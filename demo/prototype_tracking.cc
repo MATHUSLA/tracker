@@ -90,6 +90,14 @@ const TRACKER::geometry::box_volume_vector combine_rpc_hits(const TRACKER::analy
 
 } /* namespace MATHUSLA */
 
+struct demo {
+  MATHUSLA::type::real X, x, y, z, t;
+};
+
+struct demo2 {
+  MATHUSLA::type::real X, x, y, z, t;
+};
+
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc, char* argv[]) {
   using namespace MATHUSLA;
@@ -97,6 +105,10 @@ int main(int argc, char* argv[]) {
 
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
+
+  //std::cout << type::are_both_r4_type_v<demo, demo2> << "\n";
+
+  //exit(1);
 
   plot::init();
   geometry::open(options.geometry_file);
