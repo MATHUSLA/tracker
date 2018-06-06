@@ -56,47 +56,63 @@ const TRACKER::geometry::box_volume get_rpc(const TRACKER::analysis::r4_point& p
 //----------------------------------------------------------------------------------------------
 */
 
+//__Combine Pair of Hits if they Occur in Overlapping RPCs______________________________________
+const TRACKER::geometry::box_volume combine_rpc_hit_pair(const TRACKER::analysis::hit& first,
+                                                         const TRACKER::analysis::hit& second) {
+  using namespace TRACKER;
+
+  const auto first_limits = geometry::limits_of_volume(first);
+  const auto second_limits = geometry::limits_of_volume(second);
+  const auto intersection_volume = geometry::intersection_volume(first_limits, second_limits);
+  const auto union_volume = geometry::union_volume(first_limits, second_limits);
+
+  std::cout << first_limits << " & " << second_limits << "\n = " << intersection_volume << "\n";
+  std::cout << first_limits << " | " << second_limits << "\n = " << union_volume << "\n\n";
+
+  auto out = intersection_volume;
+  out.center.z = union_volume.center.z;
+  out.min.z = union_volume.min.z;
+  out.max.z = union_volume.max.z;
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Combine Hits if they Occur in Overlapping RPCs______________________________________________
 const TRACKER::geometry::box_volume_vector combine_rpc_hits(const TRACKER::analysis::event& points,
                                                             const TRACKER::analysis::real time_threshold) {
   using namespace TRACKER;
+  using namespace util::math;
 
-  static const analysis::real z_threshold = 97 * units::length;
+  static const analysis::real z_threshold = 10 * units::length;
 
   const auto size = points.size();
   geometry::box_volume_vector boxes;
   boxes.reserve(size);
 
-  size_t index = 0;
-  for (; index < size - 1; ++index) {
-    if ((std::abs(points[index].z - points[index + 1].z) <= z_threshold)
-        && (std::abs(points[index].t - points[index + 1].t) <= time_threshold)) {
-      boxes.push_back(geometry::intersection_volume(
-        geometry::limits_of_volume(points[index]),
-        geometry::limits_of_volume(points[++index])
-      ));
+  size_t i = 0;
+  for (; i < size - 1; ++i) {
+    const auto current = points[i];
+    const auto next = points[i + 1];
+    if (within(current.z, next.z, z_threshold) && within(current.t, next.t, time_threshold)) {
+      boxes.push_back(combine_rpc_hit_pair(current, next));
+      i += 1;
     } else {
-      boxes.push_back(geometry::limits_of_volume(points[index]));
+      boxes.push_back(geometry::limits_of_volume(current));
     }
   }
 
-  if (index == size) {
-    boxes.push_back(geometry::limits_of_volume(points[index - 1]));
-  }
+  if (i == size)
+    boxes.push_back(geometry::limits_of_volume(points[i-1]));
 
   return boxes;
 }
+
+//const TRACKER::analysis::full_event_vector combine_rpc_hits(const TRACKER::analysis::event& points,
+//                                                            const TRACKER::analysis::real time_threshold) {
+//}
 //----------------------------------------------------------------------------------------------
 
 } /* namespace MATHUSLA */
-
-struct demo {
-  MATHUSLA::type::real X, x, y, z, t;
-};
-
-struct demo2 {
-  MATHUSLA::type::real X, x, y, z, t;
-};
 
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc, char* argv[]) {
@@ -105,10 +121,6 @@ int main(int argc, char* argv[]) {
 
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
-
-  //std::cout << type::are_both_r4_type_v<demo, demo2> << "\n";
-
-  //exit(1);
 
   plot::init();
   geometry::open(options.geometry_file);
@@ -124,7 +136,37 @@ int main(int argc, char* argv[]) {
         canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
       }
 
-      // const auto box_volumes = combine_rpc_hits(collapsed_event, 2 * units::time);
+      const auto box_volumes = combine_rpc_hits(collapsed_event, 2 * units::time);
+
+      for (const auto& box : box_volumes)
+        canvas.add_box(box.min, box.max, 3, plot::color::BLACK);
+
+      /* TODO: finish vvvvv
+
+      const auto layers = analysis::partition(combine_rpc_hits(collapsed_event, 2*units::time),
+                                              options.layer_axis,
+                                              options.layer_depth);
+
+      const auto seeds = analysis::seed(options.seed_size,
+                                        layers,
+                                        options.line_width);
+
+      const auto tracks = analysis::fit_seeds(analysis::join_all(seeds));
+      for (const auto& track : tracks) {
+        const auto& event = track.event();
+        canvas.add_points(event, 0.5);
+        for (const auto& point : event) {
+          const auto limits = geometry::limits_of_volume(point);
+          canvas.add_point(limits.center, 0.25, plot::color::BLUE);
+          canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);
+        }
+        canvas.add_line(event.front(), event.back());
+        std::cout << track << "\n";
+        canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+      }
+
+      OLD CODE: vvvv
+      ////////////////////////////////////////////////////////////////////////////////
 
       const auto layered_event = analysis::partition(collapsed_event, options.layer_axis, options.layer_depth);
 
@@ -145,7 +187,7 @@ int main(int argc, char* argv[]) {
 
       util::io::newline();
 
-      auto joined = analysis::join_all(seeds);
+      const auto joined = analysis::join_all(seeds);
 
       std::cout << "joined (" << joined.size() << "):\n\n";
       for (const auto& seed : joined)
@@ -165,6 +207,7 @@ int main(int argc, char* argv[]) {
         std::cout << track << "\n";
         canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
       }
+      */
 
       canvas.draw();
     }

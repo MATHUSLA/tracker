@@ -44,12 +44,15 @@ namespace { ////////////////////////////////////////////////////////////////////
 void _parse_detector_map_entry(const uint_fast64_t line_count,
                                std::string& line,
                                detector_map& out) {
-  const auto space = util::string::strip(line).find(" ");
-  if (space == std::string::npos || line[0] == '#') {
+  const auto colon = util::string::strip(line).find(":");
+  if (colon == std::string::npos || line[0] == '#') {
     return;
   } else {
     try {
-      out.insert({std::stoll(line.substr(1 + space)), line.substr(0, space)});
+      auto i = std::stoll(line.substr(1 + colon));
+      auto s = line.substr(0, colon);
+      // std::cout << i << " " << s << "\n";
+      out.insert({i, s});
     } catch (...) {
       util::error::exit("[FATAL ERROR] Detector Map has an invalid ID.\n",
                         "              See Line ", line_count, ".\n");

@@ -296,6 +296,13 @@ const std::string volume(const r4_point& point) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Box Volume Stream Overload__________________________________________________________________
+std::ostream& operator<<(std::ostream& os,
+                         const box_volume& box) {
+  return os << "[" << box.min << "..." << box.center << "..." << box.max << "]";
+}
+//----------------------------------------------------------------------------------------------
+
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Get Solid from Geometry Volume______________________________________________________________
@@ -313,15 +320,12 @@ void _calculate_local_extent(const G4VSolid* solid,
   solid->CalculateExtent(EAxis::kXAxis, _blank_voxels, _blank_transform, min, max);
   min_vector.setX(min);
   max_vector.setX(max);
-  //std::cout << min << " " << max << "\n";
   solid->CalculateExtent(EAxis::kYAxis, _blank_voxels, _blank_transform, min, max);
   min_vector.setY(min);
   max_vector.setY(max);
-  //std::cout << min << " " << max << "\n";
   solid->CalculateExtent(EAxis::kZAxis, _blank_voxels, _blank_transform, min, max);
   min_vector.setZ(min);
   max_vector.setZ(max);
-  //std::cout << min << " " << max << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
 

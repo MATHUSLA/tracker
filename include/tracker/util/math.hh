@@ -20,6 +20,8 @@
 #define UTIL__MATH_HH
 #pragma once
 
+#include <tracker/util/algorithm.hh>
+
 namespace MATHUSLA {
 
 namespace util { ///////////////////////////////////////////////////////////////////////////////
@@ -56,6 +58,37 @@ T range_fused_product(InputIt1 first1,
 template<class T>
 constexpr const T abs(const T& value) {
   return std::max(value, -value);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Within Interval_____________________________________________________________________________
+template<class T, class Compare>
+constexpr bool within(const T& first,
+                      const T& second,
+                      const T& interval,
+                      Compare comp) {
+  return comp(util::math::abs(first - second), interval);
+}
+template<class T>
+constexpr bool within(const T& first,
+                      const T& second,
+                      const T& interval) {
+  return within(first, second, interval, std::less_equal<>());
+}
+template<class T, class Compare>
+constexpr bool within(const T& first,
+                      const T& second,
+                      const T& low,
+                      const T& high,
+                      Compare comp) {
+  return util::algorithm::between(util::math::abs(first - second), low, high, comp);
+}
+template<class T>
+constexpr bool within(const T& first,
+                      const T& second,
+                      const T& low,
+                      const T& high) {
+  return within(first, second, low, high, std::less_equal<>());
 }
 //----------------------------------------------------------------------------------------------
 

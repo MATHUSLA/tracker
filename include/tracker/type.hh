@@ -619,9 +619,9 @@ template<class T, class I,
 inline constexpr bool within_dr(const T& first,
                                 const T& second,
                                 const I& interval) {
-  return util::math::abs(first.x - second.x) <= interval.x
-      && util::math::abs(first.y - second.y) <= interval.y
-      && util::math::abs(first.z - second.z) <= interval.z;
+  return util::math::within(first.x, second.x, interval.x)
+      && util::math::within(first.y, second.y, interval.y)
+      && util::math::within(first.z, second.z, interval.z);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -631,7 +631,7 @@ template<class T,
 inline constexpr bool within_ds(const T& first,
                                 const T& second,
                                 const T& interval) {
-  return util::math::abs(first.t - second.t) <= interval.t
+  return util::math::within(first.t, second.t, interval.t)
       && within_dr(first, second, interval);
 }
 //----------------------------------------------------------------------------------------------
