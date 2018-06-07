@@ -18,20 +18,26 @@
 
 #include <tracker/analysis.hh>
 #include <tracker/geometry.hh>
-#include <tracker/reader.hh>
 #include <tracker/plot.hh>
+#include <tracker/reader.hh>
 #include <tracker/units.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
 #include <tracker/util/io.hh>
 
+//__Namespace Alias_____________________________________________________________________________
+namespace analysis = MATHUSLA::TRACKER::analysis;
+namespace geometry = MATHUSLA::TRACKER::geometry;
+namespace plot     = MATHUSLA::TRACKER::plot;
+namespace reader   = MATHUSLA::TRACKER::reader;
+//----------------------------------------------------------------------------------------------
+
 namespace MATHUSLA {
 
 //__Combine Pair of Hits if they Occur in Overlapping RPCs______________________________________
-const TRACKER::geometry::box_volume combine_rpc_volume_pair(const TRACKER::geometry::box_volume& first,
-                                                            const TRACKER::geometry::box_volume& second) {
-  using namespace TRACKER;
+const geometry::box_volume combine_rpc_volume_pair(const geometry::box_volume& first,
+                                                   const geometry::box_volume& second) {
   auto out = geometry::coordinatewise_intersection(first, second);
   const auto union_volume = geometry::coordinatewise_union(first, second);
   out.min.z = union_volume.min.z;
@@ -42,18 +48,17 @@ const TRACKER::geometry::box_volume combine_rpc_volume_pair(const TRACKER::geome
 //----------------------------------------------------------------------------------------------
 
 //__Check If RPC Combine Created a Valid Strip Overlap__________________________________________
-constexpr bool was_combine_successful(const TRACKER::geometry::box_volume& combined) {
+constexpr bool was_combine_successful(const geometry::box_volume& combined) {
   return (combined.min.x || combined.max.x) && (combined.min.y || combined.max.y);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Check If RPC Combine Created a Valid Strip Overlap__________________________________________
-const TRACKER::analysis::full_hit construct_hit(const type::real top_time,
-                                                const type::real bottom_time,
-                                                const std::string& top_volume,
-                                                const std::string& bottom_volume,
-                                                const TRACKER::geometry::box_volume& combined) {
-  using namespace TRACKER;
+const analysis::full_hit construct_hit(const type::real top_time,
+                                       const type::real bottom_time,
+                                       const std::string& top_volume,
+                                       const std::string& bottom_volume,
+                                       const geometry::box_volume& combined) {
   const type::r4_point errors{
     std::hypot(geometry::time_resolution_of(top_volume),
                geometry::time_resolution_of(bottom_volume)) / 2.0L,
@@ -66,15 +71,13 @@ const TRACKER::analysis::full_hit construct_hit(const type::real top_time,
 //----------------------------------------------------------------------------------------------
 
 //__Combine Hits if they Occur in Overlapping RPCs______________________________________________
-const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::event& points,
-                                                     const type::real time_threshold,
-                                                     TRACKER::analysis::full_event& seeding_rpc_hits,
-                                                     TRACKER::analysis::full_event& tracking_rpc_hits) {
-  using namespace TRACKER;
-  using namespace util::math;
-
+const analysis::full_event combine_rpc_hits(const analysis::event& points,
+                                            const type::real time_threshold,
+                                            analysis::full_event& seeding_rpc_hits,
+                                            analysis::full_event& tracking_rpc_hits) {
   static const analysis::real z_lower = 24.0L * units::length;
   static const analysis::real z_upper = 45.0L * units::length;
+  using namespace util::math;
 
   const auto size = points.size();
   analysis::full_event event;
@@ -113,9 +116,9 @@ const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::ev
           geometry::limits_of(bottom_volume));
 
         if (was_combine_successful(combined) && within(top_point.t, bottom_point.t, time_threshold)) {
-          const auto constructed_hit = construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined);
-          event.push_back(constructed_hit);
-          seeding_rpc_hits.push_back(constructed_hit);
+          const auto new_hit = construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined);
+          event.push_back(new_hit);
+          seeding_rpc_hits.push_back(new_hit);
           tracking_rpc_hits.push_back(analysis::add_errors(top_point));
           tracking_rpc_hits.push_back(analysis::add_errors(bottom_point));
           discard_list.set(bottom_index);
@@ -151,10 +154,38 @@ const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::ev
 }
 //----------------------------------------------------------------------------------------------
 
+//__Reset Seed Vector Using RPC Combination Hits________________________________________________
+const analysis::full_event_vector reset_seeds(const analysis::full_event_vector& joined_seeds,
+                                              const analysis::full_event& seeding_rpc_hits,
+                                              const analysis::full_event& tracking_rpc_hits) {
+  const auto size = seeding_rpc_hits.size();
+  if (size == 0) return {};
+
+  analysis::full_event_vector out;
+  for (const auto& seed : joined_seeds) {
+    out.push_back({});
+    auto& back = out.back();
+    for (const auto& hit : seed) {
+      size_t rpc_index = 0;
+      for (; rpc_index < size; ++rpc_index) {
+        if (hit == seeding_rpc_hits[rpc_index]) {
+          back.push_back(tracking_rpc_hits[2 * rpc_index]);
+          back.push_back(tracking_rpc_hits[2 * rpc_index + 1]);
+        }
+      }
+      if (rpc_index == size)
+        back.push_back(hit);
+    }
+    type::t_sort(back);
+  }
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Add Track to Canvas_________________________________________________________________________
-void show_track(TRACKER::plot::canvas& canvas,
-                const TRACKER::analysis::track& track) {
-  using namespace TRACKER;
+void show_track(plot::canvas& canvas,
+                const analysis::track& track) {
   const auto& full_event = track.full_event();
   uint_fast8_t brightness = 0, step = 230 / full_event.size();
   for (const auto& point : full_event) {
@@ -172,9 +203,6 @@ void show_track(TRACKER::plot::canvas& canvas,
 //__Prototype Tracking Algorithm________________________________________________________________
 int prototype_tracking(int argc,
                        char* argv[]) {
-  using namespace MATHUSLA;
-  using namespace MATHUSLA::TRACKER;
-
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
   const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
@@ -200,28 +228,7 @@ int prototype_tracking(int argc,
       const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, seeding_rpc_hits, tracking_rpc_hits);
       const auto layers = analysis::partition(full_event_points, options.layer_axis, options.layer_depth);
       const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
-      const auto joined_seeds = analysis::join_all(seeds);
-
-      const auto seeding_rpc_size = seeding_rpc_hits.size();
-      const auto tracking_rpc_size = tracking_rpc_hits.size();
-
-      analysis::full_event_vector tracking_vector;
-      for (const auto& seed : joined_seeds) {
-        tracking_vector.push_back({});
-        auto& back = tracking_vector.back();
-        for (const auto& hit : seed) {
-          size_t rpc_index = 0;
-          for (; rpc_index < seeding_rpc_size; ++rpc_index) {
-            if (hit == seeding_rpc_hits[rpc_index]) {
-              back.push_back(tracking_rpc_hits[2 * rpc_index]);
-              back.push_back(tracking_rpc_hits[2 * rpc_index + 1]);
-            }
-          }
-          if (rpc_index == seeding_rpc_size)
-            back.push_back(hit);
-        }
-        type::t_sort(back);
-      }
+      const auto tracking_vector = reset_seeds(analysis::join_all(seeds), seeding_rpc_hits, tracking_rpc_hits);
 
       std::cout << tracking_vector.size() << "\n";
 
