@@ -154,9 +154,10 @@ int main(int argc, char* argv[]) {
 
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
+  const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
 
   plot::init();
-  geometry::open(options.geometry_file);
+  geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
   for (const auto& path : reader::root::search_directory(options.root_directory)) {
     plot::canvas canvas(path);
     std::cout << path << "\n";

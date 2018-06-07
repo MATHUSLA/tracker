@@ -43,7 +43,7 @@ namespace { ////////////////////////////////////////////////////////////////////
 //__Parse Line for Detector Map_________________________________________________________________
 void _parse_detector_map_entry(const uint_fast64_t line_count,
                                std::string& line,
-                               detector_map& out) {
+                               geometry::detector_map& out) {
   const auto colon = util::string::strip(line).find(":");
   if (colon == std::string::npos || line[0] == '#') {
     return;
@@ -64,14 +64,20 @@ void _parse_detector_map_entry(const uint_fast64_t line_count,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Import Detector Map from File_______________________________________________________________
-detector_map import_detector_map(const std::string& path) {
+const geometry::detector_map import_detector_map(const std::string& path) {
   std::ifstream file(path);
-  detector_map out{};
+  geometry::detector_map out{};
   std::string line;
   uint_fast64_t line_counter{};
   while (std::getline(file, line))
     _parse_detector_map_entry(++line_counter, line, out);
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Detector Time Resolution Map Import_________________________________________________________
+const geometry::time_resolution_map import_time_resolution_map(const std::string& path) {
+  return {};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -125,19 +131,19 @@ TTree* _unchecked_get_TTree(TFile* file,
 //----------------------------------------------------------------------------------------------
 
 //__Set TTree Branch Base Function______________________________________________________________
-void _set_TTree_branches(TTree* tree,
-                         const std::string& name,
-                         Double_t* value) {
+constexpr void _set_TTree_branches(TTree* tree,
+                                   const std::string& name,
+                                   Double_t* value) {
   tree->SetBranchAddress(name.c_str(), value);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Recursively Set TTree Branches______________________________________________________________
 template<class... Args>
-void _set_TTree_branches(TTree* tree,
-                         const std::string& name,
-                         Double_t* value,
-                         Args ...args) {
+constexpr void _set_TTree_branches(TTree* tree,
+                                   const std::string& name,
+                                   Double_t* value,
+                                   Args ...args) {
   _set_TTree_branches(tree, name, value);
   _set_TTree_branches(tree, args...);
 }
@@ -146,7 +152,7 @@ void _set_TTree_branches(TTree* tree,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Search and Collect ROOT File Paths__________________________________________________________
-std::vector<std::string> search_directory(const std::string& path) {
+const std::vector<std::string> search_directory(const std::string& path) {
   std::vector<std::string> paths{};
   _collect_paths(new TSystemDirectory("data", path.c_str()), paths, "root");
   return paths;
@@ -154,11 +160,11 @@ std::vector<std::string> search_directory(const std::string& path) {
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-analysis::event_vector import_events(const std::string& path,
-                                     const std::string& t_key,
-                                     const std::string& x_key,
-                                     const std::string& y_key,
-                                     const std::string& z_key) {
+const analysis::event_vector import_events(const std::string& path,
+                                           const std::string& t_key,
+                                           const std::string& x_key,
+                                           const std::string& y_key,
+                                           const std::string& z_key) {
   analysis::event_vector out{};
   TTree* tree = nullptr;
   _traverse_file(path, [&](const auto& file, const auto& key) {
@@ -182,10 +188,10 @@ analysis::event_vector import_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-analysis::event_vector import_events(const std::string& path,
-                                     const std::string& t_key,
-                                     const std::string& detector_key,
-                                     const detector_map& map) {
+const analysis::event_vector import_events(const std::string& path,
+                                           const std::string& t_key,
+                                           const std::string& detector_key,
+                                           const geometry::detector_map& map) {
   analysis::event_vector out{};
   TTree* tree = nullptr;
   _traverse_file(path, [&](const auto& file, const auto& key) {
@@ -212,9 +218,9 @@ analysis::event_vector import_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-analysis::event_vector import_events(const std::string& path,
-                                     const tracking_options& options,
-                                     const detector_map& map) {
+const analysis::event_vector import_events(const std::string& path,
+                                           const tracking_options& options,
+                                           const geometry::detector_map& map) {
   return options.mode == reader::CollectionMode::Detector
     ? import_events(path, options.root_t_key, options.root_detector_key, map)
     : import_events(path, options.root_t_key, options.root_x_key, options.root_y_key, options.root_z_key);
@@ -222,8 +228,8 @@ analysis::event_vector import_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-analysis::event_vector import_events(const std::string& path,
-                                     const tracking_options& options) {
+const analysis::event_vector import_events(const std::string& path,
+                                           const tracking_options& options) {
   return options.mode == reader::CollectionMode::Detector
     ? import_events(path, options.root_t_key, options.root_detector_key,
         import_detector_map(options.geometry_map_file))

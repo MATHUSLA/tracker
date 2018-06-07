@@ -197,7 +197,9 @@ _geometric_volume _get_volume(const r3_point& point) {
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Initialize Geant4 Geometry Manager__________________________________________________________
-void open(const std::string& path) {
+void open(const std::string& path,
+          const real default_time_error,
+          const time_resolution_map& map) {
   close();
   _path = path;
   const static std::string&& _bar = std::string(61, '-');
@@ -208,6 +210,8 @@ void open(const std::string& path) {
   _manager->SetUserInitialization(new _empty_construction);
   _manager->InitializeGeometry();
   _setup_geometry({_world, G4AffineTransform()});
+  _default_time_resolution = default_time_error;
+  // add time_resolution_map
   std::cout << _bar << "\n\n";
 }
 //----------------------------------------------------------------------------------------------

@@ -20,6 +20,8 @@
 #define TRACKER__GEOMETRY_HH
 #pragma once
 
+#include <unordered_map>
+
 #include <tracker/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
@@ -28,8 +30,18 @@ namespace geometry { ///////////////////////////////////////////////////////////
 
 using namespace type;
 
+//__Detector Map________________________________________________________________________________
+using detector_map = std::unordered_map<integer, std::string>;
+//----------------------------------------------------------------------------------------------
+
+//__Geometry Time Resolution Map________________________________________________________________
+using time_resolution_map = std::unordered_map<std::string, real>;
+//----------------------------------------------------------------------------------------------
+
 //__Geometry Navigation System__________________________________________________________________
-void open(const std::string& path /*, TODO: argument for script*/);
+void open(const std::string& path,
+          const real default_time_error,
+          const time_resolution_map& map={});
 void close();
 //----------------------------------------------------------------------------------------------
 
