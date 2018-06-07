@@ -67,7 +67,9 @@ const TRACKER::analysis::full_hit construct_hit(const type::real top_time,
 
 //__Combine Hits if they Occur in Overlapping RPCs______________________________________________
 const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::event& points,
-                                                     const type::real time_threshold) {
+                                                     const type::real time_threshold,
+                                                     TRACKER::analysis::full_event& seeding_rpc_hits,
+                                                     TRACKER::analysis::full_event& tracking_rpc_hits) {
   using namespace TRACKER;
   using namespace util::math;
 
@@ -98,7 +100,7 @@ const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::ev
         const auto bottom_point = bottom[bottom_index];
 
         if (bottom_index == bottom_size) {
-          event.push_back(analysis::find_errors(top_point));
+          event.push_back(analysis::add_errors(top_point));
           ++top_index;
           bottom_index = 0;
           continue;
@@ -111,7 +113,11 @@ const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::ev
           geometry::limits_of(bottom_volume));
 
         if (was_combine_successful(combined) && within(top_point.t, bottom_point.t, time_threshold)) {
-          event.push_back(construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined));
+          const auto constructed_hit = construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined);
+          event.push_back(constructed_hit);
+          seeding_rpc_hits.push_back(constructed_hit);
+          tracking_rpc_hits.push_back(analysis::add_errors(top_point));
+          tracking_rpc_hits.push_back(analysis::add_errors(bottom_point));
           discard_list.set(bottom_index);
           ++top_index;
           bottom_index = 0;
@@ -121,23 +127,23 @@ const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::ev
       }
 
       for (; top_index < top_size; ++top_index) {
-        event.push_back(analysis::find_errors(top[top_index]));
+        event.push_back(analysis::add_errors(top[top_index]));
       }
       for (bottom_index = 0; bottom_index < bottom_size; ++bottom_index) {
         if (!discard_list[bottom_index])
-          event.push_back(analysis::find_errors(bottom[bottom_index]));
+          event.push_back(analysis::add_errors(bottom[bottom_index]));
       }
       ++layer_index;
     } else {
       util::algorithm::back_insert_transform(top, event,
-        [](const auto& part){ return analysis::find_errors(part); });
+        [](const auto& part){ return analysis::add_errors(part); });
     }
 
   }
 
   if (layer_index == partition_size - 1) {
     util::algorithm::back_insert_transform(parts.back(), event,
-      [](const auto& part){ return analysis::find_errors(part); });
+      [](const auto& part){ return analysis::add_errors(part); });
   }
 
   util::algorithm::reverse(event);
@@ -145,10 +151,27 @@ const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::ev
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace MATHUSLA */
+//__Add Track to Canvas_________________________________________________________________________
+void show_track(TRACKER::plot::canvas& canvas,
+                const TRACKER::analysis::track& track) {
+  using namespace TRACKER;
+  const auto& full_event = track.full_event();
+  uint_fast8_t brightness = 0, step = 230 / full_event.size();
+  for (const auto& point : full_event) {
+    const auto center = type::reduce_to_r3(point);
+    const plot::color color{brightness, brightness, brightness};
+    canvas.add_box(center, point.error.x, point.error.y, point.error.z, 2.5, color);
+    canvas.add_point(center, 0.3, color);
+    brightness += step;
+  }
+  canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
+  canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+}
+//----------------------------------------------------------------------------------------------
 
-//__Main Function: Prototype Tracker____________________________________________________________
-int main(int argc, char* argv[]) {
+//__Prototype Tracking Algorithm________________________________________________________________
+int prototype_tracking(int argc,
+                       char* argv[]) {
   using namespace MATHUSLA;
   using namespace MATHUSLA::TRACKER;
 
@@ -164,99 +187,70 @@ int main(int argc, char* argv[]) {
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
 
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
-
-      canvas.add_points(collapsed_event, 1.5, {90, 90, 90});
+      util::io::print_range(collapsed_event, "\n") << "\n\n";
+      canvas.add_points(collapsed_event, 0.8, plot::color::BLUE);
       for (const auto& name : geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"})) {
         const auto limits = geometry::limits_of(name);
         canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
       }
 
-      util::io::print_range(collapsed_event, "\n", "NEW ") << "\n\n";
+      analysis::full_event seeding_rpc_hits;
+      analysis::full_event tracking_rpc_hits;
 
-      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time);
+      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, seeding_rpc_hits, tracking_rpc_hits);
+      const auto layers = analysis::partition(full_event_points, options.layer_axis, options.layer_depth);
+      const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
+      const auto joined_seeds = analysis::join_all(seeds);
 
-      uint_fast8_t index = 0, step = 230 / full_event_points.size();
-      for (const auto& point : full_event_points) {
-        canvas.add_box(type::reduce_to_r3(point),
-                       point.error.x, point.error.y, point.error.z,
-                       3, {index, index, index});
-        index += step;
-      }
+      const auto seeding_rpc_size = seeding_rpc_hits.size();
+      const auto tracking_rpc_size = tracking_rpc_hits.size();
 
-      /*
-      const auto layers = analysis::partition(combine_rpc_hits(collapsed_event, 2*units::time),
-                                              options.layer_axis,
-                                              options.layer_depth);
-
-      const auto seeds = analysis::seed(options.seed_size,
-                                        layers,
-                                        options.line_width);
-
-      const auto tracks = analysis::fit_seeds(analysis::join_all(seeds));
-      for (const auto& track : tracks) {
-        const auto& event = track.event();
-        canvas.add_points(event, 0.5);
-        for (const auto& point : event) {
-          const auto limits = geometry::limits_of_volume(point);
-          canvas.add_point(limits.center, 0.25, plot::color::BLUE);
-          canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);
+      analysis::full_event_vector tracking_vector;
+      for (const auto& seed : joined_seeds) {
+        tracking_vector.push_back({});
+        auto& back = tracking_vector.back();
+        for (const auto& hit : seed) {
+          size_t rpc_index = 0;
+          for (; rpc_index < seeding_rpc_size; ++rpc_index) {
+            if (hit == seeding_rpc_hits[rpc_index]) {
+              back.push_back(tracking_rpc_hits[2 * rpc_index]);
+              back.push_back(tracking_rpc_hits[2 * rpc_index + 1]);
+            }
+          }
+          if (rpc_index == seeding_rpc_size)
+            back.push_back(hit);
         }
-        canvas.add_line(event.front(), event.back());
-        std::cout << track << "\n";
-        canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+        type::t_sort(back);
       }
 
-      OLD CODE: vvvv
-      ////////////////////////////////////////////////////////////////////////////////
+      std::cout << tracking_vector.size() << "\n";
 
-      const auto layered_event = analysis::partition(collapsed_event, options.layer_axis, options.layer_depth);
-
-      canvas.add_points(collapsed_event, 1.5, {90, 90, 90});
-
-      util::io::print_range(event, "\n", "OLD ") << "\n\n";
-      util::io::print_range(collapsed_event, "\n", "NEW ") << "\n\n";
-      for (const auto& layer : layered_event.parts)
-        util::io::print_range(layer, "\n", "LAYER ") << "\n\n\n";
-
-      const auto seeds = analysis::seed(options.seed_size,
-                                        layered_event,
-                                        options.line_width);
-
-      std::cout << "seeds (" << seeds.size() << "):\n\n";
-      for (const auto& seed : seeds)
-        util::io::print_range(seed) << "\n";
-
-      util::io::newline();
-
-      const auto joined = analysis::join_all(seeds);
-
-      std::cout << "joined (" << joined.size() << "):\n\n";
-      for (const auto& seed : joined)
-        util::io::print_range(seed) << "\n";
-
-      const auto tracks = analysis::fit_seeds(joined, {"MIGRAD", {}, false, -1, 0.5, 150});
-      std::cout << "\nTRACK FITTING (" << tracks.size() << "):\n\n";
-      for (const auto& track : tracks) {
-        const auto& event = track.event();
-        canvas.add_points(event, 0.5);
-        for (const auto& point : event) {
-          const auto limits = geometry::limits_of_volume(point);
-          canvas.add_point(limits.center, 0.25, plot::color::BLUE);
-          canvas.add_box(limits.min, limits.max, 2, plot::color::BLUE);
+      for (const auto& seed : tracking_vector) {
+        for (const auto& point : seed) {
+          std::cout << type::reduce_to_r4(point) << " ";
         }
-        canvas.add_line(event.front(), event.back());
-        std::cout << track << "\n";
-        canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+        std::cout << "\n";
       }
-      */
+      std::cout << "\n\n";
 
+      for (const auto& track : analysis::fit_seeds(tracking_vector)) {
+        show_track(canvas, track);
+        //std::cout << track << "\n";
+      }
       canvas.draw();
     }
   }
-
   geometry::close();
   plot::end();
-
   return 0;
+}
+//----------------------------------------------------------------------------------------------
+
+} /* namespace MATHUSLA */
+
+//__Main Function: Prototype Tracker____________________________________________________________
+int main(int argc,
+         char* argv[]) {
+  return MATHUSLA::prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

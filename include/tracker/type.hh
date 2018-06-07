@@ -167,6 +167,10 @@ template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
 inline constexpr r3_point reduce_to_r3(const T& point) {
   return {point.x, point.y, point.z};
 }
+template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
+inline constexpr r4_point reduce_to_r4(const T& point) {
+  return {point.t, point.x, point.y, point.z};
+}
 //----------------------------------------------------------------------------------------------
 
 //__Select Coordinate Subset of Point___________________________________________________________

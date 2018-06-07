@@ -60,8 +60,8 @@ inline constexpr bool operator==(const full_hit& left,
 //----------------------------------------------------------------------------------------------
 
 //__Find The Errors Associated with a Hit from Geometry_________________________________________
-const full_hit find_errors(const hit& point);
-const full_event find_errors(const event& points);
+const full_hit add_errors(const hit& point);
+const full_event add_errors(const event& points);
 //----------------------------------------------------------------------------------------------
 
 //__Center Events by Coordinate_________________________________________________________________
@@ -163,7 +163,7 @@ struct fit_settings {
   bool                graphics_on        = false;
   integer             print_level        = -1;
   double              error_def          = 0.5;
-  integer             max_iterations     = 250;
+  integer             max_iterations     = 300;
 };
 //----------------------------------------------------------------------------------------------
 

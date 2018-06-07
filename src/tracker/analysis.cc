@@ -36,7 +36,7 @@ namespace MATHUSLA { namespace TRACKER {
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 //__Find The Errors Associated with a Hit from Geometry_________________________________________
-const full_hit find_errors(const hit& point) {
+const full_hit add_errors(const hit& point) {
   const auto volume = geometry::volume(point);
   const auto limits = geometry::limits_of(volume);
   const auto& center = limits.center;
@@ -48,11 +48,11 @@ const full_hit find_errors(const hit& point) {
              limits.max.y - limits.min.y,
              limits.max.z - limits.min.z } };
 }
-const full_event find_errors(const event& points) {
+const full_event add_errors(const event& points) {
   full_event out;
   out.reserve(points.size());
   std::transform(points.cbegin(), points.cend(), std::back_inserter(out),
-    [](const auto& point) { return find_errors(point); });
+    [](const auto& point) { return add_errors(point); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -65,9 +65,9 @@ const Event centralize(const Event& points,
   const auto size = points.size();
   if (size == 0) return {};
   auto out = coordinate_copy_sort(coordinate, points);
-  const hit min{points.front().t, 0, 0, 0};
-  std::transform(out.cbegin(), out.cend(), out.begin(),
-    [&](const auto& point) { return point - min; });
+  //const hit min{points.front().t, 0, 0, 0};
+  //std::transform(out.cbegin(), out.cend(), out.begin(),
+  //  [&](const auto& point) { return point - min; });
   return out;
 }
 const event centralize(const event& points,
@@ -545,7 +545,6 @@ _track_parameters _guess_track(const full_event& points) {
   const auto& last = points.back();
   const auto dt = last.t - first.t;
   const auto time_error = first.error.t;
-  std::cout << first << "\n";
   return {{first.t,                 time_error,         0, 0},
           {first.x,                 100*units::length,  0, 0},
           {first.y,                 100*units::length,  0, 0},
@@ -614,9 +613,10 @@ _track_parameters& _fit_event_minuit(const full_event& points,
   switch (error_flag) {
     case 1:
     case 2:
-    case 3:
-    case 4: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"",
-                              settings.command_name, "\".\n");
+    case 3: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"", settings.command_name,
+                              "\". Exited with Error Code ", error_flag, ".\n");
+    //case 4: util::error::exit("[FATAL ERROR] MINUIT Exited Abnormally ",
+    //                          "with Error Code ", error_flag, ".\n");
     default: break;
   }
 
@@ -654,7 +654,7 @@ _track_parameters& _fit_event_minuit(const full_event& points,
 
 track::track(const std::vector<hit>& points,
              const fit_settings& settings)
-    : track(find_errors(points), settings) {}
+    : track(add_errors(points), settings) {}
 
 //__Track Constructor___________________________________________________________________________
 track::track(const std::vector<full_hit>& points,
