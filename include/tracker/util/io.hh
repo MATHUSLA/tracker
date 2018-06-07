@@ -73,6 +73,21 @@ inline bool path_exists(const std::string& path) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Bold, Italicise, and Underline Text_________________________________________________________
+inline std::ostream& bold(std::ostream& os=std::cout) {
+  return os << "\e[1m";
+}
+inline std::ostream& italics(std::ostream& os=std::cout) {
+  return os << "\e[3m";
+}
+inline std::ostream& underline(std::ostream& os=std::cout) {
+  return os << "\e[4m";
+}
+inline std::ostream& reset_font(std::ostream& os=std::cout) {
+  return os << "\e[0m";
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace io */ ///////////////////////////////////////////////////////////////////////////
 
 } /* namespace util */ /////////////////////////////////////////////////////////////////////////

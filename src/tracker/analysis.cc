@@ -18,6 +18,7 @@
 
 #include <tracker/analysis.hh>
 
+#include <iomanip>
 #include <numeric>
 #include <queue>
 
@@ -567,6 +568,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 //__MINUIT Gaussian Fitter______________________________________________________________________
 _track_parameters& _fit_event_minuit(const full_event& points,
                                      _track_parameters& parameters,
+                                     real_vector& covariance_matrix,
                                      const fit_settings& settings,
                                      const Coordinate fixed=Coordinate::Z) {
   TMinuit minuit;
@@ -643,8 +645,16 @@ _track_parameters& _fit_event_minuit(const full_event& points,
   vz.value = value;
   vz.error = error;
 
-  // save covariance matrix
-  // mnemat
+  constexpr std::size_t dimension = 6;
+  Double_t matrix[dimension][dimension];
+  minuit.mnemat(&matrix[0][0], dimension);
+  covariance_matrix.clear();
+  covariance_matrix.reserve(dimension * dimension);
+  for (std::size_t i = 0; i < dimension; ++i) {
+    for (std::size_t j = 0; j < dimension; ++j) {
+      covariance_matrix.push_back(matrix[i][j]);
+    }
+  }
 
   return parameters;
 }
@@ -662,7 +672,7 @@ track::track(const std::vector<full_hit>& points,
     : _full_event(points), _settings(settings) {
 
   auto fit_track = _guess_track(_full_event);
-  _fit_event_minuit(_full_event, fit_track, _settings);
+  _fit_event_minuit(_full_event, fit_track, _covariance_matrix, _settings);
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);
@@ -768,7 +778,22 @@ std::ostream& operator<<(std::ostream& os,
      << "  chi2:     " << track.chi_squared() << " = ";
   util::io::print_range(track.chi_squared_vector(), " + ", "", os) << "\n";
   os << "  dof:      " << track.degrees_of_freedom()               << "\n"
-     << "  chi2/dof: " << track.chi_squared_per_dof()              << "\n";
+     << "  chi2/dof: " << track.chi_squared_per_dof()              << "\n"
+     << "  cov mat:  | ";
+  const auto matrix = track.covariance_matrix();
+  for (size_t i = 0; i < 6; ++i) {
+    if (i > 0) os << "            | ";
+    for (size_t j = 0; j < 6; ++j) {
+      const auto cell = matrix[6*i+j];
+      if (i == j) {
+        os << util::io::bold << util::io::underline
+           << cell << util::io::reset_font << " ";
+      } else {
+        os << cell << " ";
+      }
+    }
+    os << "|\n";
+  }
 
   os.precision(6);
   os << "Dynamics: \n"

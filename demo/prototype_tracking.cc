@@ -242,7 +242,7 @@ int prototype_tracking(int argc,
 
       for (const auto& track : analysis::fit_seeds(tracking_vector)) {
         show_track(canvas, track);
-        //std::cout << track << "\n";
+        std::cout << track << "\n";
       }
       canvas.draw();
     }

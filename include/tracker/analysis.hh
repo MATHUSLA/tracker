@@ -213,6 +213,7 @@ public:
   size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
   const real_vector& chi_squared_vector() const { return _delta_chi_squared; }
+  const real_vector& covariance_matrix() const { return _covariance_matrix; }
 
   const event event() const;
   const full_event& full_event() const { return _full_event; }
@@ -225,7 +226,7 @@ public:
 private:
   fit_parameter _t0, _x0, _y0, _z0, _vx, _vy, _vz;
   std::vector<full_hit> _full_event;
-  real_vector _delta_chi_squared;
+  real_vector _delta_chi_squared, _covariance_matrix;
   std::vector<std::string> _detectors;
   fit_settings _settings;
 };
