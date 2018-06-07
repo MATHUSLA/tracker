@@ -20,6 +20,8 @@
 #define UTIL__ALGORITHM_HH
 #pragma once
 
+#include <algorithm>
+
 namespace MATHUSLA {
 
 namespace util { ///////////////////////////////////////////////////////////////////////////////
@@ -40,6 +42,22 @@ constexpr bool between(const T& value,
                        const T& low,
                        const T& high) {
   return between(value, low, high, std::less<>());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reverse Full Range__________________________________________________________________________
+template<class Range>
+constexpr void reverse(Range& range) {
+  std::reverse(std::begin(range), std::end(range));
+}
+
+//__Transform Range into another Range Through Back Inserter____________________________________
+template<class InputRange, class OutputRange, class UnaryFunction>
+constexpr UnaryFunction back_insert_transform(const InputRange& in,
+                                              OutputRange& out,
+                                              UnaryFunction f) {
+  std::transform(std::cbegin(in), std::cend(in), std::back_inserter(out), f);
+  return std::move(f);
 }
 //----------------------------------------------------------------------------------------------
 

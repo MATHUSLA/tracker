@@ -147,6 +147,20 @@ public:
                const real width=1,
                const color& color=color::BLACK);
 
+  void add_box(const r3_point& center,
+               const real width_x,
+               const real width_y,
+               const real width_z,
+               const real width=1,
+               const color& color=color::BLACK);
+
+  void add_box(const r4_point& center,
+               const real width_x,
+               const real width_y,
+               const real width_z,
+               const real width=1,
+               const color& color=color::BLACK);
+
 private:
   struct canvas_impl;
   std::unique_ptr<canvas_impl> _impl;

@@ -23,10 +23,6 @@
 
 #include <ROOT/TMinuit.h>
 
-#include <ROOT/Minuit2/FCNBase.h>
-#include <ROOT/Minuit2/MnMigrad.h>
-#include <ROOT/Minuit2/FunctionMinimum.h>
-
 #include <tracker/geometry.hh>
 #include <tracker/units.hh>
 
@@ -38,6 +34,28 @@
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
+
+//__Find The Errors Associated with a Hit from Geometry_________________________________________
+const full_hit find_errors(const hit& point) {
+  const auto volume = geometry::volume(point);
+  const auto limits = geometry::limits_of(volume);
+  const auto& center = limits.center;
+  const auto& min = limits.min;
+  const auto& max = limits.max;
+  return { point.t, center.x, center.y, center.z,
+           { geometry::time_resolution_of(volume),
+             limits.max.x - limits.min.x,
+             limits.max.y - limits.min.y,
+             limits.max.z - limits.min.z } };
+}
+const full_event find_errors(const event& points) {
+  full_event out;
+  out.reserve(points.size());
+  std::transform(points.cbegin(), points.cend(), std::back_inserter(out),
+    [](const auto& point) { return find_errors(point); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
 
 //__Centralize Events by Coordinate_____________________________________________________________
 template<class Event,
@@ -68,7 +86,7 @@ template<class Event,
 const Event collapse(const Event& points,
                      const r4_point& ds) {
   const auto size = points.size();
-  if (size == 0) return {};
+  if (size <= 1) return points;
 
   Event out;
   out.reserve(size);
@@ -83,7 +101,6 @@ const Event collapse(const Event& points,
     size_type collected = 1, missed_index = 0;
     const auto& point = sorted_event[index];
     const auto time_interval = point.t + ds.t;
-
     auto sum = point;
 
     auto skipped = false;
@@ -176,6 +193,33 @@ const full_event_partition partition(const full_event& points,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Reset Partition by new Interval_____________________________________________________________
+template<class EventPartition,
+  typename Event = typename EventPartition::parts::value_type,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const EventPartition repartition(const EventPartition& previous,
+                                 const real interval) {
+  const auto& parts = previous.parts;
+  Event reset_parts;
+  reset_parts.reserve(std::accumulate(parts.cbegin(), parts.cend(), 0ULL,
+    [](const auto size, const auto& event) { return size + event.size(); }));
+
+  for (const auto& event : parts) {
+    reset_parts.insert(reset_parts.cend(), event.cbegin(), event.cend());
+  }
+
+  return partition(reset_parts, previous.coordinate, interval);
+}
+const event_partition repartition(const event_partition& previous,
+                                  const real interval) {
+  return repartition<event_partition, event>(previous, interval);
+}
+const full_event_partition repartition(const full_event_partition& previous,
+                                       const real interval) {
+  return repartition<full_event_partition, full_event>(previous, interval);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Fast Check if Points Form a Line____________________________________________________________
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
@@ -186,7 +230,7 @@ bool fast_line_check_2d(const Event& points,
   const auto& line_begin = points.front();
   const auto& line_end = points.back();
   return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,
-    [&](const auto& max, const auto& point) {
+    [&](const auto max, const auto& point) {
         return std::max(max, point_line_distance(point, line_begin, line_end, x1, x2)); });
 }
 template<class Event,
@@ -199,7 +243,7 @@ bool fast_line_check_3d(const Event& points,
   const auto& line_begin = points.front();
   const auto& line_end = points.back();
   return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,
-    [&](const auto& max, const auto& point) {
+    [&](const auto max, const auto& point) {
         return std::max(max, point_line_distance(point, line_begin, line_end, x1, x2, x3)); });
 }
 bool fast_line_check(const event& points,
@@ -474,25 +518,6 @@ const full_event_vector join_all(const full_event_vector& seeds) {
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-//__Transform Event Vector to Full Event Vector_________________________________________________
-const full_event _transform(const event& points) {
-  full_event out;
-  out.reserve(points.size());
-  std::transform(points.cbegin(), points.cend(), std::back_inserter(out), [](const auto& point) {
-    const auto limits = geometry::limits_of_volume(point);
-    const auto& center = limits.center;
-    const auto& min = limits.min;
-    const auto& max = limits.max;
-    return full_hit{point.t, center.x, center.y, center.z,
-      {2*units::time,
-       limits.max.x - limits.min.x,
-       limits.max.y - limits.min.y,
-       limits.max.z - limits.min.z}};
-  });
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Calculate Squared Residual of Track wrt Full Hit____________________________________________
 real _track_squared_residual(const real t0,
                              const real x0,
@@ -535,7 +560,7 @@ _track_parameters _guess_track(const full_event& points) {
 thread_local full_event&& _nll_fit_event = {};
 void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
-    [&](const auto& sum, const auto& point) {
+    [&](const auto sum, const auto& point) {
       return sum + _track_squared_residual(x[0], x[1], x[2], x[3], x[4], x[5], x[6], point); });
 }
 //----------------------------------------------------------------------------------------------
@@ -618,116 +643,8 @@ _track_parameters& _fit_event_minuit(const full_event& points,
   vz.value = value;
   vz.error = error;
 
-  return parameters;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Negative Log Likelihood Functor_____________________________________________________________
-class _track_nll : public ROOT::Minuit2::FCNBase {
-public:
-  _track_nll(double error_def, const full_event& points)
-      : _full_event(points), _error_def(error_def) {}
-
-  double Up() const { return _error_def; }
-  void SetErrorDef(double error_def) { _error_def = error_def; }
-
-  double operator()(const std::vector<double>& x) const {
-    return 0.5L * std::accumulate(_full_event.cbegin(), _full_event.cend(), 0.0L,
-      [&](const auto& sum, const auto& point) {
-        return sum + _track_squared_residual(x[0], x[1], x[2], x[3], x[4], x[5], x[6], point); });
-  }
-
-private:
-  full_event _full_event;
-  double _error_def = 0.5;
-};
-//----------------------------------------------------------------------------------------------
-
-//__MINUIT2 MIGRAD Fitter_______________________________________________________________________
-_track_parameters& _fit_event_minuit2(const full_event& points,
-                                      _track_parameters& parameters,
-                                      const fit_settings& settings,
-                                      const Coordinate fixed=Coordinate::Z) {
-
-  ROOT::Minuit2::MnUserParameters minuit_parameters;
-
-  auto& t0 = parameters.t0;
-  if (!t0.min && !t0.max) {
-    minuit_parameters.Add("T0", t0.value, t0.error);
-  } else {
-    minuit_parameters.Add("T0", t0.value, t0.error, t0.min, t0.max);
-  }
-
-  auto& x0 = parameters.x0;
-  if (!x0.min && !x0.max) {
-    minuit_parameters.Add("X0", x0.value, x0.error);
-  } else {
-    minuit_parameters.Add("X0", x0.value, x0.error, x0.min, x0.max);
-  }
-
-  auto& y0 = parameters.y0;
-  if (!y0.min && !y0.max) {
-    minuit_parameters.Add("Y0", y0.value, y0.error);
-  } else {
-    minuit_parameters.Add("Y0", y0.value, y0.error, y0.min, y0.max);
-  }
-
-  auto& z0 = parameters.z0;
-  if (!z0.min && !z0.max) {
-    minuit_parameters.Add("Z0", z0.value, z0.error);
-  } else {
-    minuit_parameters.Add("Z0", z0.value, z0.error, z0.min, z0.max);
-  }
-
-  auto& vx = parameters.vx;
-  if (!vx.min && !vx.max) {
-    minuit_parameters.Add("VX", vx.value, vx.error);
-  } else {
-    minuit_parameters.Add("VX", vx.value, vx.error, vx.min, vx.max);
-  }
-
-  auto& vy = parameters.vy;
-  if (!vy.min && !vy.max) {
-    minuit_parameters.Add("VY", vy.value, vy.error);
-  } else {
-    minuit_parameters.Add("VY", vy.value, vy.error, vy.min, vy.max);
-  }
-
-  auto& vz = parameters.vz;
-  if (!vz.min && !vz.max) {
-    minuit_parameters.Add("VZ", vz.value, vz.error);
-  } else {
-    minuit_parameters.Add("VZ", vz.value, vz.error, vz.min, vz.max);
-  }
-
-  switch (fixed) {
-    case Coordinate::T: minuit_parameters.Fix("T0"); break;
-    case Coordinate::X: minuit_parameters.Fix("X0"); break;
-    case Coordinate::Y: minuit_parameters.Fix("Y0"); break;
-    case Coordinate::Z: minuit_parameters.Fix("Z0"); break;
-  }
-
-  ROOT::Minuit2::MnMigrad migrad(_track_nll(settings.error_def, points), minuit_parameters);
-
-  const auto min = migrad();
-  const auto minimum_parameters = min.UserState();
-
-  t0.value = minimum_parameters.Value("T0");
-  t0.error = minimum_parameters.Error("T0");
-  x0.value = minimum_parameters.Value("X0");
-  x0.error = minimum_parameters.Error("X0");
-  y0.value = minimum_parameters.Value("Y0");
-  y0.error = minimum_parameters.Error("Y0");
-  z0.value = minimum_parameters.Value("Z0");
-  z0.error = minimum_parameters.Error("Z0");
-  vx.value = minimum_parameters.Value("VX");
-  vx.error = minimum_parameters.Error("VX");
-  vy.value = minimum_parameters.Value("VY");
-  vy.error = minimum_parameters.Error("VY");
-  vz.value = minimum_parameters.Value("VZ");
-  vz.error = minimum_parameters.Error("VZ");
-
-  // const auto hessian = minimum_parameters.Hessian();
+  // save covariance matrix
+  // mnemat
 
   return parameters;
 }
@@ -737,7 +654,7 @@ _track_parameters& _fit_event_minuit2(const full_event& points,
 
 track::track(const std::vector<hit>& points,
              const fit_settings& settings)
-    : track(_transform(points), settings) {}
+    : track(find_errors(points), settings) {}
 
 //__Track Constructor___________________________________________________________________________
 track::track(const std::vector<full_hit>& points,
@@ -767,13 +684,6 @@ track::track(const std::vector<full_hit>& points,
 
   std::transform(full_event_begin, full_event_end, std::back_inserter(_detectors),
     [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
-
-  std::transform(full_event_begin, full_event_end, std::back_inserter(_squared_residuals),
-    [&](const auto& point) {
-      return _track_squared_residual(
-        _t0.value, _x0.value, _y0.value, _z0.value, _vx.value, _vy.value, _vz.value,
-        point);
-    });
 }
 //----------------------------------------------------------------------------------------------
 
@@ -781,28 +691,6 @@ track::track(const std::vector<full_hit>& points,
 const hit track::operator()(const real z) const {
   const auto dt = (z - _z0.value) / _vz.value;
   return { dt + _t0.value, std::fma(dt, _vx.value, _x0.value), std::fma(dt, _vy.value, _y0.value), z };
-}
-//----------------------------------------------------------------------------------------------
-
-//__Total Residual______________________________________________________________________________
-real track::residual() const {
-  return std::sqrt(squared_residual());
-}
-//----------------------------------------------------------------------------------------------
-
-//__Total Squared-Residual______________________________________________________________________
-real track::squared_residual() const {
-  return std::accumulate(_squared_residuals.cbegin(), _squared_residuals.cend(), 0.0L);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Residual at Each Volume_____________________________________________________________________
-const real_vector track::residual_vector() const {
-  real_vector out;
-  out.reserve(_squared_residuals.size());
-  std::transform(_squared_residuals.cbegin(), _squared_residuals.cend(), std::back_inserter(out),
-    [&](const auto& sq_res) { return std::sqrt(sq_res); });
-  return out;
 }
 //----------------------------------------------------------------------------------------------
 

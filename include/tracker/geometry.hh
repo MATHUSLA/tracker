@@ -29,7 +29,7 @@ namespace geometry { ///////////////////////////////////////////////////////////
 using namespace type;
 
 //__Geometry Navigation System__________________________________________________________________
-void open(const std::string& path);
+void open(const std::string& path /*, TODO: argument for script*/);
 void close();
 //----------------------------------------------------------------------------------------------
 
@@ -45,9 +45,13 @@ const std::vector<std::string> full_structure();
 const std::vector<std::string> full_structure_except(const std::vector<std::string>& names);
 //----------------------------------------------------------------------------------------------
 
+//__Get Default Time Resolution for Detector Volumes____________________________________________
+real default_time_resolution();
+//----------------------------------------------------------------------------------------------
+
 //__Volume Hierarchy of a Volume________________________________________________________________
 // TODO: finish
-const std::vector<std::string> volume_hierarchy(const std::string& name);
+// const std::vector<std::string> volume_hierarchy(const std::string& name);
 //----------------------------------------------------------------------------------------------
 
 //__Volume Containment Check____________________________________________________________________
@@ -81,31 +85,28 @@ std::ostream& operator<<(std::ostream& os,
 const box_volume limits_of(const std::string& name);
 //----------------------------------------------------------------------------------------------
 
-//__Compute Intersection of Volumes then Find Bounding Box______________________________________
-// TODO: finish
-const box_volume intersection_volume(const std::string& first,
-                                     const std::string& second);
-//----------------------------------------------------------------------------------------------
-
-//__Compute Union of Volumes then Find Bounding Box_____________________________________________
-// TODO: finish
-const box_volume union_volume(const std::string& first,
-                              const std::string& second);
+//__Time Error on a Detector Component__________________________________________________________
+real time_resolution_of(const std::string& name);
 //----------------------------------------------------------------------------------------------
 
 //__Compute Intersection of Box Volumes_________________________________________________________
-const box_volume intersection_volume(const box_volume& first,
-                                     const box_volume& second);
+const box_volume coordinatewise_intersection(const box_volume& first,
+                                             const box_volume& second);
 //----------------------------------------------------------------------------------------------
 
 //__Compute Union of Box Volumes________________________________________________________________
-const box_volume union_volume(const box_volume& first,
-                              const box_volume& second);
+const box_volume coordinatewise_union(const box_volume& first,
+                                      const box_volume& second);
 //----------------------------------------------------------------------------------------------
 
 //__Limit Box of the Volume with Point__________________________________________________________
 const box_volume limits_of_volume(const r3_point& point);
 const box_volume limits_of_volume(const r4_point& point);
+//----------------------------------------------------------------------------------------------
+
+//__Time Error on a Detector Component from a Point_____________________________________________
+real time_resolution_of_volume(const r3_point& point);
+real time_resolution_of_volume(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
 //__Box Volume Containment Check________________________________________________________________

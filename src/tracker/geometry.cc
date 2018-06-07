@@ -29,6 +29,8 @@
 #include <Geant4/G4IntersectionSolid.hh>
 #include <Geant4/G4UnionSolid.hh>
 
+#include <tracker/units.hh>  // TODO: remove this dependency
+
 #include <tracker/util/algorithm.hh>
 
 namespace MATHUSLA { namespace TRACKER {
@@ -59,6 +61,8 @@ thread_local G4RunManager* _manager;
 thread_local G4VPhysicalVolume* _world;
 thread_local std::unordered_map<std::string, _geometric_volume> _geometry;
 thread_local std::vector<std::string> _geometry_insertion_order;
+thread_local real _default_time_resolution = 2 * units::time;
+thread_local std::unordered_map<std::string, real> _time_resolution_map;
 thread_local std::unordered_map<r3_point, std::string, r3_point_hash> _name_cache;
 //thread_local std::unordered_map<std::string, box_volume> _box_cache;
 const G4VoxelLimits _blank_voxels;
@@ -213,6 +217,7 @@ void close() {
   _path.clear();
   _geometry_insertion_order.clear();
   _geometry.clear();
+  _time_resolution_map.clear();
   _name_cache.clear();
   // _box_cache.clear();
   delete _world;
@@ -248,6 +253,12 @@ const std::vector<std::string> full_structure_except(const std::vector<std::stri
       if (std::find(names_begin, names_end, name) == names_end) out.push_back(name);
     });
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Default Time Resolution for Detector Volumes____________________________________________
+real default_time_resolution() {
+  return _default_time_resolution;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -380,68 +391,18 @@ const box_volume limits_of(const std::string& name) {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Compute Intersection of Volumes then Find Bounding Box______________________________________
-const box_volume intersection_volume(const std::string& first,
-                                     const std::string& second) {
-  // TODO: finish
-
-  const auto geometry_end = _geometry.cend();
-
-  const auto& geometry_search_1 = _geometry.find(first);
-  if (geometry_search_1 == geometry_end)
-    return {};
-
-  const auto& geometry_search_2 = _geometry.find(second);
-  if (geometry_search_2 == geometry_end)
-    return {};
-
-  const auto& gvolume_1 = geometry_search_1->second;
-  const auto solid_1 = _get_solid(gvolume_1);
-  if (!solid_1)
-    return {};
-
-  const auto& gvolume_2 = geometry_search_2->second;
-  const auto solid_2 = _get_solid(gvolume_2);
-  if (!solid_2)
-    return {};
-
-  return {};
-}
-//----------------------------------------------------------------------------------------------
-
-//__Compute Union of Volumes then Find Bounding Box_____________________________________________
-const box_volume union_volume(const std::string& first,
-                              const std::string& second) {
-  // TODO: finish
-
-  const auto geometry_end = _geometry.cend();
-
-  const auto& geometry_search_1 = _geometry.find(first);
-  if (geometry_search_1 == geometry_end)
-    return {};
-
-  const auto& geometry_search_2 = _geometry.find(second);
-  if (geometry_search_2 == geometry_end)
-    return {};
-
-  const auto& gvolume_1 = geometry_search_1->second;
-  const auto solid_1 = _get_solid(gvolume_1);
-  if (!solid_1)
-    return {};
-
-  const auto& gvolume_2 = geometry_search_2->second;
-  const auto solid_2 = _get_solid(gvolume_2);
-  if (!solid_2)
-    return {};
-
-  return {};
+//__Time Error on a Detector Component__________________________________________________________
+real time_resolution_of(const std::string& name) {
+  const auto search = _time_resolution_map.find(name);
+  return search != _time_resolution_map.cend() ? search->second : _default_time_resolution;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Compute Intersection of Box Volumes_________________________________________________________
-const box_volume intersection_volume(const box_volume& first,
-                                     const box_volume& second) {
+const box_volume coordinatewise_intersection(const box_volume& first,
+                                             const box_volume& second) {
   box_volume out{};
+
   if (!(first.max.x < second.min.x || second.max.x < first.min.x)) {
     out.min.x = std::max(first.min.x, second.min.x);
     out.max.x = std::min(first.max.x, second.max.x);
@@ -460,8 +421,8 @@ const box_volume intersection_volume(const box_volume& first,
 //----------------------------------------------------------------------------------------------
 
 //__Compute Union of Box Volumes________________________________________________________________
-const box_volume union_volume(const box_volume& first,
-                              const box_volume& second) {
+const box_volume coordinatewise_union(const box_volume& first,
+                                      const box_volume& second) {
   box_volume out{};
   out.min.x = std::min(first.min.x, second.min.x);
   out.max.x = std::max(first.max.x, second.max.x);
@@ -480,6 +441,15 @@ const box_volume limits_of_volume(const r3_point& point) {
 }
 const box_volume limits_of_volume(const r4_point& point) {
   return limits_of(volume(point));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Time Error on a Detector Component from a Point_____________________________________________
+real time_resolution_of_volume(const r3_point& point) {
+  return time_resolution_of(volume(point));
+}
+real time_resolution_of_volume(const r4_point& point) {
+  return time_resolution_of_volume(reduce_to_r3(point));
 }
 //----------------------------------------------------------------------------------------------
 

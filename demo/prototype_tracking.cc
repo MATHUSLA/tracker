@@ -23,93 +23,126 @@
 #include <tracker/units.hh>
 
 #include <tracker/util/algorithm.hh>
+#include <tracker/util/bit_vector.hh>
 #include <tracker/util/io.hh>
 
 namespace MATHUSLA {
 
-/*
-//__Parse Volume Name to Check if RPC___________________________________________________________
-constexpr bool is_rpc(const std::string& name) {
-  using namespace TRACKER;
-  using namespace util::algorithm;
-  const auto size = name.size();
-  if (size != 4 && size != 5) {
-    return false;
-  } else {
-    const auto strip = between(name[size - 1], '1', '8');
-    const auto pad = (between(name[size - 2], '1', '9') && name[size - 3] == '0')
-                   || (name[size - 2] == '0' && name[size - 3] == '1');
-    const auto rpc = size == 4 ? between(name[size - 4], '1', '9')
-                               : ((between(name[size - 4], '1', '9') && name[size - 5] == '0')
-                               || (between(name[size - 4], '0', '2') && name[size - 5] == '1'));
-    return strip && pad && rpc;
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Get RPC Volume if Point is Inside RPC_______________________________________________________
-const TRACKER::geometry::box_volume get_rpc(const TRACKER::analysis::r4_point& point) {
-  using namespace TRACKER;
-  const auto name = geometry::volume(point);
-  return is_rpc(name) ? geometry::limits_of(name) : {};
-}
-//----------------------------------------------------------------------------------------------
-*/
-
 //__Combine Pair of Hits if they Occur in Overlapping RPCs______________________________________
-const TRACKER::geometry::box_volume combine_rpc_hit_pair(const TRACKER::analysis::hit& first,
-                                                         const TRACKER::analysis::hit& second) {
+const TRACKER::geometry::box_volume combine_rpc_volume_pair(const TRACKER::geometry::box_volume& first,
+                                                            const TRACKER::geometry::box_volume& second) {
   using namespace TRACKER;
-
-  const auto first_limits = geometry::limits_of_volume(first);
-  const auto second_limits = geometry::limits_of_volume(second);
-  const auto intersection_volume = geometry::intersection_volume(first_limits, second_limits);
-  const auto union_volume = geometry::union_volume(first_limits, second_limits);
-
-  std::cout << first_limits << " & " << second_limits << "\n = " << intersection_volume << "\n";
-  std::cout << first_limits << " | " << second_limits << "\n = " << union_volume << "\n\n";
-
-  auto out = intersection_volume;
-  out.center.z = union_volume.center.z;
+  auto out = geometry::coordinatewise_intersection(first, second);
+  const auto union_volume = geometry::coordinatewise_union(first, second);
   out.min.z = union_volume.min.z;
+  out.center.z = union_volume.center.z;
   out.max.z = union_volume.max.z;
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
+//__Check If RPC Combine Created a Valid Strip Overlap__________________________________________
+constexpr bool was_combine_successful(const TRACKER::geometry::box_volume& combined) {
+  return (combined.min.x || combined.max.x) && (combined.min.y || combined.max.y);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Check If RPC Combine Created a Valid Strip Overlap__________________________________________
+const TRACKER::analysis::full_hit construct_hit(const type::real top_time,
+                                                const type::real bottom_time,
+                                                const std::string& top_volume,
+                                                const std::string& bottom_volume,
+                                                const TRACKER::geometry::box_volume& combined) {
+  using namespace TRACKER;
+  const type::r4_point errors{
+    std::hypot(geometry::time_resolution_of(top_volume),
+               geometry::time_resolution_of(bottom_volume)) / 2.0L,
+    combined.max.x - combined.min.x,
+    combined.max.y - combined.min.y,
+    combined.max.z - combined.min.z};
+  return {(top_time + bottom_time) / 2.0L, combined.center.x, combined.center.y, combined.center.z,
+          errors};
+}
+//----------------------------------------------------------------------------------------------
+
 //__Combine Hits if they Occur in Overlapping RPCs______________________________________________
-const TRACKER::geometry::box_volume_vector combine_rpc_hits(const TRACKER::analysis::event& points,
-                                                            const TRACKER::analysis::real time_threshold) {
+const TRACKER::analysis::full_event combine_rpc_hits(const TRACKER::analysis::event& points,
+                                                     const type::real time_threshold) {
   using namespace TRACKER;
   using namespace util::math;
 
-  static const analysis::real z_threshold = 10 * units::length;
+  static const analysis::real z_lower = 24.0L * units::length;
+  static const analysis::real z_upper = 45.0L * units::length;
 
   const auto size = points.size();
-  geometry::box_volume_vector boxes;
-  boxes.reserve(size);
+  analysis::full_event event;
+  event.reserve(size);
 
-  size_t i = 0;
-  for (; i < size - 1; ++i) {
-    const auto current = points[i];
-    const auto next = points[i + 1];
-    if (within(current.z, next.z, z_threshold) && within(current.t, next.t, time_threshold)) {
-      boxes.push_back(combine_rpc_hit_pair(current, next));
-      i += 1;
+  const auto parts = analysis::partition(points, type::Coordinate::Z, z_lower).parts;
+  const auto partition_size = parts.size();
+
+  size_t layer_index = 0;
+  for (; layer_index < partition_size - 1; ++layer_index) {
+    const auto top = parts[layer_index];
+    const auto bottom = parts[layer_index + 1];
+
+    if (within(top.front().z, bottom.back().z, z_lower, z_upper)) {
+      const auto top_size = top.size();
+      const auto bottom_size = bottom.size();
+      util::bit_vector discard_list(bottom_size);
+
+      size_t top_index = 0, bottom_index = 0;
+      while (top_index < top_size) {
+        bottom_index = discard_list.first_unset(bottom_index);
+        const auto top_point = top[top_index];
+        const auto bottom_point = bottom[bottom_index];
+
+        if (bottom_index == bottom_size) {
+          event.push_back(analysis::find_errors(top_point));
+          ++top_index;
+          bottom_index = 0;
+          continue;
+        }
+
+        const auto top_volume = geometry::volume(top_point);
+        const auto bottom_volume = geometry::volume(bottom_point);
+        const auto combined = combine_rpc_volume_pair(
+          geometry::limits_of(top_volume),
+          geometry::limits_of(bottom_volume));
+
+        if (was_combine_successful(combined) && within(top_point.t, bottom_point.t, time_threshold)) {
+          event.push_back(construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined));
+          discard_list.set(bottom_index);
+          ++top_index;
+          bottom_index = 0;
+        } else {
+          ++bottom_index;
+        }
+      }
+
+      for (; top_index < top_size; ++top_index) {
+        event.push_back(analysis::find_errors(top[top_index]));
+      }
+      for (bottom_index = 0; bottom_index < bottom_size; ++bottom_index) {
+        if (!discard_list[bottom_index])
+          event.push_back(analysis::find_errors(bottom[bottom_index]));
+      }
+      ++layer_index;
     } else {
-      boxes.push_back(geometry::limits_of_volume(current));
+      util::algorithm::back_insert_transform(top, event,
+        [](const auto& part){ return analysis::find_errors(part); });
     }
+
   }
 
-  if (i == size)
-    boxes.push_back(geometry::limits_of_volume(points[i-1]));
+  if (layer_index == partition_size - 1) {
+    util::algorithm::back_insert_transform(parts.back(), event,
+      [](const auto& part){ return analysis::find_errors(part); });
+  }
 
-  return boxes;
+  util::algorithm::reverse(event);
+  return event;
 }
-
-//const TRACKER::analysis::full_event_vector combine_rpc_hits(const TRACKER::analysis::event& points,
-//                                                            const TRACKER::analysis::real time_threshold) {
-//}
 //----------------------------------------------------------------------------------------------
 
 } /* namespace MATHUSLA */
@@ -125,8 +158,9 @@ int main(int argc, char* argv[]) {
   plot::init();
   geometry::open(options.geometry_file);
   for (const auto& path : reader::root::search_directory(options.root_directory)) {
+    plot::canvas canvas(path);
+    std::cout << path << "\n";
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
-      plot::canvas canvas(path);
 
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
 
@@ -136,13 +170,19 @@ int main(int argc, char* argv[]) {
         canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
       }
 
-      const auto box_volumes = combine_rpc_hits(collapsed_event, 2 * units::time);
+      util::io::print_range(collapsed_event, "\n", "NEW ") << "\n\n";
 
-      for (const auto& box : box_volumes)
-        canvas.add_box(box.min, box.max, 3, plot::color::BLACK);
+      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time);
 
-      /* TODO: finish vvvvv
+      uint_fast8_t index = 0, step = 230 / full_event_points.size();
+      for (const auto& point : full_event_points) {
+        canvas.add_box(type::reduce_to_r3(point),
+                       point.error.x, point.error.y, point.error.z,
+                       3, {index, index, index});
+        index += step;
+      }
 
+      /*
       const auto layers = analysis::partition(combine_rpc_hits(collapsed_event, 2*units::time),
                                               options.layer_axis,
                                               options.layer_depth);

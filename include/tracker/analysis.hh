@@ -59,6 +59,11 @@ inline constexpr bool operator==(const full_hit& left,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Find The Errors Associated with a Hit from Geometry_________________________________________
+const full_hit find_errors(const hit& point);
+const full_event find_errors(const event& points);
+//----------------------------------------------------------------------------------------------
+
 //__Center Events by Coordinate_________________________________________________________________
 const event centralize(const event& points,
                        const Coordinate coordinate);
@@ -85,6 +90,13 @@ const event_partition partition(const event& points,
 const full_event_partition partition(const full_event& points,
                                      const Coordinate coordinate,
                                      const real interval);
+//----------------------------------------------------------------------------------------------
+
+//__Reset Partition by new Interval_____________________________________________________________
+const event_partition repartition(const event_partition& previous,
+                                  const real interval);
+const full_event_partition repartition(const full_event_partition& previous,
+                                       const real interval);
 //----------------------------------------------------------------------------------------------
 
 //__Fast Check if Points Form a Line____________________________________________________________
@@ -195,11 +207,6 @@ public:
   real vy_error() const { return _vy.error; }
   real vz_error() const { return _vz.error; }
 
-  real residual() const;
-  real squared_residual() const;
-  const real_vector residual_vector() const;
-  const real_vector& squared_residual_vector() const { return _squared_residuals; }
-
   real beta() const;
 
   real chi_squared() const;
@@ -218,7 +225,7 @@ public:
 private:
   fit_parameter _t0, _x0, _y0, _z0, _vx, _vy, _vz;
   std::vector<full_hit> _full_event;
-  real_vector _squared_residuals, _delta_chi_squared;
+  real_vector _delta_chi_squared;
   std::vector<std::string> _detectors;
   fit_settings _settings;
 };

@@ -239,6 +239,10 @@ void canvas::draw() {
     if (axis) {
       axis->SetLabelColor(kBlack);
       axis->SetAxisColor(kBlack);
+      axis->SetTitleOffset(2);
+      axis->SetXTitle("X");
+      axis->SetYTitle("Y");
+      axis->SetZTitle("Z");
     }
   }
 
@@ -396,6 +400,29 @@ void canvas::add_box(const r4_point& min,
                      const real width,
                      const color& color) {
   add_box(reduce_to_r3(min), reduce_to_r3(max), width, color);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Box to Canvas___________________________________________________________________________
+void canvas::add_box(const r3_point& center,
+                     const real width_x,
+                     const real width_y,
+                     const real width_z,
+                     const real width,
+                     const color& color) {
+  const auto half_widths = r3_point{width_x, width_y, width_z} / 2;
+  add_box(center - half_widths, center + half_widths, width, color);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Box to Canvas___________________________________________________________________________
+void canvas::add_box(const r4_point& center,
+                     const real width_x,
+                     const real width_y,
+                     const real width_z,
+                     const real width,
+                     const color& color) {
+  add_box(reduce_to_r3(center), width_x, width_y, width_z, width, color);
 }
 //----------------------------------------------------------------------------------------------
 
