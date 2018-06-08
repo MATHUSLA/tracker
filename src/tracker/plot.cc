@@ -39,6 +39,7 @@ namespace { ////////////////////////////////////////////////////////////////////
 
 //__Plotting Application________________________________________________________________________
 TApplication* _app = nullptr;
+thread_local bool _app_on = false;
 //----------------------------------------------------------------------------------------------
 
 //__Convert RGB Color to TColor_________________________________________________________________
@@ -106,19 +107,30 @@ const std::string _make_unique_name(const std::string& name) {
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Start Plotting Environment__________________________________________________________________
-void init() {
+void init(bool on) {
+  _app_on = on;
   int argc = 1;
   std::array<char*, 1> argv{strdup("app")};
-  if (_app == nullptr)
+  if (!_app && _app_on)
     _app = new TApplication("app", &argc, argv.data());
 }
 //----------------------------------------------------------------------------------------------
 
 //__End Plotting Environment____________________________________________________________________
 void end() {
-  try { _app->Run(true); } catch(...) {}
-  delete _app;
-  _app = nullptr;
+  if (_app) {
+    try {
+      _app->Run(true);
+      delete _app;
+      _app = nullptr;
+    } catch(...) {}
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Check if Plotting is On_____________________________________________________________________
+bool is_on() {
+  return _app_on;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -240,9 +252,9 @@ void canvas::draw() {
       axis->SetLabelColor(kBlack);
       axis->SetAxisColor(kBlack);
       axis->SetTitleOffset(2);
-      axis->SetXTitle("X");
-      axis->SetYTitle("Y");
-      axis->SetZTitle("Z");
+      axis->SetXTitle("X (mm)");
+      axis->SetYTitle("Y (mm)");
+      axis->SetZTitle("Z (mm)");
     }
   }
 

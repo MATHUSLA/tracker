@@ -27,6 +27,7 @@
 #include <tracker/geometry.hh>
 #include <tracker/units.hh>
 
+#include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
 #include <tracker/util/error.hh>
 #include <tracker/util/io.hh>
@@ -40,20 +41,16 @@ namespace analysis { ///////////////////////////////////////////////////////////
 const full_hit add_errors(const hit& point) {
   const auto volume = geometry::volume(point);
   const auto limits = geometry::limits_of(volume);
-  const auto& center = limits.center;
-  const auto& min = limits.min;
-  const auto& max = limits.max;
+  const auto center = limits.center;
+  const auto min = limits.min;
+  const auto max = limits.max;
   return { point.t, center.x, center.y, center.z,
-           { geometry::time_resolution_of(volume),
-             limits.max.x - limits.min.x,
-             limits.max.y - limits.min.y,
-             limits.max.z - limits.min.z } };
+           { geometry::time_resolution_of(volume), max.x - min.x, max.y - min.y, max.z - min.z } };
 }
 const full_event add_errors(const event& points) {
   full_event out;
   out.reserve(points.size());
-  std::transform(points.cbegin(), points.cend(), std::back_inserter(out),
-    [](const auto& point) { return add_errors(point); });
+  util::algorithm::back_insert_transform(points, out, [](const auto& point) { return add_errors(point); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -836,7 +833,7 @@ const hit track::back() const {
 const event track::event() const {
   std::vector<hit> out;
   out.reserve(_full_event.size());
-  std::transform(_full_event.cbegin(), _full_event.cend(), std::back_inserter(out),
+  util::algorithm::back_insert_transform(_full_event, out,
     [](const auto& full_point) { return hit{full_point.t, full_point.x, full_point.y, full_point.z}; });
   return out;
 }

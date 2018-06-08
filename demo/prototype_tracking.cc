@@ -73,8 +73,8 @@ const analysis::full_hit construct_hit(const type::real top_time,
 //__Combine All Hits that Occur in Overlapping RPCs_____________________________________________
 const analysis::full_event combine_rpc_hits(const analysis::event& points,
                                             const type::real time_threshold,
-                                            analysis::full_event& seeding_rpc_hits,
-                                            analysis::full_event& tracking_rpc_hits) {
+                                            analysis::full_event& combined_rpc_hits,
+                                            analysis::full_event& original_rpc_hits) {
   static const analysis::real z_lower = 24.0L * units::length;
   static const analysis::real z_upper = 45.0L * units::length;
   using namespace util::math;
@@ -118,9 +118,9 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
         if (was_combine_successful(combined) && within(top_point.t, bottom_point.t, time_threshold)) {
           const auto new_hit = construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined);
           event.push_back(new_hit);
-          seeding_rpc_hits.push_back(new_hit);
-          tracking_rpc_hits.push_back(analysis::add_errors(top_point));
-          tracking_rpc_hits.push_back(analysis::add_errors(bottom_point));
+          combined_rpc_hits.push_back(new_hit);
+          original_rpc_hits.push_back(analysis::add_errors(top_point));
+          original_rpc_hits.push_back(analysis::add_errors(bottom_point));
           discard_list.set(bottom_index);
           ++top_index;
           bottom_index = 0;
@@ -141,7 +141,6 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
       util::algorithm::back_insert_transform(top, event,
         [](const auto& part){ return analysis::add_errors(part); });
     }
-
   }
 
   if (layer_index == partition_size - 1) {
@@ -156,31 +155,31 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
 
 //__Reset Seed Vector Using RPC Combination Hits________________________________________________
 const analysis::full_event_vector reset_seeds(const analysis::full_event_vector& joined_seeds,
-                                              const analysis::full_event& seeding_rpc_hits,
-                                              const analysis::full_event& tracking_rpc_hits) {
-  const auto size = seeding_rpc_hits.size();
-  if (size == 0) return {};
+                                              const analysis::full_event& combined_rpc_hits,
+                                              const analysis::full_event& original_rpc_hits) {
+  const auto combined_size = combined_rpc_hits.size();
+  if (combined_size == 0)
+    return joined_seeds;
 
   analysis::full_event_vector out;
+  out.reserve(joined_seeds.size());
   for (const auto& seed : joined_seeds) {
-    out.push_back({});
-    auto& back = out.back();
-    //analysis::full_event next;
+    analysis::full_event next;
     for (const auto& hit : seed) {
       size_t rpc_index = 0;
-      for (; rpc_index < size; ++rpc_index) {
-        if (hit == seeding_rpc_hits[rpc_index]) {
-          back.push_back(tracking_rpc_hits[2 * rpc_index]);
-          back.push_back(tracking_rpc_hits[2 * rpc_index + 1]);
+      for (; rpc_index < combined_size; ++rpc_index) {
+        if (hit == combined_rpc_hits[rpc_index]) {
+          next.push_back(original_rpc_hits[2 * rpc_index]);
+          next.push_back(original_rpc_hits[2 * rpc_index + 1]);
+          break;
         }
       }
-      if (rpc_index == size)
-        back.push_back(hit);
+      if (rpc_index == combined_size)
+        next.push_back(hit);
     }
-    type::t_sort(back);
-    // out.push_back(type::t_sort(next));
+    next.shrink_to_fit();
+    out.push_back(type::t_sort(next));
   }
-
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -224,34 +223,37 @@ int prototype_tracking(int argc,
     plot::canvas canvas(path);
     std::cout << path << "\n";
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
-
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
-      util::io::print_range(collapsed_event, "\n") << "\n\n";
+
+      for (const auto& point : collapsed_event) {
+        std::cout << geometry::volume(point) << " :: " << point << "\n";
+      }
+      std::cout << "\n";
+
       canvas.add_points(collapsed_event, 0.8, plot::color::BLUE);
       draw_detector_centers(canvas);
 
-      analysis::full_event seeding_rpc_hits;
-      analysis::full_event tracking_rpc_hits;
-
-      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, seeding_rpc_hits, tracking_rpc_hits);
+      analysis::full_event combined_rpc_hits;
+      analysis::full_event original_rpc_hits;
+      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, combined_rpc_hits, original_rpc_hits);
       const auto layers = analysis::partition(full_event_points, options.layer_axis, options.layer_depth);
       const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
-      const auto tracking_vector = reset_seeds(analysis::join_all(seeds), seeding_rpc_hits, tracking_rpc_hits);
+      const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
 
-      std::cout << tracking_vector.size() << "\n";
-
+      std::cout << "Track Count: " << tracking_vector.size() << "\n";
       for (const auto& seed : tracking_vector) {
         for (const auto& point : seed) {
           std::cout << type::reduce_to_r4(point) << " ";
         }
         std::cout << "\n";
       }
-      std::cout << "\n\n";
+      std::cout << "\n";
 
       for (const auto& track : analysis::fit_seeds(tracking_vector)) {
         draw_track(canvas, track);
         std::cout << track << "\n";
       }
+      std::cout << "\n" << std::string(100, '=') << "\n\n";
       canvas.draw();
     }
   }
