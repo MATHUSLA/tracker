@@ -202,7 +202,7 @@ void open(const std::string& path,
           const time_resolution_map& map) {
   close();
   _path = path;
-  const static std::string&& _bar = std::string(61, '-');
+  static const std::string _bar(61, '-');
   std::cout << "\nInitialize Geant4 Geometry Manager:\n" << _bar << "\n\n";
   _world = _load_geometry(path);
   _manager = new G4RunManager;

@@ -184,7 +184,7 @@ const analysis::full_event_vector reset_seeds(const analysis::full_event_vector&
 //----------------------------------------------------------------------------------------------
 
 //__Add Track to Canvas_________________________________________________________________________
-void show_track(plot::canvas& canvas,
+void draw_track(plot::canvas& canvas,
                 const analysis::track& track) {
   const auto& full_event = track.full_event();
   uint_fast8_t brightness = 0, step = 230 / full_event.size();
@@ -197,6 +197,15 @@ void show_track(plot::canvas& canvas,
   }
   canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
   canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Detector Centers to Canvas______________________________________________________________
+void draw_detector_centers(plot::canvas& canvas) {
+  for (const auto& name
+      : geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"})) {
+    canvas.add_point(geometry::limits_of(name).center, 0.25, plot::color::MAGENTA);
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -217,10 +226,7 @@ int prototype_tracking(int argc,
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
       util::io::print_range(collapsed_event, "\n") << "\n\n";
       canvas.add_points(collapsed_event, 0.8, plot::color::BLUE);
-      for (const auto& name : geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"})) {
-        const auto limits = geometry::limits_of(name);
-        canvas.add_point(limits.center, 0.25, plot::color::MAGENTA);
-      }
+      draw_detector_centers(canvas);
 
       analysis::full_event seeding_rpc_hits;
       analysis::full_event tracking_rpc_hits;
@@ -241,7 +247,7 @@ int prototype_tracking(int argc,
       std::cout << "\n\n";
 
       for (const auto& track : analysis::fit_seeds(tracking_vector)) {
-        show_track(canvas, track);
+        draw_track(canvas, track);
         std::cout << track << "\n";
       }
       canvas.draw();

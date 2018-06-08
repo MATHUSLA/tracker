@@ -845,6 +845,8 @@ const event track::event() const {
 //__Track Output Stream Operator________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const track& track) {
+  static const std::string bar(80, '-');
+  os << bar << "\n";
   os.precision(7);
   os << "Track Parameters: \n"
      << "  T0: " << track.t0_value() << "  (+/- " << track.t0_error() << ")\n"
@@ -857,12 +859,14 @@ std::ostream& operator<<(std::ostream& os,
 
   os.precision(6);
   os << "Event: \n";
+  os << "  front: " << track.front() << "\n\n";
   const auto points = track.event();
   const auto detectors = track.detectors();
   const auto size = points.size();
   for (size_t i = 0; i < size; ++i) {
-    os << "  " << detectors[i] << " " << points[i] << "\n";
+    os << "    " << detectors[i] << " " << points[i] << "\n";
   }
+  os << "\n  back:  " << track.back()  << "\n";
 
   os.precision(7);
   os << "Statistics: \n"
@@ -888,11 +892,9 @@ std::ostream& operator<<(std::ostream& os,
 
   os.precision(6);
   os << "Dynamics: \n"
-     << "  beta:  " << track.beta()  << "  (+/- " << track.beta_error() << ")\n"
-     << "  front: " << track.front() << "\n"
-     << "  back:  " << track.back()  << "\n";
+     << "  beta:  " << track.beta()  << "  (+/- " << track.beta_error() << ")\n";
 
-  return os;
+  return os << bar;
 }
 //----------------------------------------------------------------------------------------------
 
