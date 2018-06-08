@@ -20,6 +20,8 @@
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
+#include <tracker/stat.hh>
+#include <tracker/track.hh>
 #include <tracker/units.hh>
 
 #include <tracker/util/algorithm.hh>
@@ -30,6 +32,7 @@
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace geometry = MATHUSLA::TRACKER::geometry;
 namespace plot     = MATHUSLA::TRACKER::plot;
+namespace stat     = MATHUSLA::TRACKER::stat;
 namespace reader   = MATHUSLA::TRACKER::reader;
 //----------------------------------------------------------------------------------------------
 
@@ -249,7 +252,12 @@ int prototype_tracking(int argc,
       }
       std::cout << "\n";
 
-      for (const auto& track : analysis::fit_seeds(tracking_vector)) {
+      const auto tracks = analysis::fit_seeds(tracking_vector);
+      analysis::track_vector tracks_after_cut;
+
+      stat::chi2_per_dof_cut(tracks, 0, 1, tracks_after_cut);
+
+      for (const auto& track : tracks_after_cut) {
         draw_track(canvas, track);
         std::cout << track << "\n";
       }

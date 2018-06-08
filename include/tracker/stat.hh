@@ -24,13 +24,15 @@
 
 #include <tracker/type.hh>
 
+#include <tracker/util/algorithm.hh>
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace stat { ///////////////////////////////////////////////////////////////////////////////
 
 using namespace type;
 
-//__Chi^2 Type Reflection_______________________________________________________________________
+//__Chi^2 Type Traits___________________________________________________________________________
 template<class C, typename = void>
 struct has_chi_squared_member : std::false_type {};
 template<class C>
@@ -39,38 +41,14 @@ template<class C>
 constexpr bool has_chi_squared_member_v = has_chi_squared_member<C>::value;
 
 template<class C, typename = void>
-struct has_chi_square_member : std::false_type {};
+struct has_chi_squared_method : std::false_type {};
 template<class C>
-struct has_chi_square_member<C, decltype(C::chi_square, void())> : std::true_type {};
+struct has_chi_squared_method<C, decltype(&C::chi_squared, void())> : std::true_type {};
 template<class C>
-constexpr bool has_chi_square_member_v = has_chi_square_member<C>::value;
-
-template<class C, typename = void>
-struct has_chi2_member : std::false_type {};
-template<class C>
-struct has_chi2_member<C, decltype(C::chi2, void())> : std::true_type {};
-template<class C>
-constexpr bool has_chi2_member_v = has_chi2_member<C>::value;
-
-template<class C,
-  bool = has_chi_squared_member_v<C>
-      || has_chi_square_member_v<C>
-      || has_chi2_member_v<C>>
-struct is_chi_squared_type : std::true_type {};
-template<class C>
-struct is_chi_squared_type<C, false> : std::false_type {};
-template<class C>
-constexpr bool is_chi_squared_type_v = is_chi_squared_type<C>::value;
+constexpr bool has_chi_squared_method_v = has_chi_squared_method<C>::value;
 //----------------------------------------------------------------------------------------------
 
-//__Degrees of Freedom Type Reflection__________________________________________________________
-template<class C, typename = void>
-struct has_degree_of_freedom_member : std::false_type {};
-template<class C>
-struct has_degree_of_freedom_member<C, decltype(C::degree_of_freedom, void())> : std::true_type {};
-template<class C>
-constexpr bool has_degree_of_freedom_member_v = has_degree_of_freedom_member<C>::value;
-
+//__Degree of Freedom Type Traits_______________________________________________________________
 template<class C, typename = void>
 struct has_degrees_of_freedom_member : std::false_type {};
 template<class C>
@@ -79,31 +57,78 @@ template<class C>
 constexpr bool has_degrees_of_freedom_member_v = has_degrees_of_freedom_member<C>::value;
 
 template<class C, typename = void>
-struct has_dof_member : std::false_type {};
+struct has_degrees_of_freedom_method : std::false_type {};
 template<class C>
-struct has_dof_member<C, decltype(C::dof, void())> : std::true_type {};
+struct has_degrees_of_freedom_method<C, decltype(&C::degrees_of_freedom, void())> : std::true_type {};
 template<class C>
-constexpr bool has_dof_member_v = has_dof_member<C>::value;
-
-template<class C,
-  bool = has_degree_of_freedom_member_v<C>
-      || has_degrees_of_freedom_member_v<C>
-      || has_dof_member_v<C>>
-struct is_degree_of_freedom_type : std::true_type {};
-template<class C>
-struct is_degree_of_freedom_type<C, false> : std::false_type {};
-template<class C>
-constexpr bool is_degree_of_freedom_type_v = is_degree_of_freedom_type<C>::value;
+constexpr bool has_degrees_of_freedom_method_v = has_degrees_of_freedom_method<C>::value;
 //----------------------------------------------------------------------------------------------
 
-//__Perform Chi^2 Cut on Data___________________________________________________________________
-template<class Range,
-  typename = std::enable_if_t<is_chi_squared_type_v<typename Range::value_type>>>
-void chi_squared_cut(const Range& range,
-                     const real min,
-                     const real max,
-                     Range& out) {
-  // TODO: implement
+//__Chi^2 and DOF Type Reflection_______________________________________________________________
+template<class C,
+  bool = has_chi_squared_member_v<C>
+      && has_degrees_of_freedom_member_v<C>>
+struct has_chi2_and_dof_members : std::true_type {};
+template<class C>
+struct has_chi2_and_dof_members<C, false> : std::false_type {};
+template<class C>
+constexpr bool has_chi2_and_dof_members_v = has_chi2_and_dof_members<C>::value;
+
+template<class C,
+  bool = has_chi_squared_method_v<C>
+      && has_degrees_of_freedom_method_v<C>>
+struct has_chi2_and_dof_methods : std::true_type {};
+template<class C>
+struct has_chi2_and_dof_methods<C, false> : std::false_type {};
+template<class C>
+constexpr bool has_chi2_and_dof_methods_v = has_chi2_and_dof_methods<C>::value;
+
+template<class C,
+  bool =  has_chi2_and_dof_methods_v<C>
+      ||  has_chi2_and_dof_members_v<C>
+      || (has_chi_squared_member_v<C> && has_degrees_of_freedom_method_v<C>)
+      || (has_chi_squared_method_v<C> && has_degrees_of_freedom_member_v<C>)>
+struct is_chi2_dof_type : std::true_type {};
+template<class C>
+struct is_chi2_dof_type<C, false> : std::false_type {};
+template<class C>
+constexpr bool is_chi2_dof_type_v = is_chi2_dof_type<C>::value;
+//----------------------------------------------------------------------------------------------
+
+//__Free Function Alternatives to Memeber Functions_____________________________________________
+template<class T>
+real chi_squared(const T& t);
+template<class T>
+real degree_of_freedom(const T& t);
+//----------------------------------------------------------------------------------------------
+
+//__Perform Chi^2/DOF Cut on Range______________________________________________________________
+template<class Range>
+std::enable_if_t<!is_chi2_dof_type_v<typename Range::value_type>>
+chi2_per_dof_cut(const Range& range,
+                 const real min,
+                 const real max,
+                 Range& out) {
+  util::algorithm::back_insert_copy_if(range, out, [&](const auto& value) {
+    return util::algorithm::between(chi_squared(value) / degree_of_freedom(value), min, max); });
+}
+template<class Range>
+std::enable_if_t<has_chi2_and_dof_methods_v<typename Range::value_type>>
+chi2_per_dof_cut(const Range& range,
+                 const real min,
+                 const real max,
+                 Range& out) {
+  util::algorithm::back_insert_copy_if(range, out, [&](const auto& value) {
+    return util::algorithm::between(value.chi_squared() / value.degrees_of_freedom(), min, max); });
+}
+template<class Range>
+std::enable_if_t<has_chi2_and_dof_members_v<typename Range::value_type>>
+chi2_per_dof_cut(const Range& range,
+                 const real min,
+                 const real max,
+                 Range& out) {
+  util::algorithm::back_insert_copy_if(range, out, [&](const auto& value) {
+    return util::algorithm::between(value.chi_squared / value.degrees_of_freedom, min, max); });
 }
 //----------------------------------------------------------------------------------------------
 

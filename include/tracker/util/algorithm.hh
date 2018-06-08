@@ -50,6 +50,17 @@ template<class Range>
 constexpr void reverse(Range& range) {
   std::reverse(std::begin(range), std::end(range));
 }
+//----------------------------------------------------------------------------------------------
+
+//__Dependent Copy Range into another Range Through Back Inserter_______________________________
+template<class InputRange, class OutputRange, class UnaryFunction>
+constexpr UnaryFunction back_insert_copy_if(const InputRange& in,
+                                            OutputRange& out,
+                                            UnaryFunction f) {
+  std::copy_if(std::cbegin(in), std::cend(in), std::back_inserter(out), f);
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
 
 //__Transform Range into another Range Through Back Inserter____________________________________
 template<class InputRange, class OutputRange, class UnaryFunction>

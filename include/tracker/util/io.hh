@@ -22,17 +22,19 @@
 
 #include <algorithm>
 #include <iostream>
-#include <sys/stat.h>
-
-#if defined(_WIN32)
-#include <windows.h>
-#endif
 
 namespace MATHUSLA {
 
 namespace util { ///////////////////////////////////////////////////////////////////////////////
 
 namespace io { /////////////////////////////////////////////////////////////////////////////////
+
+//__Hidden Includes To Keep Global Namespace Clean______________________________________________
+#include <sys/stat.h>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+//----------------------------------------------------------------------------------------------
 
 //__Print Range of Printable Elements___________________________________________________________
 template<class Range>

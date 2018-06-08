@@ -30,6 +30,7 @@ add_library(tracker SHARED
     src/tracker/plot.cc
     src/tracker/reader.cc
     src/tracker/stat.cc
+    src/tracker/track.cc
     src/tracker/util/command_line_parser.cc
 )
 target_compile_features(tracker PUBLIC cxx_std_14)

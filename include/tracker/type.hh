@@ -160,22 +160,22 @@ constexpr bool are_both_same_rN_type_v = are_both_same_rN_type<C1, C2>::value;
 
 //__Point-Wise Reduction of Dimension___________________________________________________________
 template<class T, typename = std::enable_if_t<is_r3_type_v<T> || is_r4_type_v<T>>>
-inline constexpr r2_point reduce_to_r2(const T& point) {
+constexpr r2_point reduce_to_r2(const T& point) {
   return {point.x, point.y};
 }
 template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
-inline constexpr r3_point reduce_to_r3(const T& point) {
+constexpr r3_point reduce_to_r3(const T& point) {
   return {point.x, point.y, point.z};
 }
 template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
-inline constexpr r4_point reduce_to_r4(const T& point) {
+constexpr r4_point reduce_to_r4(const T& point) {
   return {point.t, point.x, point.y, point.z};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Select Coordinate Subset of Point___________________________________________________________
 template<class T>
-inline constexpr std::enable_if_t<is_r3_type_v<T>, r2_point>
+constexpr std::enable_if_t<is_r3_type_v<T>, r2_point>
 select_r2(const T& point,
           const Coordinate x1,
           const Coordinate x2) {
@@ -195,7 +195,7 @@ select_r2(const T& point,
   return out;
 }
 template<class T>
-inline constexpr std::enable_if_t<is_r4_type_v<T>, r2_point>
+constexpr std::enable_if_t<is_r4_type_v<T>, r2_point>
 select_r2(const T& point,
           const Coordinate x1,
           const Coordinate x2) {
@@ -215,7 +215,7 @@ select_r2(const T& point,
   return out;
 }
 template<class T>
-inline constexpr std::enable_if_t<is_r3_type_v<T>, r3_point>
+constexpr std::enable_if_t<is_r3_type_v<T>, r3_point>
 select_r3(const T& point,
           const Coordinate x1,
           const Coordinate x2,
@@ -242,7 +242,7 @@ select_r3(const T& point,
   return out;
 }
 template<class T>
-inline constexpr std::enable_if_t<is_r4_type_v<T>, r3_point>
+constexpr std::enable_if_t<is_r4_type_v<T>, r3_point>
 select_r3(const T& point,
           const Coordinate x1,
           const Coordinate x2,
@@ -269,7 +269,7 @@ select_r3(const T& point,
   return out;
 }
 template<class T>
-inline constexpr std::enable_if_t<is_r4_type_v<T>, r4_point>
+constexpr std::enable_if_t<is_r4_type_v<T>, r4_point>
 select_r4(const T& point,
           const Coordinate x1,
           const Coordinate x2,
@@ -321,14 +321,14 @@ inline std::ostream& operator<<(std::ostream& os,
 
 //__RN Coordinate-Wise Negation_________________________________________________________________
 template<class T>
-inline std::enable_if_t<is_r2_type_v<T>, T>
+std::enable_if_t<is_r2_type_v<T>, T>
 operator-(T point) {
   point.x = -point.x;
   point.y = -point.y;
   return point;
 }
 template<class T>
-inline std::enable_if_t<is_r3_type_v<T>, T>
+std::enable_if_t<is_r3_type_v<T>, T>
 operator-(T point) {
   point.x = -point.x;
   point.y = -point.y;
@@ -336,7 +336,7 @@ operator-(T point) {
   return point;
 }
 template<class T>
-inline std::enable_if_t<is_r4_type_v<T>, T>
+std::enable_if_t<is_r4_type_v<T>, T>
 operator-(T point) {
   point.t = -point.t;
   point.x = -point.x;
@@ -348,7 +348,7 @@ operator-(T point) {
 
 //__RN Coordinate-Wise In-Place Addition________________________________________________________
 template<class T1, class T2>
-inline std::enable_if_t<are_both_r2_type_v<T1, T2>, T1>&
+std::enable_if_t<are_both_r2_type_v<T1, T2>, T1>&
 operator+=(T1& left,
            const T2& right) {
   left.x += right.x;
@@ -356,7 +356,7 @@ operator+=(T1& left,
   return left;
 }
 template<class T1, class T2>
-inline std::enable_if_t<are_both_r3_type_v<T1, T2>, T1>&
+std::enable_if_t<are_both_r3_type_v<T1, T2>, T1>&
 operator+=(T1& left,
            const T2& right) {
   left.x += right.x;
@@ -365,7 +365,7 @@ operator+=(T1& left,
   return left;
 }
 template<class T1, class T2>
-inline std::enable_if_t<are_both_r4_type_v<T1, T2>, T1>&
+std::enable_if_t<are_both_r4_type_v<T1, T2>, T1>&
 operator+=(T1& left,
            const T2& right) {
   left.t += right.t;
@@ -379,15 +379,15 @@ operator+=(T1& left,
 //__RN Coordinate-Wise Addition_________________________________________________________________
 template<class T1, class T2,
   typename = std::enable_if_t<are_both_same_rN_type_v<T1, T2>>>
-inline T1 operator+(T1 left,
-                    const T2& right) {
+T1 operator+(T1 left,
+             const T2& right) {
   return left += right;
 }
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Subtraction_____________________________________________________
 template<class T1, class T2>
-inline std::enable_if_t<are_both_r2_type_v<T1, T2>, T1>&
+std::enable_if_t<are_both_r2_type_v<T1, T2>, T1>&
 operator-=(T1& left,
            const T2& right) {
   left.x -= right.x;
@@ -395,7 +395,7 @@ operator-=(T1& left,
   return left;
 }
 template<class T1, class T2>
-inline std::enable_if_t<are_both_r3_type_v<T1, T2>, T1>&
+std::enable_if_t<are_both_r3_type_v<T1, T2>, T1>&
 operator-=(T1& left,
            const T2& right) {
   left.x -= right.x;
@@ -404,7 +404,7 @@ operator-=(T1& left,
   return left;
 }
 template<class T1, class T2>
-inline std::enable_if_t<are_both_r4_type_v<T1, T2>, T1>&
+std::enable_if_t<are_both_r4_type_v<T1, T2>, T1>&
 operator-=(T1& left,
            const T2& right) {
   left.t -= right.t;
@@ -418,15 +418,15 @@ operator-=(T1& left,
 //__RN Coordinate-Wise Subtraction______________________________________________________________
 template<class T1, class T2,
   typename = std::enable_if_t<are_both_same_rN_type_v<T1, T2>>>
-inline T1 operator-(T1 left,
-                    const T2& right) {
+T1 operator-(T1 left,
+             const T2& right) {
   return left -= right;
 }
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Scalar Multiplication___________________________________________
 template<class T, class A>
-inline std::enable_if_t<is_r2_type_v<T> && std::is_arithmetic<A>::value, T>&
+std::enable_if_t<is_r2_type_v<T> && std::is_arithmetic<A>::value, T>&
 operator*=(T& left,
            const A right) {
   left.x *= right;
@@ -434,7 +434,7 @@ operator*=(T& left,
   return left;
 }
 template<class T, class A>
-inline std::enable_if_t<is_r3_type_v<T> && std::is_arithmetic<A>::value, T>&
+std::enable_if_t<is_r3_type_v<T> && std::is_arithmetic<A>::value, T>&
 operator*=(T& left,
            const A right) {
   left.x *= right;
@@ -443,7 +443,7 @@ operator*=(T& left,
   return left;
 }
 template<class T, class A>
-inline std::enable_if_t<is_r4_type_v<T> && std::is_arithmetic<A>::value, T>&
+std::enable_if_t<is_r4_type_v<T> && std::is_arithmetic<A>::value, T>&
 operator*=(T& left,
            const A right) {
   left.t *= right;
@@ -456,24 +456,22 @@ operator*=(T& left,
 
 //__RN Coordinate-Wise Scalar Multiplication____________________________________________________
 template<class T, class A,
-  typename = std::enable_if_t<is_rN_type_v<T>
-                              && std::is_arithmetic<A>::value>>
-inline T operator*(T left,
-                   const A right) {
+  typename = std::enable_if_t<is_rN_type_v<T> && std::is_arithmetic<A>::value>>
+T operator*(T left,
+            const A right) {
   return left *= right;
 }
 template<class T, class A,
-  typename = std::enable_if_t<is_rN_type_v<T>
-                              && std::is_arithmetic<A>::value>>
-inline T operator*(const A left,
-                   T right) {
+  typename = std::enable_if_t<is_rN_type_v<T> && std::is_arithmetic<A>::value>>
+T operator*(const A left,
+            T right) {
   return right *= left;
 }
 //----------------------------------------------------------------------------------------------
 
 //__RN Coordinate-Wise In-Place Scalar Division_________________________________________________
 template<class T, class A>
-inline std::enable_if_t<is_r2_type_v<T> && std::is_arithmetic<A>::value, T>&
+std::enable_if_t<is_r2_type_v<T> && std::is_arithmetic<A>::value, T>&
 operator/=(T& left,
            const A right) {
   left.x /= right;
@@ -481,7 +479,7 @@ operator/=(T& left,
   return left;
 }
 template<class T, class A>
-inline std::enable_if_t<is_r3_type_v<T> && std::is_arithmetic<A>::value, T>&
+std::enable_if_t<is_r3_type_v<T> && std::is_arithmetic<A>::value, T>&
 operator/=(T& left,
            const A right) {
   left.x /= right;
@@ -490,7 +488,7 @@ operator/=(T& left,
   return left;
 }
 template<class T, class A>
-inline std::enable_if_t<is_r4_type_v<T> && std::is_arithmetic<A>::value, T>&
+std::enable_if_t<is_r4_type_v<T> && std::is_arithmetic<A>::value, T>&
 operator/=(T& left,
            const A right) {
   left.t /= right;
@@ -503,17 +501,15 @@ operator/=(T& left,
 
 //__RN Coordinate-Wise Scalar Division__________________________________________________________
 template<class T, class A,
-  typename = std::enable_if_t<is_rN_type_v<T>
-                              && std::is_arithmetic<A>::value>>
-inline T operator/(T left,
-                   const A right) {
+  typename = std::enable_if_t<is_rN_type_v<T> && std::is_arithmetic<A>::value>>
+T operator/(T left,
+            const A right) {
   return left /= right;
 }
 template<class T, class A,
-  typename = std::enable_if_t<is_rN_type_v<T>
-                              && std::is_arithmetic<A>::value>>
-inline T operator/(const A left,
-                   T right) {
+  typename = std::enable_if_t<is_rN_type_v<T> && std::is_arithmetic<A>::value>>
+T operator/(const A left,
+            T right) {
   return right /= left;
 }
 //----------------------------------------------------------------------------------------------
@@ -528,7 +524,7 @@ inline constexpr bool operator==(const r3_point& left,
   return left.x == right.x && left.y == right.y && left.z == right.z;
 }
 inline constexpr bool operator==(const r4_point& left,
-                       const r4_point& right) {
+                                 const r4_point& right) {
   return left.t == right.t && left.x == right.x && left.y == right.y && left.z == right.z;
 }
 //----------------------------------------------------------------------------------------------
@@ -536,8 +532,8 @@ inline constexpr bool operator==(const r4_point& left,
 //__RN Coordinate-Wise Inequality_________________________________________________________________
 template<class T,
   typename = std::enable_if_t<is_rN_type_v<T>>>
-inline constexpr bool operator!=(const T& left,
-                                 const T& right) {
+constexpr bool operator!=(const T& left,
+                          const T& right) {
   return !(left == right);
 }
 //----------------------------------------------------------------------------------------------
@@ -584,9 +580,9 @@ inline r3_point cross(const r3_point& left,
 
 //__RN Point-Line Distance______________________________________________________________________
 template<class T, typename = std::enable_if_t<is_rN_type_v<T>>>
-inline real point_line_distance(const T& point,
-                                const T& begin,
-                                const T& end) {
+real point_line_distance(const T& point,
+                         const T& begin,
+                         const T& end) {
   const auto delta = begin - point;
   const auto line = end - begin;
   const auto norm2_line = line * line;
@@ -594,22 +590,22 @@ inline real point_line_distance(const T& point,
                      : norm(delta - (delta * line) * line / norm2_line);
 }
 template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
-inline real point_line_distance(const T& point,
-                                const T& begin,
-                                const T& end,
-                                const Coordinate x1,
-                                const Coordinate x2) {
+real point_line_distance(const T& point,
+                         const T& begin,
+                         const T& end,
+                         const Coordinate x1,
+                         const Coordinate x2) {
   return point_line_distance(select_r2(point, x1, x2),
                              select_r2(begin, x1, x2),
                              select_r2(end, x1, x2));
 }
 template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
-inline real point_line_distance(const T& point,
-                                const T& begin,
-                                const T& end,
-                                const Coordinate x1,
-                                const Coordinate x2,
-                                const Coordinate x3) {
+real point_line_distance(const T& point,
+                         const T& begin,
+                         const T& end,
+                         const Coordinate x1,
+                         const Coordinate x2,
+                         const Coordinate x3) {
   return point_line_distance(select_r3(point, x1, x2, x3),
                              select_r3(begin, x1, x2, x3),
                              select_r3(end, x1, x2, x3));
@@ -620,9 +616,9 @@ inline real point_line_distance(const T& point,
 template<class T, class I,
   typename = std::enable_if_t<(is_r3_type_v<T> || is_r4_type_v<T>)
                            && (is_r3_type_v<I> || is_r4_type_v<I>)>>
-inline constexpr bool within_dr(const T& first,
-                                const T& second,
-                                const I& interval) {
+constexpr bool within_dr(const T& first,
+                         const T& second,
+                         const I& interval) {
   return util::math::within(first.x, second.x, interval.x)
       && util::math::within(first.y, second.y, interval.y)
       && util::math::within(first.z, second.z, interval.z);
@@ -632,9 +628,9 @@ inline constexpr bool within_dr(const T& first,
 //__R4 Interval Check___________________________________________________________________________
 template<class T,
   typename = std::enable_if_t<is_r4_type_v<T>>>
-inline constexpr bool within_ds(const T& first,
-                                const T& second,
-                                const T& interval) {
+constexpr bool within_ds(const T& first,
+                         const T& second,
+                         const T& interval) {
   return util::math::within(first.t, second.t, interval.t)
       && within_dr(first, second, interval);
 }
