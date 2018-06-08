@@ -158,18 +158,21 @@ struct fit_parameter { real value, error, min, max; };
 
 //__Fit Settings Type with Default Values_______________________________________________________
 struct fit_settings {
-  std::string         command_name       = "MIGRAD";
-  std::vector<double> command_parameters = {};
-  bool                graphics_on        = false;
-  integer             print_level        = -1;
-  double              error_def          = 0.5;
-  integer             max_iterations     = 300;
+  Coordinate          parameter_direction = Coordinate::Z;
+  std::string         command_name        = "MIGRAD";
+  std::vector<double> command_parameters  = {};
+  bool                graphics_on         = false;
+  integer             print_level         = -1;
+  double              error_def           = 0.5;
+  integer             max_iterations      = 300;
 };
 //----------------------------------------------------------------------------------------------
 
 //__Track Object________________________________________________________________________________
 class track {
 public:
+  enum class parameter { T0, X0, Y0, Z0, VX, VY, VZ };
+
   track(const event& points,
         const fit_settings& settings={});
 
@@ -190,6 +193,7 @@ public:
   const fit_parameter vx() const { return _vx; }
   const fit_parameter vy() const { return _vy; }
   const fit_parameter vz() const { return _vz; }
+  const fit_parameter fit_of(const parameter p) const;
 
   real t0_value() const { return _t0.value; }
   real x0_value() const { return _x0.value; }
@@ -198,6 +202,7 @@ public:
   real vx_value() const { return _vx.value; }
   real vy_value() const { return _vy.value; }
   real vz_value() const { return _vz.value; }
+  real value(const parameter p) const;
 
   real t0_error() const { return _t0.error; }
   real x0_error() const { return _x0.error; }
@@ -206,22 +211,27 @@ public:
   real vx_error() const { return _vx.error; }
   real vy_error() const { return _vy.error; }
   real vz_error() const { return _vz.error; }
+  real error(const parameter p) const;
 
   real beta() const;
+  real beta_error() const;
 
   real chi_squared() const;
   size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
   const real_vector& chi_squared_vector() const { return _delta_chi_squared; }
+
+  real variance(const parameter p) const;
+  real covariance(const parameter p,
+                  const parameter q) const;
   const real_vector& covariance_matrix() const { return _covariance_matrix; }
 
+  const hit front() const;
+  const hit back() const;
   const event event() const;
   const full_event& full_event() const { return _full_event; }
   const fit_settings& settings() const { return _settings; }
   const std::vector<std::string>& detectors() const { return _detectors; }
-
-  const hit front() const;
-  const hit back() const;
 
 private:
   fit_parameter _t0, _x0, _y0, _z0, _vx, _vy, _vz;

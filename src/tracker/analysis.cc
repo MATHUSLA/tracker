@@ -566,11 +566,10 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
-_track_parameters& _fit_event_minuit(const full_event& points,
-                                     _track_parameters& parameters,
-                                     real_vector& covariance_matrix,
-                                     const fit_settings& settings,
-                                     const Coordinate fixed=Coordinate::Z) {
+void _fit_event_minuit(const full_event& points,
+                       const fit_settings& settings,
+                       _track_parameters& parameters,
+                       real_vector& covariance_matrix) {
   TMinuit minuit;
   minuit.SetGraphicsMode(settings.graphics_on);
   minuit.SetPrintLevel(settings.print_level);
@@ -594,7 +593,7 @@ _track_parameters& _fit_event_minuit(const full_event& points,
   auto& vz = parameters.vz;
   minuit.DefineParameter(6, "VZ", vz.value, vz.error, vz.min, vz.max);
 
-  switch (fixed) {
+  switch (settings.parameter_direction) {
     case Coordinate::T: minuit.FixParameter(0); break;
     case Coordinate::X: minuit.FixParameter(1); break;
     case Coordinate::Y: minuit.FixParameter(2); break;
@@ -655,8 +654,6 @@ _track_parameters& _fit_event_minuit(const full_event& points,
       covariance_matrix.push_back(matrix[i][j]);
     }
   }
-
-  return parameters;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -672,7 +669,7 @@ track::track(const std::vector<full_hit>& points,
     : _full_event(points), _settings(settings) {
 
   auto fit_track = _guess_track(_full_event);
-  _fit_event_minuit(_full_event, fit_track, _covariance_matrix, _settings);
+  _fit_event_minuit(_full_event, _settings, fit_track, _covariance_matrix);
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);
@@ -704,10 +701,44 @@ const hit track::operator()(const real z) const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get Fit Parameter from Track________________________________________________________________
+const fit_parameter track::fit_of(const track::parameter p) const {
+  switch (p) {
+    case track::parameter::T0: return _t0;
+    case track::parameter::X0: return _x0;
+    case track::parameter::Y0: return _y0;
+    case track::parameter::Z0: return _z0;
+    case track::parameter::VX: return _vx;
+    case track::parameter::VY: return _vy;
+    case track::parameter::VZ: return _vz;
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Fit Parameter Value from Track__________________________________________________________
+real track::value(const track::parameter p) const {
+  return fit_of(p).value;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Fit Parameter Error from Track__________________________________________________________
+real track::error(const track::parameter p) const {
+  return fit_of(p).error;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Relativistic Beta for the Track_____________________________________________________________
 real track::beta() const {
   return std::sqrt(util::math::fused_product(
     _vx.value, _vx.value, _vy.value, _vy.value, _vz.value, _vz.value)) / units::speed_of_light;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Relativistic Beta for the Track_____________________________________________________________
+real track::beta_error() const {
+  // FIXME: Bad Error Estimate, only uses first order approximation
+  return 2.0L * std::sqrt(util::math::fused_product(
+    _vx.error, _vx.error, _vy.error, _vy.error, _vz.error, _vz.error)) / units::speed_of_light;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -729,13 +760,63 @@ real track::chi_squared_per_dof() const {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Get Event from Track________________________________________________________________________
-const event track::event() const {
-  std::vector<hit> out;
-  out.reserve(_full_event.size());
-  std::transform(_full_event.cbegin(), _full_event.cend(), std::back_inserter(out),
-    [](const auto& full_point) { return hit{full_point.t, full_point.x, full_point.y, full_point.z}; });
-  return out;
+//__Get Variance of a Track Parameter___________________________________________________________
+real track::variance(const track::parameter p) const {
+  return covariance(p, p);
+}
+//----------------------------------------------------------------------------------------------
+
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+//__Get Shift Index of Track Parameters for Covariance Matrix___________________________________
+constexpr std::size_t _shift_covariance_index(const track::parameter p) {
+  switch (p) {
+    case track::parameter::T0: return 0;
+    case track::parameter::X0: return 1;
+    case track::parameter::Y0: return 2;
+    case track::parameter::Z0: return 2;
+    case track::parameter::VX: return 3;
+    case track::parameter::VY: return 4;
+    case track::parameter::VZ: return 5;
+  }
+}
+//----------------------------------------------------------------------------------------------
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Get Covariance between Track Parameters_____________________________________________________
+real track::covariance(const track::parameter p,
+                       const track::parameter q) const {
+  switch (_settings.parameter_direction) {
+    case Coordinate::T:
+      if (p == track::parameter::T0 || q == track::parameter::T0) {
+        return 0;
+      } else {
+        const auto p_index = _shift_covariance_index(p)
+                           - (p == track::parameter::X0 || p == track::parameter::Y0);
+        const auto q_index = _shift_covariance_index(q)
+                           - (q == track::parameter::X0 || q == track::parameter::Y0);
+        return _covariance_matrix[6 * p_index + q_index];
+      }
+    case Coordinate::X:
+      if (p == track::parameter::X0 || q == track::parameter::X0) {
+        return 0;
+      } else {
+        const auto p_index = _shift_covariance_index(p) - (p == track::parameter::Y0);
+        const auto q_index = _shift_covariance_index(q) - (q == track::parameter::Y0);
+        return _covariance_matrix[6 * p_index + q_index];
+      }
+    case Coordinate::Y:
+      if (p == track::parameter::Y0 || q == track::parameter::Y0) {
+        return 0;
+      } else {
+        return _covariance_matrix[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+      }
+    case Coordinate::Z:
+      if (p == track::parameter::Z0 || q == track::parameter::Z0) {
+        return 0;
+      } else {
+        return _covariance_matrix[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+      }
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -748,6 +829,16 @@ const hit track::front() const {
 //__Get Back of Event from Track________________________________________________________________
 const hit track::back() const {
   return (*this)(_full_event.back().z);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Event from Track________________________________________________________________________
+const event track::event() const {
+  std::vector<hit> out;
+  out.reserve(_full_event.size());
+  std::transform(_full_event.cbegin(), _full_event.cend(), std::back_inserter(out),
+    [](const auto& full_point) { return hit{full_point.t, full_point.x, full_point.y, full_point.z}; });
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -797,7 +888,7 @@ std::ostream& operator<<(std::ostream& os,
 
   os.precision(6);
   os << "Dynamics: \n"
-     << "  beta:  " << track.beta()  << "\n"
+     << "  beta:  " << track.beta()  << "  (+/- " << track.beta_error() << ")\n"
      << "  front: " << track.front() << "\n"
      << "  back:  " << track.back()  << "\n";
 
