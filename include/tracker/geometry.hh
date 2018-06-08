@@ -1,5 +1,5 @@
 /*
- * include/util/geometry.hh
+ * include/tracker/geometry.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -128,7 +128,8 @@ constexpr bool is_inside_volume(const r4_point& point,
                                 const box_volume& box);
 //----------------------------------------------------------------------------------------------
 
-//__Find Center of Geometry around Point________________________________________________________
+//__Find Center of Geometry_____________________________________________________________________
+const r3_point find_center(const std::string& name);
 const r3_point find_center(const r3_point& point);
 const r4_point find_center(const r4_point& point);
 //----------------------------------------------------------------------------------------------

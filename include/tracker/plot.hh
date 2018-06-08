@@ -1,5 +1,5 @@
 /*
- * include/plot.hh
+ * include/tracker/plot.hh
  *
  * Copyright 2018 Brandon Gomes
  *

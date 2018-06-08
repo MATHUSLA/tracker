@@ -1,5 +1,5 @@
 /*
- * src/geometry.cc
+ * src/tracker/geometry.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -471,6 +471,9 @@ constexpr bool is_inside_volume(const r4_point& point,
 //----------------------------------------------------------------------------------------------
 
 //__Find Center of Geometry around Point________________________________________________________
+const r3_point find_center(const std::string& name) {
+  return limits_of(name).center;
+}
 const r3_point find_center(const r3_point& point) {
   return limits_of_volume(point).center;
 }

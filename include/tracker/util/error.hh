@@ -1,5 +1,5 @@
 /*
- * include/util/error.hh
+ * include/tracker/util/error.hh
  *
  * Copyright 2018 Brandon Gomes
  *

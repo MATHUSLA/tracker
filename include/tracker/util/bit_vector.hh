@@ -1,5 +1,5 @@
 /*
- * include/util/bit_vector.hh
+ * include/tracker/util/bit_vector.hh
  *
  * Copyright 2018 Brandon Gomes
  *

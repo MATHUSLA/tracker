@@ -1,5 +1,5 @@
 /*
- * include/util/algorithm.hh
+ * include/tracker/util/algorithm.hh
  *
  * Copyright 2018 Brandon Gomes
  *

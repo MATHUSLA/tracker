@@ -1,5 +1,5 @@
 /*
- * include/util/math.hh
+ * include/tracker/util/math.hh
  *
  * Copyright 2018 Brandon Gomes
  *

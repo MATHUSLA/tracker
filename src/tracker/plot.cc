@@ -1,5 +1,5 @@
 /*
- * src/plot.cc
+ * src/tracker/plot.cc
  *
  * Copyright 2018 Brandon Gomes
  *

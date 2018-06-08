@@ -53,7 +53,7 @@ constexpr bool was_combine_successful(const geometry::box_volume& combined) {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Check If RPC Combine Created a Valid Strip Overlap__________________________________________
+//__Construct True Hit from RPC Hit Volumes_____________________________________________________
 const analysis::full_hit construct_hit(const type::real top_time,
                                        const type::real bottom_time,
                                        const std::string& top_volume,
@@ -70,7 +70,7 @@ const analysis::full_hit construct_hit(const type::real top_time,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Combine Hits if they Occur in Overlapping RPCs______________________________________________
+//__Combine All Hits that Occur in Overlapping RPCs_____________________________________________
 const analysis::full_event combine_rpc_hits(const analysis::event& points,
                                             const type::real time_threshold,
                                             analysis::full_event& seeding_rpc_hits,
@@ -165,6 +165,7 @@ const analysis::full_event_vector reset_seeds(const analysis::full_event_vector&
   for (const auto& seed : joined_seeds) {
     out.push_back({});
     auto& back = out.back();
+    //analysis::full_event next;
     for (const auto& hit : seed) {
       size_t rpc_index = 0;
       for (; rpc_index < size; ++rpc_index) {
@@ -177,6 +178,7 @@ const analysis::full_event_vector reset_seeds(const analysis::full_event_vector&
         back.push_back(hit);
     }
     type::t_sort(back);
+    // out.push_back(type::t_sort(next));
   }
 
   return out;

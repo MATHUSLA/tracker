@@ -1,5 +1,5 @@
 /*
- * include/util/type.hh
+ * include/tracker/util/type.hh
  *
  * Copyright 2018 Brandon Gomes
  *

@@ -1,5 +1,5 @@
 /*
- * include/tracker/util.hh
+ * src/tracker/stat.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,21 +16,10 @@
  * limitations under the License.
  */
 
-#ifndef UTIL__UTIL_HH
-#define UTIL__UTIL_HH
-#pragma once
+#include <tracker/stat.hh>
 
-#define FP_FAST_FMA
-#define FP_FAST_FMAF
-#define FP_FAST_FMAL
+namespace MATHUSLA { namespace TRACKER {
 
-#include <tracker/util/algorithm.hh>
-#include <tracker/util/bit_vector.hh>
-#include <tracker/util/command_line_parser.hh>
-#include <tracker/util/error.hh>
-#include <tracker/util/io.hh>
-#include <tracker/util/math.hh>
-#include <tracker/util/string.hh>
-#include <tracker/util/type.hh>
 
-#endif /* UTIL__UTIL_HH */
+
+} } /* namespace MATHUSLA::TRACKER */
