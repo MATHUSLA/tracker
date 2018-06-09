@@ -23,6 +23,7 @@
 #include <ROOT/TMinuit.h>
 
 #include <tracker/geometry.hh>
+#include <tracker/stat.hh>
 #include <tracker/units.hh>
 
 #include <tracker/util/algorithm.hh>
@@ -365,36 +366,37 @@ std::ostream& operator<<(std::ostream& os,
   static const std::string bar(80, '-');
   os << bar << "\n";
   os.precision(7);
-  os << "Track Parameters: \n"
-     << "  T0: " << track.t0_value() << "  (+/- " << track.t0_error() << ")\n"
-     << "  X0: " << track.x0_value() << "  (+/- " << track.x0_error() << ")\n"
-     << "  Y0: " << track.y0_value() << "  (+/- " << track.y0_error() << ")\n"
-     << "  Z0: " << track.z0_value() << "  (+/- " << track.z0_error() << ")\n"
-     << "  VX: " << track.vx_value() << "  (+/- " << track.vx_error() << ")\n"
-     << "  VY: " << track.vy_value() << "  (+/- " << track.vy_error() << ")\n"
-     << "  VZ: " << track.vz_value() << "  (+/- " << track.vz_error() << ")\n";
+  os << "* Track Parameters: \n"
+     << "    T0: " << track.t0_value() << "  (+/- " << track.t0_error() << ")\n"
+     << "    X0: " << track.x0_value() << "  (+/- " << track.x0_error() << ")\n"
+     << "    Y0: " << track.y0_value() << "  (+/- " << track.y0_error() << ")\n"
+     << "    Z0: " << track.z0_value() << "  (+/- " << track.z0_error() << ")\n"
+     << "    VX: " << track.vx_value() << "  (+/- " << track.vx_error() << ")\n"
+     << "    VY: " << track.vy_value() << "  (+/- " << track.vy_error() << ")\n"
+     << "    VZ: " << track.vz_value() << "  (+/- " << track.vz_error() << ")\n";
 
   os.precision(6);
-  os << "Event: \n";
-  os << "  front: " << track.front() << "\n\n";
+  os << "* Event: \n";
+  os << "    front: " << track.front() << "\n\n";
   const auto points = track.event();
   const auto detectors = track.detectors();
   const auto size = points.size();
   for (size_t i = 0; i < size; ++i) {
-    os << "    " << detectors[i] << " " << points[i] << "\n";
+    os << "      " << detectors[i] << " " << points[i] << "\n";
   }
-  os << "\n  back:  " << track.back()  << "\n";
+  os << "\n    back:  " << track.back()  << "\n";
 
   os.precision(7);
-  os << "Statistics: \n"
-     << "  chi2:     " << track.chi_squared() << " = ";
-  util::io::print_range(track.chi_squared_vector(), " + ", "", os) << "\n";
-  os << "  dof:      " << track.degrees_of_freedom()               << "\n"
-     << "  chi2/dof: " << track.chi_squared_per_dof()              << "\n"
-     << "  cov mat:  | ";
+  os << "* Statistics: \n"
+     << "    dof:      " << track.degrees_of_freedom()               << "\n"
+     << "    chi2:     " << track.chi_squared() << " = ";
+  util::io::print_range(track.chi_squared_vector(), " + ", "", os)   << "\n";
+  os << "    chi2/dof: " << track.chi_squared_per_dof()              << "\n"
+     << "    p-value:  " << stat::chi_squared_p_value(track)         << "\n"
+     << "    cov mat:  | ";
   const auto matrix = track.covariance_matrix();
   for (size_t i = 0; i < 6; ++i) {
-    if (i > 0) os << "            | ";
+    if (i > 0) os << "              | ";
     for (size_t j = 0; j < 6; ++j) {
       const auto cell = matrix[6*i+j];
       if (i == j) {
@@ -408,8 +410,8 @@ std::ostream& operator<<(std::ostream& os,
   }
 
   os.precision(6);
-  os << "Dynamics: \n"
-     << "  beta:  " << track.beta()  << "  (+/- " << track.beta_error() << ")\n";
+  os << "* Dynamics: \n"
+     << "    beta:  " << track.beta()  << "  (+/- " << track.beta_error() << ")\n";
 
   return os << bar;
 }

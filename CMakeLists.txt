@@ -22,7 +22,7 @@ project(MATHUSLA_TRACKER VERSION 0.0.1 DESCRIPTION "MATHUSLA Particle Tracker")
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 find_package(Geant4 REQUIRED COMPONENTS gdml)
-find_package(ROOT   REQUIRED COMPONENTS Minuit)
+find_package(ROOT   REQUIRED COMPONENTS MathCore Minuit)
 
 add_library(tracker SHARED
     src/tracker/analysis.cc

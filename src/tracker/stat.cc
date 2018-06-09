@@ -18,8 +18,19 @@
 
 #include <tracker/stat.hh>
 
+#include <ROOT/Math/ProbFunc.h>
+
 namespace MATHUSLA { namespace TRACKER {
 
+namespace stat { ///////////////////////////////////////////////////////////////////////////////
 
+//__Calculate P-Value from Chi^2________________________________________________________________
+real chi_squared_p_value(const real chi2,
+                         const size_t dof) {
+  return ROOT::Math::chisquared_cdf_c(chi2, dof);
+}
+//----------------------------------------------------------------------------------------------
+
+} /* namespace stat */ /////////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */

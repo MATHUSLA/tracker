@@ -108,11 +108,13 @@ template<class BinaryFunction>
 BinaryFunction _traverse_file(const std::string& path,
                               BinaryFunction f) {
   auto file = TFile::Open(path.c_str());
-  TIter next(file->GetListOfKeys());
-  TKey* key = nullptr;
-  while ((key = static_cast<TKey*>(next())))
-    f(file, key);
-  delete key;
+  if (file && !file->IsZombie()) {
+    TIter next(file->GetListOfKeys());
+    TKey* key = nullptr;
+    while ((key = static_cast<TKey*>(next())))
+      f(file, key);
+    delete key;
+  }
   return std::move(f);
 }
 //----------------------------------------------------------------------------------------------
@@ -528,14 +530,14 @@ const tracking_options parse_input(int& argc,
   option verbose_opt ('v', "",         "Verbosity",                   option::required_arguments);
   option geo_opt     ('g', "geometry", "Geometry Import",             option::required_arguments);
   option map_opt     ('m', "map",      "Detector Map",                option::required_arguments);
-  option root_opt    ('d', "data",     "ROOT Data Directory",         option::required_arguments);
+  option data_opt    ('d', "data",     "ROOT Data Directory",         option::required_arguments);
   option script_opt  ('s', "script",   "Tracking Script",             option::required_arguments);
 
-  util::cli::parse(argv, {&help_opt, &verbose_opt, &geo_opt, &root_opt, &map_opt, &script_opt});
+  util::cli::parse(argv, {&help_opt, &verbose_opt, &geo_opt, &data_opt, &map_opt, &script_opt});
 
-  util::error::exit_when((geo_opt.count && !root_opt.count)
-                      || (root_opt.count && !geo_opt.count)
-                      || !(script_opt.count || geo_opt.count || root_opt.count)
+  util::error::exit_when((geo_opt.count && !data_opt.count)
+                      || (data_opt.count && !geo_opt.count)
+                      || !(script_opt.count || geo_opt.count || data_opt.count)
                       || argc == 1,
     "[FATAL ERROR] Insufficient Arguments:\n",
     "              Must include arguments for geometry ",
@@ -549,16 +551,16 @@ const tracking_options parse_input(int& argc,
     out = script::read(script_opt.argument);
     geo_opt.count += !out.geometry_file.empty();
     map_opt.count += !out.geometry_map_file.empty();
-    root_opt.count += !out.root_directory.empty();
+    data_opt.count += !out.root_directory.empty();
   } else {
     out.geometry_file = geo_opt.count ? geo_opt.argument : "";
     out.geometry_map_file = map_opt.count ? map_opt.argument : "";
-    out.root_directory = root_opt.count ? root_opt.argument : "";
+    out.root_directory = data_opt.count ? data_opt.argument : "";
   }
 
   if (geo_opt.count) _exit_on_missing_path(out.geometry_file, "Geometry File");
   if (map_opt.count) _exit_on_missing_path(out.geometry_map_file, "Geometry Map");
-  if (root_opt.count) _exit_on_missing_path(out.root_directory, "ROOT Directory");
+  if (data_opt.count) _exit_on_missing_path(out.root_directory, "ROOT Directory");
 
   return out;
 }

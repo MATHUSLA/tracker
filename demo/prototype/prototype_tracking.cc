@@ -1,5 +1,5 @@
 /*
- * demo/prototype_tracking.cc
+ * demo/prototype/prototype_tracking.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -26,7 +26,6 @@
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
-#include <tracker/util/io.hh>
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
@@ -83,6 +82,9 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
   using namespace util::math;
 
   const auto size = points.size();
+  if (size == 0)
+    return {};
+
   analysis::full_event event;
   event.reserve(size);
 
@@ -223,46 +225,37 @@ int prototype_tracking(int argc,
   plot::init();
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
   for (const auto& path : reader::root::search_directory(options.root_directory)) {
-    plot::canvas canvas(path);
-    std::cout << path << "\n";
+    std::cout << path << "\n\n";
+    uint_fast64_t counter{};
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
+      const auto event_name = path + "__e" + std::to_string(counter++);
+      plot::canvas canvas(event_name);
+      std::cout << event_name << "\n";
+
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
-
-      for (const auto& point : collapsed_event) {
-        std::cout << geometry::volume(point) << " :: " << point << "\n";
-      }
-      std::cout << "\n";
-
       canvas.add_points(collapsed_event, 0.8, plot::color::BLUE);
       draw_detector_centers(canvas);
 
-      analysis::full_event combined_rpc_hits;
-      analysis::full_event original_rpc_hits;
+      analysis::full_event combined_rpc_hits, original_rpc_hits;
       const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, combined_rpc_hits, original_rpc_hits);
       const auto layers = analysis::partition(full_event_points, options.layer_axis, options.layer_depth);
       const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
       const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
 
-      std::cout << "Track Count: " << tracking_vector.size() << "\n";
-      for (const auto& seed : tracking_vector) {
-        for (const auto& point : seed) {
-          std::cout << type::reduce_to_r4(point) << " ";
-        }
-        std::cout << "\n";
-      }
-      std::cout << "\n";
-
       const auto tracks = analysis::fit_seeds(tracking_vector);
       analysis::track_vector tracks_after_cut;
+      stat::chi2_per_dof_cut(tracks, 0.0L, 1.0L, tracks_after_cut);
 
-      stat::chi2_per_dof_cut(tracks, 0, 1, tracks_after_cut);
+      std::cout << "Original Track Count: " << tracks.size() << "\n"
+                << "After Chi^2 Cut: " << tracks_after_cut.size() << "\n";
 
       for (const auto& track : tracks_after_cut) {
         draw_track(canvas, track);
         std::cout << track << "\n";
       }
-      std::cout << "\n" << std::string(100, '=') << "\n\n";
       canvas.draw();
+
+      std::cout << "\n" << std::string(100, '=') << "\n\n";
     }
   }
   geometry::close();

@@ -99,36 +99,62 @@ constexpr bool is_chi2_dof_type_v = is_chi2_dof_type<C>::value;
 template<class T>
 real chi_squared(const T& t);
 template<class T>
-real degree_of_freedom(const T& t);
+real degrees_of_freedom(const T& t);
+//----------------------------------------------------------------------------------------------
+
+//__Calculate P-Value from Chi^2________________________________________________________________
+real chi_squared_p_value(const real chi2,
+                         const size_t dof);
+//----------------------------------------------------------------------------------------------
+
+//__Calculate P-Value from Chi^2________________________________________________________________
+template<class T>
+std::enable_if_t<!is_chi2_dof_type_v<T>, real>
+chi_squared_p_value(const T& t) {
+  return chi_squared_p_value(chi_squared(t), degrees_of_freedom(t));
+}
+template<class T>
+std::enable_if_t<has_chi2_and_dof_methods_v<T>, real>
+chi_squared_p_value(const T& t) {
+  return chi_squared_p_value(t.chi_squared(), t.degrees_of_freedom());
+}
+template<class T>
+std::enable_if_t<has_chi2_and_dof_members_v<T>, real>
+chi_squared_p_value(const T& t) {
+  return chi_squared_p_value(t.chi_squared, t.degrees_of_freedom);
+}
 //----------------------------------------------------------------------------------------------
 
 //__Perform Chi^2/DOF Cut on Range______________________________________________________________
 template<class Range>
-std::enable_if_t<!is_chi2_dof_type_v<typename Range::value_type>>
+std::enable_if_t<!is_chi2_dof_type_v<typename Range::value_type>, Range>&
 chi2_per_dof_cut(const Range& range,
                  const real min,
                  const real max,
                  Range& out) {
   util::algorithm::back_insert_copy_if(range, out, [&](const auto& value) {
-    return util::algorithm::between(chi_squared(value) / degree_of_freedom(value), min, max); });
+    return util::algorithm::between(chi_squared(value) / degrees_of_freedom(value), min, max); });
+  return out;
 }
 template<class Range>
-std::enable_if_t<has_chi2_and_dof_methods_v<typename Range::value_type>>
+std::enable_if_t<has_chi2_and_dof_methods_v<typename Range::value_type>, Range>&
 chi2_per_dof_cut(const Range& range,
                  const real min,
                  const real max,
                  Range& out) {
   util::algorithm::back_insert_copy_if(range, out, [&](const auto& value) {
     return util::algorithm::between(value.chi_squared() / value.degrees_of_freedom(), min, max); });
+  return out;
 }
 template<class Range>
-std::enable_if_t<has_chi2_and_dof_members_v<typename Range::value_type>>
+std::enable_if_t<has_chi2_and_dof_members_v<typename Range::value_type>, Range>&
 chi2_per_dof_cut(const Range& range,
                  const real min,
                  const real max,
                  Range& out) {
   util::algorithm::back_insert_copy_if(range, out, [&](const auto& value) {
     return util::algorithm::between(value.chi_squared / value.degrees_of_freedom, min, max); });
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
