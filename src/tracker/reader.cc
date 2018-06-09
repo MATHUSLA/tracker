@@ -457,7 +457,7 @@ const tracking_options read(const std::string& path) {
   tracking_options out;
 
   std::string line;
-  uint_fast64_t line_counter{};
+  // TODO: use for in-place map reader -> `uint_fast64_t line_counter{};`
   while (std::getline(file, line)) {
     if (line.empty()) continue;
 
