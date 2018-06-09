@@ -1,5 +1,5 @@
 /*
- * include/util/bit_vector.hh
+ * include/tracker/util/bit_vector.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -33,37 +33,80 @@ namespace detail { /////////////////////////////////////////////////////////////
 struct hidden_bool {
   bool data;
   hidden_bool() : data(0) {}
-  hidden_bool(bool data) : data(data) {}
-
-  hidden_bool(const hidden_bool& rhs) = default;
-  hidden_bool(hidden_bool&& rhs)      = default;
+  hidden_bool(const bool data) : data(data) {}
+  hidden_bool(const hidden_bool& rhs)            = default;
+  hidden_bool(hidden_bool&& rhs)                 = default;
   hidden_bool& operator=(const hidden_bool& rhs) = default;
   hidden_bool& operator=(hidden_bool&& rhs)      = default;
-
   operator bool() const { return data; }
 };
 //----------------------------------------------------------------------------------------------
 } /* namespace detail */ ///////////////////////////////////////////////////////////////////////
 
+//__Boolean-Like Bit____________________________________________________________________________
+using bit = detail::hidden_bool;
+//----------------------------------------------------------------------------------------------
+
 //__Dynamic Bit Vector__________________________________________________________________________
-class bit_vector : public std::vector<detail::hidden_bool> {
+class bit_vector : public std::vector<bit> {
 public:
-  bit_vector(std::size_t count, std::size_t size) {
+  bit_vector(const std::size_t count,
+             const std::size_t size) {
     resize(size, 0);
-    for (auto i = count > size ? 0 : size - count; i < size; ++i) operator[](i) = true;
+    for (std::size_t i = count > size ? 0 : size - count; i < size; ++i)
+      (*this)[i] = true;
   }
 
-  bit_vector(std::size_t size) : bit_vector(0, size) {}
+  bit_vector(const std::size_t size) : bit_vector(0, size) {}
 
-  std::size_t count() const { return std::count(begin(), end(), true); }
+  std::size_t count() const noexcept {
+    return std::count(cbegin(), cend(), true);
+  }
 
-  bool next_permutation() { return std::next_permutation(begin(), end()); }
+  std::size_t first_set(const std::size_t start=0) const noexcept {
+    const auto s = size();
+    for (std::size_t i = start; i < s; ++i)
+      if ((*this)[i]) return i;
+    return s;
+  }
+
+  std::size_t first_unset(const std::size_t start=0) const noexcept {
+    const auto s = size();
+    for (std::size_t i = start; i < s; ++i)
+      if (!(*this)[i]) return i;
+    return s;
+  }
+
+  bit_vector& set() noexcept {
+    for (std::size_t i = 0; i < size(); ++i) (*this)[i] = true;
+    return *this;
+  }
+
+  bit_vector& set(const std::size_t index) {
+    (*this)[index] = true;
+    return *this;
+  }
+
+  bit_vector& reset() noexcept {
+    for (std::size_t i = 0; i < size(); ++i) (*this)[i] = false;
+    return *this;
+  }
+
+  bit_vector& reset(const std::size_t index) {
+    (*this)[index] = false;
+    return *this;
+  }
+
+  bool next_permutation() noexcept {
+    return std::next_permutation(begin(), end());
+  }
 };
 //----------------------------------------------------------------------------------------------
 
 //__Bit Vector Printer__________________________________________________________________________
-inline std::ostream& operator<<(std::ostream& os, const bit_vector& bits) {
-  for (const auto& bit : bits) os << bit;
+inline std::ostream& operator<<(std::ostream& os,
+                                const bit_vector& bits) {
+  for (const auto& b : bits) os << b;
   return os;
 }
 //----------------------------------------------------------------------------------------------
@@ -73,8 +116,8 @@ using bit_vector_sequence = std::vector<bit_vector>;
 //----------------------------------------------------------------------------------------------
 
 //__Generate Bit Vector Sequences In-place______________________________________________________
-inline bit_vector_sequence generate_bit_sequences(std::vector<std::pair<std::size_t, std::size_t>> setup) {
-  const auto&& size = setup.size();
+inline bit_vector_sequence generate_bit_sequences(const std::vector<std::pair<std::size_t, std::size_t>>& setup) {
+  const auto size = setup.size();
   if (size == 0) return {};
   bit_vector_sequence out;
   out.reserve(size);
@@ -86,7 +129,9 @@ inline bit_vector_sequence generate_bit_sequences(std::vector<std::pair<std::siz
 
 //__First Order Bit Permutation Sequencer_______________________________________________________
 template<class UnaryFunction>
-inline UnaryFunction order1_permutations(std::size_t count, std::size_t total, UnaryFunction f) {
+UnaryFunction order1_permutations(const std::size_t count,
+                                  const std::size_t total,
+                                  UnaryFunction f) {
   bit_vector chooser(count, total);
   do { f(chooser); } while (chooser.next_permutation());
   return std::move(f);
@@ -95,8 +140,10 @@ inline UnaryFunction order1_permutations(std::size_t count, std::size_t total, U
 
 //__Second Order Bit Permutation Sequencer______________________________________________________
 template<class UnaryFunction>
-inline UnaryFunction order2_permutations(std::size_t count, bit_vector_sequence& vectors, UnaryFunction f) {
-  const auto&& size = vectors.size();
+UnaryFunction order2_permutations(const std::size_t count,
+                                  bit_vector_sequence& vectors,
+                                  UnaryFunction f) {
+  const auto size = vectors.size();
   bit_vector chooser(count, size);
   std::size_t index;
   do {

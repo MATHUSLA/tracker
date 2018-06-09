@@ -1,5 +1,5 @@
 /*
- * include/string.hh
+ * include/tracker/util/string.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -28,12 +28,12 @@ namespace util { ///////////////////////////////////////////////////////////////
 
 namespace string { /////////////////////////////////////////////////////////////////////////////
 
-//__Split on Delimeters_________________________________________________________________________
+//__Split String on Delimeters__________________________________________________________________
 template <class Range>
 void split(const std::string& string,
            Range& tokens,
            const std::string& delimiters=" ") {
-  const auto&& size = string.size();
+  const auto size = string.size();
   std::string::size_type position, previous = 0;
   while (previous <= size) {
     position = string.find_first_of(delimiters, previous);
@@ -52,9 +52,25 @@ void splitlines(const std::string& string,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Join Range of Strings on Delimeters_________________________________________________________
+template <class Range>
+std::string join(const Range& tokens,
+                 const std::string& delimeter="") {
+  const auto begin = tokens.cbegin();
+  const auto end = tokens.cend();
+  if (begin == end)
+    return "";
+
+  std::string out;
+  out.append(*begin);
+  std::for_each(begin + 1, end, [&](const auto& string) { out += delimeter + string; });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Remove Leading and Trailing Spaces__________________________________________________________
 inline std::string& strip(std::string& string) {
-  const auto& end = string.end();
+  const auto end = string.end();
 
   auto forward = string.cbegin();
   while (std::isspace(*forward) && forward != end) ++forward;

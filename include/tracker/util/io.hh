@@ -1,5 +1,5 @@
 /*
- * include/util/io.hh
+ * include/tracker/util/io.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -22,11 +22,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <sys/stat.h>
-
-#if defined(_WIN32)
-#include <windows.h>
-#endif
 
 namespace MATHUSLA {
 
@@ -34,14 +29,24 @@ namespace util { ///////////////////////////////////////////////////////////////
 
 namespace io { /////////////////////////////////////////////////////////////////////////////////
 
+//__Hidden Includes To Keep Global Namespace Clean______________________________________________
+#include <sys/stat.h>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+//----------------------------------------------------------------------------------------------
+
 //__Print Range of Printable Elements___________________________________________________________
 template<class Range>
-std::ostream& print_range(const Range& range, const std::string& spacer=" ", std::ostream& os=std::cout) {
+std::ostream& print_range(const Range& range,
+                          const std::string& spacer=" ",
+                          const std::string& prefix="",
+                          std::ostream& os=std::cout) {
   const auto& begin = range.cbegin();
   const auto& end = range.cend() - 1;
   if (end - begin >= 0) {
-    std::for_each(begin, end, [&](const auto& element) { os << element << spacer; });
-    os << *end;
+    std::for_each(begin, end, [&](const auto& element) { os << prefix << element << spacer; });
+    os << prefix << *end;
   }
   return os;
 }
@@ -67,6 +72,21 @@ inline int create_directory(const std::string& dir) {
 inline bool path_exists(const std::string& path) {
   struct stat info;
   return !stat(path.c_str(), &info);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Bold, Italicise, and Underline Text_________________________________________________________
+inline std::ostream& bold(std::ostream& os=std::cout) {
+  return os << "\e[1m";
+}
+inline std::ostream& italics(std::ostream& os=std::cout) {
+  return os << "\e[3m";
+}
+inline std::ostream& underline(std::ostream& os=std::cout) {
+  return os << "\e[4m";
+}
+inline std::ostream& reset_font(std::ostream& os=std::cout) {
+  return os << "\e[0m";
 }
 //----------------------------------------------------------------------------------------------
 

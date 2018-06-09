@@ -1,5 +1,5 @@
 /*
- * include/util/command_line_parser.hh
+ * include/tracker/util/command_line_parser.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -38,8 +38,8 @@ struct option {
     no_arguments        = 0x002u,
     required_arguments  = 0x004u,
     no_hyphen_arguments = 0x008u,
+    repeatable          = 0x010u,
 
-    repeatable                = 0x010u,
     is_short_without_argument = 0x020u,
     is_short_with_argument    = 0x040u,
     is_long_without_argument  = 0x080u,

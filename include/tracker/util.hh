@@ -1,5 +1,5 @@
 /*
- * include/util.hh
+ * include/tracker/util.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -24,11 +24,13 @@
 #define FP_FAST_FMAF
 #define FP_FAST_FMAL
 
-#include "util/algorithm.hh"
-#include "util/command_line_parser.hh"
-#include "util/error.hh"
-#include "util/io.hh"
-#include "util/math.hh"
-#include "util/string.hh"
+#include <tracker/util/algorithm.hh>
+#include <tracker/util/bit_vector.hh>
+#include <tracker/util/command_line_parser.hh>
+#include <tracker/util/error.hh>
+#include <tracker/util/io.hh>
+#include <tracker/util/math.hh>
+#include <tracker/util/string.hh>
+#include <tracker/util/type.hh>
 
 #endif /* UTIL__UTIL_HH */

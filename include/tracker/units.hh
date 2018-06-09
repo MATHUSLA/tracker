@@ -1,5 +1,5 @@
 /*
- * include/units.hh
+ * include/tracker/units.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -20,9 +20,9 @@
 #define TRACKER__UNITS_HH
 #pragma once
 
-#include "Geant4/G4UnitsTable.hh"
-#include "Geant4/G4SystemOfUnits.hh"
-#include "Geant4/G4PhysicalConstants.hh"
+#include <Geant4/G4UnitsTable.hh>
+#include <Geant4/G4SystemOfUnits.hh>
+#include <Geant4/G4PhysicalConstants.hh>
 
 namespace MATHUSLA {
 
@@ -40,6 +40,7 @@ constexpr auto length   = cm;
 constexpr auto time     = ns;
 constexpr auto energy   = MeV;
 constexpr auto momentum = MeVperC;
+constexpr auto velocity = length / time;
 //----------------------------------------------------------------------------------------------
 
 //__Install Momentum Units into Geant4__________________________________________________________

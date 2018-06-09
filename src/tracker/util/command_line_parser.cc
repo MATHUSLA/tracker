@@ -1,5 +1,5 @@
 /*
- * src/util/command_line_parser.cc
+ * src/tracker/util/command_line_parser.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "util/command_line_parser.hh"
+#include <tracker/util/command_line_parser.hh>
 
 #include <cstring>
 #include <cstdlib>
@@ -30,7 +30,7 @@
 #define EX_USAGE EXIT_FAILURE
 #endif
 
-#include "util/error.hh"
+#include <tracker/util/error.hh>
 
 namespace MATHUSLA {
 
@@ -78,11 +78,9 @@ namespace cli { ////////////////////////////////////////////////////////////////
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Find Long Option from Option List___________________________________________________________
-option* _find_long_option(const std::string& arg, option_list options) {
-  size_t count = 0,
-         found = 0,
-         index = 0,
-         length = std::strcspn(arg.c_str(), "=");
+option* _find_long_option(const std::string& arg,
+                          option_list options) {
+  size_t count = 0, found = 0, index = 0, length = std::strcspn(arg.c_str(), "=");
 
   for (const auto& option : options) {
     if (!option->long_name.empty()) {
@@ -155,7 +153,8 @@ void _print_help_message(const std::string& argv0,
 //----------------------------------------------------------------------------------------------
 
 //__Auto Error Message__________________________________________________________________________
-void _print_error_message(const std::string& argv0, option_list options) {
+void _print_error_message(const std::string& argv0,
+                          option_list options) {
   for (const auto& option : options) {
     error::exit_when(_is_on(option, option::is_short_without_argument | option::required_arguments),
       argv0, ": option -", option->short_name, " requires an argument\n");
@@ -189,11 +188,14 @@ option::option(char short_name,
 //----------------------------------------------------------------------------------------------
 
 //__Commmand Line Option Parser_________________________________________________________________
-size_t parse(char* argv[], option_list options) {
+size_t parse(char* argv[],
+             option_list options) {
   if (!options.size()) return 0;
 
   for (auto& option : options)
     option->reset();
+
+  std::vector<size_t> operand_indicies{};
 
   size_t operand_count = 1;
   size_t expecting = option::empty;
@@ -202,6 +204,7 @@ size_t parse(char* argv[], option_list options) {
   auto error = new option();
 
   for (size_t i = 1; argv[i]; ++i) {
+
     if (expecting != option::empty) {
       if (!_is_short(argv[i]) || !(_is_on(current, option::no_hyphen_arguments))) {
         current->set_argument(argv[i], expecting);
@@ -266,13 +269,18 @@ size_t parse(char* argv[], option_list options) {
       argv[operand_count] = argv[i];
       operand_count++;
     }
+
   }
 
   if (expecting != option::empty) {
     current->set_argument(nullptr, expecting >> 1);
   }
 
-  argv[operand_count] = nullptr;
+  // argv[operand_count] = nullptr;
+
+  for (const auto& i : operand_indicies)
+    std::cout << argv[i] << " ";
+  std::cout << "\n";
 
   error::exit_when(error->short_name,
     argv[0], ": unrecognised option -", error->short_name, '\n');

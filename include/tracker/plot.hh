@@ -1,5 +1,5 @@
 /*
- * include/plot.hh
+ * include/tracker/plot.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -22,7 +22,7 @@
 
 #include <memory>
 
-#include "point.hh"
+#include <tracker/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -31,8 +31,9 @@ namespace plot { ///////////////////////////////////////////////////////////////
 using namespace type;
 
 //__Plot System_________________________________________________________________________________
-void init();
+void init(bool on=true);
 void end();
+bool is_on();
 //----------------------------------------------------------------------------------------------
 
 //__Simple Color Type___________________________________________________________________________
@@ -50,13 +51,15 @@ struct color {
 //----------------------------------------------------------------------------------------------
 
 //__Color Equality______________________________________________________________________________
-inline bool operator==(const color& left, const color& right) {
+inline bool operator==(const color& left,
+                       const color& right) {
   return left.r == right.r && left.g == right.g && left.b == right.b;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Color Inequality____________________________________________________________________________
-inline bool operator!=(const color& left, const color& right) {
+inline bool operator!=(const color& left,
+                       const color& right) {
   return !(left == right);
 }
 //----------------------------------------------------------------------------------------------
@@ -65,19 +68,25 @@ inline bool operator!=(const color& left, const color& right) {
 class canvas {
 public:
   canvas(const std::string& name="canvas",
-         const integer width=800,
-         const integer height=500);
+         const integer width=900,
+         const integer height=600);
   canvas(canvas&& other) = default;
   ~canvas();
 
   canvas& operator=(canvas&& other) = default;
 
+  static canvas load(const std::string& path,
+                     const std::string& name="canvas");
+
   const std::string name() const;
   integer width() const;
   integer height() const;
+  bool empty() const;
 
   void draw();
   void clear();
+
+  bool save(const std::string& path) const;
 
   void add_point(const real x,
                  const real y,
@@ -92,6 +101,10 @@ public:
   void add_point(const r4_point& point,
                  const real size=1,
                  const color& color=color::BLACK);
+
+  void add_points(const r4_point_vector& points,
+                  const real width=1,
+                  const color& color=color::BLACK);
 
   void add_line(const real x1,
                 const real y1,
@@ -112,6 +125,10 @@ public:
                 const real width=1,
                 const color& color=color::BLACK);
 
+  void add_polyline(const r4_point_vector& points,
+                    const real width=1,
+                    const color& color=color::BLACK);
+
   void add_box(const real min_x,
                const real min_y,
                const real min_z,
@@ -131,24 +148,25 @@ public:
                const real width=1,
                const color& color=color::BLACK);
 
+  void add_box(const r3_point& center,
+               const real width_x,
+               const real width_y,
+               const real width_z,
+               const real width=1,
+               const color& color=color::BLACK);
+
+  void add_box(const r4_point& center,
+               const real width_x,
+               const real width_y,
+               const real width_z,
+               const real width=1,
+               const color& color=color::BLACK);
+
 private:
   struct canvas_impl;
   std::unique_ptr<canvas_impl> _impl;
 };
 //----------------------------------------------------------------------------------------------
-
-namespace root { ///////////////////////////////////////////////////////////////////////////////
-
-//__Export Plot Canvas to ROOT File_____________________________________________________________
-void to_file(const canvas& canvas,
-             const std::string& path);
-//----------------------------------------------------------------------------------------------
-
-//__Import Plot Canvas from ROOT File___________________________________________________________
-canvas from_file(const std::string& path);
-//----------------------------------------------------------------------------------------------
-
-} /* namespace root */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace plot */ /////////////////////////////////////////////////////////////////////////
 
