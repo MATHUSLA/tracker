@@ -39,7 +39,7 @@ using event_vector = std::vector<event>;
 //----------------------------------------------------------------------------------------------
 
 //__Extended Event Types________________________________________________________________________
-struct full_hit { real t, x, y, z; r4_point error; };
+struct full_hit { real t, x, y, z; r4_point width; };
 using full_event = std::vector<full_hit>;
 using full_event_vector = std::vector<full_event>;
 //----------------------------------------------------------------------------------------------
@@ -53,13 +53,13 @@ std::ostream& operator<<(std::ostream& os,
 constexpr bool operator==(const full_hit& left,
                           const full_hit& right) {
   return left.t == right.t && left.x == right.x && left.y == right.y && left.z == right.z
-      && left.error == right.error;
+      && left.width == right.width;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Find The Errors Associated with a Hit from Geometry_________________________________________
-const full_hit add_errors(const hit& point);
-const full_event add_errors(const event& points);
+const full_hit add_width(const hit& point);
+const full_event add_width(const event& points);
 //----------------------------------------------------------------------------------------------
 
 //__Center Events by Coordinate_________________________________________________________________

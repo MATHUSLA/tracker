@@ -20,11 +20,10 @@
 #define TRACKER__STAT_HH
 #pragma once
 
-#include <type_traits>
-
 #include <tracker/type.hh>
 
-#include <tracker/util/algorithm.hh>
+#include <tracker/util/math.hh>
+#include <tracker/util/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -157,6 +156,39 @@ chi2_per_dof_cut(const Range& range,
   return out;
 }
 //----------------------------------------------------------------------------------------------
+
+namespace error { //////////////////////////////////////////////////////////////////////////////
+
+//__Propagate Error_____________________________________________________________________________
+template<std::size_t N>
+real propagate(const real_array<N>& gradient,
+               const real_array<N*N>& covariance) {
+  return type::weighted_norm(gradient, covariance);
+}
+template<std::size_t N>
+real propagate(const real_vector& gradient,
+               const real_vector& covariance) {
+  return propagate(to_array<N>(gradient), to_array<N>(covariance));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Propagate Error in Sum of Independent Errors________________________________________________
+template<class ...Args>
+constexpr real propagate_sum(const real error,
+                             const Args... rest) {
+  return util::math::hypot(error, rest...);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Propagate Error in Average of Independent Errors____________________________________________
+template<class ...Args>
+constexpr real propagate_average(const real error,
+                                 const Args... rest) {
+  return propagate_independent_sum(error, rest...) / std::sqrt(util::type::count_v<Args...>);
+}
+//----------------------------------------------------------------------------------------------
+
+} /* namespace error */ ////////////////////////////////////////////////////////////////////////
 
 } /* namespace stat */ /////////////////////////////////////////////////////////////////////////
 

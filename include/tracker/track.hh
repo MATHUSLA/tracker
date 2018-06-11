@@ -85,16 +85,18 @@ public:
 
   real beta() const;
   real beta_error() const;
+  const r3_point unit() const;
+  const r3_point unit_error() const;
 
   real chi_squared() const;
   size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
-  const real_vector& chi_squared_vector() const { return _delta_chi_squared; }
+  const real_vector& chi_squared_vector() const { return _delta_chi2; }
 
   real variance(const parameter p) const;
   real covariance(const parameter p,
                   const parameter q) const;
-  const real_vector& covariance_matrix() const { return _covariance_matrix; }
+  const real_vector& covariance_matrix() const { return _covariance; }
 
   const hit front() const;
   const hit back() const;
@@ -106,7 +108,7 @@ public:
 private:
   fit_parameter _t0, _x0, _y0, _z0, _vx, _vy, _vz;
   std::vector<full_hit> _full_event;
-  real_vector _delta_chi_squared, _covariance_matrix;
+  real_vector _delta_chi2, _covariance;
   std::vector<std::string> _detectors;
   fit_settings _settings;
 };

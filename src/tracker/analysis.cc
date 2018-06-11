@@ -34,12 +34,12 @@ namespace analysis { ///////////////////////////////////////////////////////////
 std::ostream& operator<<(std::ostream& os,
                          const full_hit& point) {
   return os << "[(" << point.t << ", " << point.x << ", " << point.y << ", " << point.z
-            << ") +/- " << point.error << "]";
+            << ") +/- " << point.width << "]";
 }
 //----------------------------------------------------------------------------------------------
 
 //__Find The Errors Associated with a Hit from Geometry_________________________________________
-const full_hit add_errors(const hit& point) {
+const full_hit add_width(const hit& point) {
   const auto volume = geometry::volume(point);
   const auto limits = geometry::limits_of(volume);
   const auto center = limits.center;
@@ -48,10 +48,10 @@ const full_hit add_errors(const hit& point) {
   return { point.t, center.x, center.y, center.z,
            { geometry::time_resolution_of(volume), max.x - min.x, max.y - min.y, max.z - min.z } };
 }
-const full_event add_errors(const event& points) {
+const full_event add_width(const event& points) {
   full_event out;
   out.reserve(points.size());
-  util::algorithm::back_insert_transform(points, out, [](const auto& point) { return add_errors(point); });
+  util::algorithm::back_insert_transform(points, out, [](const auto& point) { return add_width(point); });
   return out;
 }
 //----------------------------------------------------------------------------------------------

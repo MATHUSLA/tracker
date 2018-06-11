@@ -63,7 +63,7 @@ const analysis::full_hit construct_hit(const type::real top_time,
                                        const geometry::box_volume& combined) {
   const type::r4_point errors{
     std::hypot(geometry::time_resolution_of(top_volume),
-               geometry::time_resolution_of(bottom_volume)) / 2.0L,
+               geometry::time_resolution_of(bottom_volume)) / std::sqrt(2.0L),
     combined.max.x - combined.min.x,
     combined.max.y - combined.min.y,
     combined.max.z - combined.min.z};
@@ -108,7 +108,7 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
         const auto bottom_point = bottom[bottom_index];
 
         if (bottom_index == bottom_size) {
-          event.push_back(analysis::add_errors(top_point));
+          event.push_back(analysis::add_width(top_point));
           ++top_index;
           bottom_index = 0;
           continue;
@@ -124,8 +124,8 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
           const auto new_hit = construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined);
           event.push_back(new_hit);
           combined_rpc_hits.push_back(new_hit);
-          original_rpc_hits.push_back(analysis::add_errors(top_point));
-          original_rpc_hits.push_back(analysis::add_errors(bottom_point));
+          original_rpc_hits.push_back(analysis::add_width(top_point));
+          original_rpc_hits.push_back(analysis::add_width(bottom_point));
           discard_list.set(bottom_index);
           ++top_index;
           bottom_index = 0;
@@ -135,22 +135,22 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
       }
 
       for (; top_index < top_size; ++top_index) {
-        event.push_back(analysis::add_errors(top[top_index]));
+        event.push_back(analysis::add_width(top[top_index]));
       }
       for (bottom_index = 0; bottom_index < bottom_size; ++bottom_index) {
         if (!discard_list[bottom_index])
-          event.push_back(analysis::add_errors(bottom[bottom_index]));
+          event.push_back(analysis::add_width(bottom[bottom_index]));
       }
       ++layer_index;
     } else {
       util::algorithm::back_insert_transform(top, event,
-        [](const auto& part){ return analysis::add_errors(part); });
+        [](const auto& part){ return analysis::add_width(part); });
     }
   }
 
   if (layer_index == partition_size - 1) {
     util::algorithm::back_insert_transform(parts.back(), event,
-      [](const auto& part){ return analysis::add_errors(part); });
+      [](const auto& part){ return analysis::add_width(part); });
   }
 
   util::algorithm::reverse(event);
@@ -197,7 +197,7 @@ void draw_track(plot::canvas& canvas,
   for (const auto& point : full_event) {
     const auto center = type::reduce_to_r3(point);
     const plot::color color{brightness, brightness, brightness};
-    canvas.add_box(center, point.error.x, point.error.y, point.error.z, 2.5, color);
+    canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     canvas.add_point(center, 0.3, color);
     brightness += step;
   }
@@ -222,7 +222,7 @@ int prototype_tracking(int argc,
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
   const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
 
-  plot::init();
+  //plot::init();
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
   for (const auto& path : reader::root::search_directory(options.root_directory)) {
     std::cout << path << "\n\n";
@@ -250,10 +250,10 @@ int prototype_tracking(int argc,
                 << "After Chi^2 Cut: " << tracks_after_cut.size() << "\n";
 
       for (const auto& track : tracks_after_cut) {
-        draw_track(canvas, track);
+        //draw_track(canvas, track);
         std::cout << track << "\n";
       }
-      canvas.draw();
+      //canvas.draw();
 
       std::cout << "\n" << std::string(100, '=') << "\n\n";
     }

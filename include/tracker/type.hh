@@ -20,6 +20,10 @@
 #define TRACKER__TYPE_HH
 #pragma once
 
+#define FP_FAST_FMA
+#define FP_FAST_FMAF
+#define FP_FAST_FMAL
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -662,7 +666,7 @@ inline constexpr real_array<4> to_indicies(const r4_point& point) {
 
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
-inline constexpr r2_point_array<N> reduce_to_r2(const r3_point_array<N>& arr) {
+constexpr r2_point_array<N> reduce_to_r2(const r3_point_array<N>& arr) {
   r2_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
@@ -674,7 +678,7 @@ inline constexpr r2_point_array<N> reduce_to_r2(const r3_point_array<N>& arr) {
 
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
-inline constexpr r2_point_array<N> reduce_to_r2(const r4_point_array<N>& arr) {
+constexpr r2_point_array<N> reduce_to_r2(const r4_point_array<N>& arr) {
   r2_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
@@ -686,7 +690,7 @@ inline constexpr r2_point_array<N> reduce_to_r2(const r4_point_array<N>& arr) {
 
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
-inline constexpr r3_point_array<N> reduce_to_r3(const r4_point_array<N>& arr) {
+constexpr r3_point_array<N> reduce_to_r3(const r4_point_array<N>& arr) {
   r3_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
@@ -698,28 +702,28 @@ inline constexpr r3_point_array<N> reduce_to_r3(const r4_point_array<N>& arr) {
 
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
-inline constexpr real_array2<N> reduce_to_r2(const real_array3<N>& arr) {
+constexpr real_array2<N> reduce_to_r2(const real_array3<N>& arr) {
   return { arr.xs, arr.ys };
 }
 //----------------------------------------------------------------------------------------------
 
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
-inline constexpr real_array2<N> reduce_to_r2(const real_array4<N>& arr) {
+constexpr real_array2<N> reduce_to_r2(const real_array4<N>& arr) {
   return { arr.xs, arr.ys };
 }
 //----------------------------------------------------------------------------------------------
 
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
-inline constexpr real_array3<N> reduce_to_r3(const real_array4<N>& arr) {
+constexpr real_array3<N> reduce_to_r3(const real_array4<N>& arr) {
   return { arr.xs, arr.ys, arr.zs };
 }
 //----------------------------------------------------------------------------------------------
 
 //__R2-Point Array Transposition________________________________________________________________
 template<std::size_t N>
-inline constexpr real_array2<N> transpose(const r2_point_array<N>& arr) {
+constexpr real_array2<N> transpose(const r2_point_array<N>& arr) {
   real_array2<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
@@ -732,7 +736,7 @@ inline constexpr real_array2<N> transpose(const r2_point_array<N>& arr) {
 
 //__R3-Point Array Transposition________________________________________________________________
 template<std::size_t N>
-inline constexpr real_array3<N> transpose(const r3_point_array<N>& arr) {
+constexpr real_array3<N> transpose(const r3_point_array<N>& arr) {
   real_array3<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
@@ -746,7 +750,7 @@ inline constexpr real_array3<N> transpose(const r3_point_array<N>& arr) {
 
 //__R4-Point Array Transposition________________________________________________________________
 template<std::size_t N>
-inline constexpr real_array4<N> transpose(const r4_point_array<N>& arr) {
+constexpr real_array4<N> transpose(const r4_point_array<N>& arr) {
   real_array4<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
@@ -761,7 +765,7 @@ inline constexpr real_array4<N> transpose(const r4_point_array<N>& arr) {
 
 //__R2-Array Point Transposition________________________________________________________________
 template<std::size_t N>
-inline constexpr r2_point_array<N> transpose(const real_array2<N>& arr) {
+constexpr r2_point_array<N> transpose(const real_array2<N>& arr) {
   r2_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     auto& out_i = out[i];
@@ -774,7 +778,7 @@ inline constexpr r2_point_array<N> transpose(const real_array2<N>& arr) {
 
 //__R3-Array Point Transposition________________________________________________________________
 template<std::size_t N>
-inline constexpr r3_point_array<N> transpose(const real_array3<N>& arr) {
+constexpr r3_point_array<N> transpose(const real_array3<N>& arr) {
   r3_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     auto& out_i = out[i];
@@ -788,7 +792,7 @@ inline constexpr r3_point_array<N> transpose(const real_array3<N>& arr) {
 
 //__R4-Array Point Transposition________________________________________________________________
 template<std::size_t N>
-inline constexpr r4_point_array<N> transpose(const real_array4<N>& arr) {
+constexpr r4_point_array<N> transpose(const real_array4<N>& arr) {
   r4_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     auto& out_i = out[i];
@@ -803,9 +807,54 @@ inline constexpr r4_point_array<N> transpose(const real_array4<N>& arr) {
 
 //__Real-Array Dot Product______________________________________________________________________
 template<std::size_t N>
-inline constexpr real operator*(const real_array<N>& left,
-                                const real_array<N>& right) {
+constexpr real operator*(const real_array<N>& left,
+                         const real_array<N>& right) {
   return std::inner_product(left.cbegin(), left.cend(), right.cbegin(), 0.0L);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Left Matrix Product______________________________________________________________
+template<std::size_t N>
+constexpr real_array<N> operator*(const real_array<N * N>& left,
+                                  const real_array<N>& right) {
+  real_array<N> out;
+  for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t j = 0; j < N; ++j)
+      out[i] = left[N*i+j] * right[j];
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Right Matrix Product______________________________________________________________
+template<std::size_t N>
+constexpr real_array<N> operator*(const real_array<N>& left,
+                                  const real_array<N * N>& right) {
+  real_array<N> out;
+  for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t j = 0; j < N; ++j)
+      out[i] = right[N*j+i] * left[j];
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Weighted Product_________________________________________________________________
+template<std::size_t N>
+constexpr real weighted_product(const real_array<N>& left,
+                                const real_array<N * N>& weight,
+                                const real_array<N>& right) {
+  real out{};
+  for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t j = 0; j < N; ++j)
+      out = std::fma(left[i] * weight[N*i+j], right[j], out);
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Weighted Norm____________________________________________________________________
+template<std::size_t N>
+constexpr real weighted_norm(const real_array<N>& vector,
+                             const real_array<N * N>& weight) {
+  return weighted_product<>(vector, weight, vector);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -972,10 +1021,39 @@ inline real operator*(const real_vector& left,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Real-Vector Weighted Product________________________________________________________________
+constexpr real weighted_product(const real_vector& left,
+                                const real_vector& weight,
+                                const real_vector& right) {
+  const auto left_size = left.size();
+  const auto right_size = right.size();
+  const auto weight_size = weight.size();
+
+  if (left_size != right_size
+      || left_size * left_size != weight_size
+      || right_size * right_size != weight_size)
+    return 0;
+
+  real out{};
+  for (std::size_t i = 0; i < left_size; ++i)
+    for (std::size_t j = 0; j < left_size; ++j)
+      out += left[i] * weight[left_size*i+j] * right[j];
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Weighted Norm____________________________________________________________________
+constexpr real weighted_norm(const real_vector& vector,
+                             const real_vector& weight) {
+  return weighted_product(vector, weight, vector);
+}
+//----------------------------------------------------------------------------------------------
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 //__R2-Point Array to Vector Transformation_____________________________________________________
-template<std::size_t N> inline r2_point_vector to_vector(const r2_point_array<N>& arr) {
+template<std::size_t N>
+r2_point_vector to_vector(const r2_point_array<N>& arr) {
   r2_point_vector out;
   out.reserve(N);
   std::copy(arr.cbegin(), arr.cend(), std::back_inserter(out));
@@ -984,7 +1062,8 @@ template<std::size_t N> inline r2_point_vector to_vector(const r2_point_array<N>
 //----------------------------------------------------------------------------------------------
 
 //__R3-Point Array to Vector Transformation_____________________________________________________
-template<std::size_t N> inline r3_point_vector to_vector(const r3_point_array<N>& arr) {
+template<std::size_t N>
+r3_point_vector to_vector(const r3_point_array<N>& arr) {
   r3_point_vector out;
   out.reserve(N);
   std::copy(arr.cbegin(), arr.cend(), std::back_inserter(out));
@@ -993,7 +1072,8 @@ template<std::size_t N> inline r3_point_vector to_vector(const r3_point_array<N>
 //----------------------------------------------------------------------------------------------
 
 //__R4-Point Array to Vector Transformation_____________________________________________________
-template<std::size_t N> inline r4_point_vector to_vector(const r4_point_array<N>& arr) {
+template<std::size_t N>
+r4_point_vector to_vector(const r4_point_array<N>& arr) {
   r4_point_vector out;
   out.reserve(N);
   std::copy(arr.cbegin(), arr.cend(), std::back_inserter(out));
@@ -1002,7 +1082,8 @@ template<std::size_t N> inline r4_point_vector to_vector(const r4_point_array<N>
 //----------------------------------------------------------------------------------------------
 
 //__R2-Array Point to Vector Point Transformation_______________________________________________
-template<std::size_t N> inline real_vector2 to_vector(const real_array2<N>& arr) {
+template<std::size_t N>
+real_vector2 to_vector(const real_array2<N>& arr) {
   real_vector2 out;
   out.xs.reserve(N);
   out.ys.reserve(N);
@@ -1015,7 +1096,8 @@ template<std::size_t N> inline real_vector2 to_vector(const real_array2<N>& arr)
 //----------------------------------------------------------------------------------------------
 
 //__R3-Array Point to Vector Point Transformation_______________________________________________
-template<std::size_t N> inline real_vector3 to_vector(const real_array3<N>& arr) {
+template<std::size_t N>
+real_vector3 to_vector(const real_array3<N>& arr) {
   real_vector3 out;
   out.xs.reserve(N);
   out.ys.reserve(N);
@@ -1030,7 +1112,8 @@ template<std::size_t N> inline real_vector3 to_vector(const real_array3<N>& arr)
 //----------------------------------------------------------------------------------------------
 
 //__R4-Array Point to Vector Point Transformation_______________________________________________
-template<std::size_t N> inline real_vector4 to_vector(const real_array4<N>& arr) {
+template<std::size_t N>
+real_vector4 to_vector(const real_array4<N>& arr) {
   real_vector4 out;
   out.ts.reserve(N);
   out.xs.reserve(N);
@@ -1048,7 +1131,7 @@ template<std::size_t N> inline real_vector4 to_vector(const real_array4<N>& arr)
 
 //__R2-Point Vector to Array Transformation_____________________________________________________
 template<std::size_t N>
-inline constexpr r2_point_array<N> to_array(const r2_point_vector& vec) {
+constexpr r2_point_array<N> to_array(const r2_point_vector& vec) {
   r2_point_array<N> out;
   std::copy(vec.cbegin(), vec.cend(), out.begin());
   return out;
@@ -1057,7 +1140,7 @@ inline constexpr r2_point_array<N> to_array(const r2_point_vector& vec) {
 
 //__R3-Point Vector to Array Transformation_____________________________________________________
 template<std::size_t N>
-inline constexpr r3_point_array<N> to_array(const r3_point_vector& vec) {
+constexpr r3_point_array<N> to_array(const r3_point_vector& vec) {
   r3_point_array<N> out;
   std::copy(vec.cbegin(), vec.cend(), out.begin());
   return out;
@@ -1066,7 +1149,7 @@ inline constexpr r3_point_array<N> to_array(const r3_point_vector& vec) {
 
 //__R4-Point Vector to Array Transformation_____________________________________________________
 template<std::size_t N>
-inline constexpr r4_point_array<N> to_array(const r4_point_vector& vec) {
+constexpr r4_point_array<N> to_array(const r4_point_vector& vec) {
   r4_point_array<N> out;
   std::copy(vec.cbegin(), vec.cend(), out.begin());
   return out;
@@ -1075,7 +1158,7 @@ inline constexpr r4_point_array<N> to_array(const r4_point_vector& vec) {
 
 //__R2-Vector Point to Array Point Transformation_______________________________________________
 template<std::size_t N>
-inline constexpr real_array2<N> to_array(const real_vector2& vec) {
+constexpr real_array2<N> to_array(const real_vector2& vec) {
   const auto size = std::min(vec.xs.size(), N);
   real_array2<N> out;
   for (std::size_t i = 0; i < size; ++i) {
@@ -1088,7 +1171,7 @@ inline constexpr real_array2<N> to_array(const real_vector2& vec) {
 
 //__R3-Vector Point to Array Point Transformation_______________________________________________
 template<std::size_t N>
-inline constexpr real_array3<N> to_array(const real_vector3& vec) {
+constexpr real_array3<N> to_array(const real_vector3& vec) {
   const auto size = std::min(vec.xs.size(), N);
   real_array3<N> out;
   for (std::size_t i = 0; i < size; ++i) {
@@ -1102,7 +1185,7 @@ inline constexpr real_array3<N> to_array(const real_vector3& vec) {
 
 //__R4-Vector Point to Array Point Transformation_______________________________________________
 template<std::size_t N>
-inline constexpr real_array4<N> to_array(const real_vector4& vec) {
+constexpr real_array4<N> to_array(const real_vector4& vec) {
   const auto size = std::min(vec.xs.size(), N);
   real_array4<N> out;
   for (std::size_t i = 0; i < size; ++i) {
@@ -1119,8 +1202,8 @@ inline constexpr real_array4<N> to_array(const real_vector4& vec) {
 
 //__General Range Sorting Function______________________________________________________________
 template<class Range, class Compare>
-inline Range& sort_range(Range& range,
-                         const Compare comp) {
+Range& sort_range(Range& range,
+                  const Compare comp) {
   std::sort(range.begin(), range.end(), comp);
   return range;
 }
@@ -1128,8 +1211,8 @@ inline Range& sort_range(Range& range,
 
 //__General Range Stable Sorting Function_______________________________________________________
 template<class Range, class Compare>
-inline Range& stable_sort_range(Range& range,
-                                const Compare comp) {
+Range& stable_sort_range(Range& range,
+                         const Compare comp) {
   std::stable_sort(range.begin(), range.end(), comp);
   return range;
 }
@@ -1137,8 +1220,8 @@ inline Range& stable_sort_range(Range& range,
 
 //__General Range Copy Sorting Function_________________________________________________________
 template<class Range, class Compare>
-inline Range copy_sort_range(const Range& range,
-                             const Compare comp) {
+Range copy_sort_range(const Range& range,
+                      const Compare comp) {
   auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
   std::partial_sort_copy(range.cbegin(), range.cend(), copy.begin(), copy.end(), comp);
   return copy;
@@ -1147,8 +1230,8 @@ inline Range copy_sort_range(const Range& range,
 
 //__General Range Stable Sorting Function_______________________________________________________
 template<class Range, class Compare>
-inline Range stable_copy_sort_range(const Range& range,
-                                    const Compare comp) {
+Range stable_copy_sort_range(const Range& range,
+                             const Compare comp) {
   auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
   std::stable_sort(copy.begin(), copy.end(), comp);
   return copy;
@@ -1194,28 +1277,28 @@ struct coordinate_ordered<Coordinate::Z, C> {
 
 //__General Coordinate-Wise Sorting Functions___________________________________________________
 template<class Range>
-inline Range& t_sort(Range& range) {
+Range& t_sort(Range& range) {
   return sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range& x_sort(Range& range) {
+Range& x_sort(Range& range) {
   return sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range& y_sort(Range& range) {
+Range& y_sort(Range& range) {
   return sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range& z_sort(Range& range) {
+Range& z_sort(Range& range) {
   return sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<Coordinate C, class Range>
-inline Range& coordinate_sort(Range& range) {
+Range& coordinate_sort(Range& range) {
   return sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
 }
 template<class Range>
-inline Range& coordinate_sort(const Coordinate coordinate,
-                              Range& range) {
+Range& coordinate_sort(const Coordinate coordinate,
+                       Range& range) {
   switch (coordinate) {
     case Coordinate::T: return t_sort(range);
     case Coordinate::X: return x_sort(range);
@@ -1227,28 +1310,28 @@ inline Range& coordinate_sort(const Coordinate coordinate,
 
 //__General Coordinate-Wise Stable Sorting Functions____________________________________________
 template<class Range>
-inline Range& t_stable_sort(Range& range) {
+Range& t_stable_sort(Range& range) {
   return stable_sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range& x_stable_sort(Range& range) {
+Range& x_stable_sort(Range& range) {
   return stable_sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range& y_stable_sort(Range& range) {
+Range& y_stable_sort(Range& range) {
   return stable_sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range& z_stable_sort(Range& range) {
+Range& z_stable_sort(Range& range) {
   return stable_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<Coordinate C, class Range>
-inline Range& coordinate_stable_sort(Range& range) {
+Range& coordinate_stable_sort(Range& range) {
   return stable_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
 }
 template<class Range>
-inline Range& coordinate_stable_sort(const Coordinate coordinate,
-                                     Range& range) {
+Range& coordinate_stable_sort(const Coordinate coordinate,
+                              Range& range) {
   switch (coordinate) {
     case Coordinate::T: return t_stable_sort(range);
     case Coordinate::X: return x_stable_sort(range);
@@ -1260,28 +1343,28 @@ inline Range& coordinate_stable_sort(const Coordinate coordinate,
 
 //__General Coordinate-Wise Copy Sorting Functions______________________________________________
 template<class Range>
-inline Range t_copy_sort(const Range& range) {
+Range t_copy_sort(const Range& range) {
   return copy_sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range x_copy_sort(const Range& range) {
+Range x_copy_sort(const Range& range) {
   return copy_sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range y_copy_sort(const Range& range) {
+Range y_copy_sort(const Range& range) {
   return copy_sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range z_copy_sort(const Range& range) {
+Range z_copy_sort(const Range& range) {
   return copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<Coordinate C, class Range>
-inline Range coordinate_copy_sort(const Range& range) {
+Range coordinate_copy_sort(const Range& range) {
   return copy_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
 }
 template<class Range>
-inline Range coordinate_copy_sort(const Coordinate coordinate,
-                                  const Range& range) {
+Range coordinate_copy_sort(const Coordinate coordinate,
+                           const Range& range) {
   switch (coordinate) {
     case Coordinate::T: return t_copy_sort(range);
     case Coordinate::X: return x_copy_sort(range);
@@ -1293,28 +1376,28 @@ inline Range coordinate_copy_sort(const Coordinate coordinate,
 
 //__General Coordinate-Wise Stable Sorting Functions____________________________________________
 template<class Range>
-inline Range t_stable_copy_sort(const Range& range) {
+Range t_stable_copy_sort(const Range& range) {
   return stable_copy_sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range x_stable_copy_sort(const Range& range) {
+Range x_stable_copy_sort(const Range& range) {
   return stable_copy_sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range y_stable_copy_sort(const Range& range) {
+Range y_stable_copy_sort(const Range& range) {
   return stable_copy_sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range>
-inline Range z_stable_copy_sort(const Range& range) {
+Range z_stable_copy_sort(const Range& range) {
   return stable_copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<Coordinate C, class Range>
-inline Range coordinate_stable_copy_sort(const Range& range) {
+Range coordinate_stable_copy_sort(const Range& range) {
   return stable_copy_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
 }
 template<class Range>
-inline Range coordinate_stable_copy_sort(const Coordinate coordinate,
-                                         const Range& range) {
+Range coordinate_stable_copy_sort(const Coordinate coordinate,
+                                  const Range& range) {
   switch (coordinate) {
     case Coordinate::T: return t_stable_copy_sort(range);
     case Coordinate::X: return x_stable_copy_sort(range);
