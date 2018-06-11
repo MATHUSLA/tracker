@@ -223,7 +223,7 @@ int prototype_tracking(int argc,
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
   const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
 
-  //plot::init();
+  plot::init();
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
   for (const auto& path : reader::root::search_directory(options.root_directory)) {
     std::cout << path << "\n\n";
@@ -251,10 +251,10 @@ int prototype_tracking(int argc,
                 << "After Chi^2 Cut: " << tracks_after_cut.size() << "\n";
 
       for (const auto& track : tracks_after_cut) {
-        //draw_track(canvas, track);
+        draw_track(canvas, track);
         std::cout << track << "\n";
       }
-      //canvas.draw();
+      canvas.draw();
 
       std::cout << "\n" << std::string(100, '=') << "\n\n";
     }
