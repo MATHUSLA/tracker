@@ -1,5 +1,5 @@
 #
-# demo/CMakeLists.txt
+# demo/prototype/CMakeLists.txt
 #
 # Copyright 2018 Brandon Gomes
 #
@@ -17,5 +17,12 @@
 
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
-# add_subdirectory(box)
-add_subdirectory(prototype)
+add_executable(prototype prototype_tracking.cc)
+target_compile_features(prototype PUBLIC cxx_std_14)
+
+target_link_libraries(prototype PUBLIC tracker)
+target_include_directories(prototype PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
+
+install(TARGETS prototype DESTINATION bin)

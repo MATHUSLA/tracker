@@ -113,7 +113,7 @@ BinaryFunction _traverse_file(const std::string& path,
     TKey* key = nullptr;
     while ((key = static_cast<TKey*>(next())))
       f(file, key);
-    delete key;
+    file->Close();
   }
   return std::move(f);
 }
@@ -184,7 +184,6 @@ const analysis::event_vector import_events(const std::string& path,
       out.push_back(points);
     }
   });
-  delete tree;
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -214,7 +213,6 @@ const analysis::event_vector import_events(const std::string& path,
       out.push_back(points);
     }
   });
-  delete tree;
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -525,7 +523,6 @@ void _exit_on_missing_path(const std::string& path,
 const tracking_options parse_input(int& argc,
                                    char* argv[]) {
   using util::cli::option;
-
   option help_opt    ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
   option verbose_opt ('v', "",         "Verbosity",                   option::required_arguments);
   option geo_opt     ('g', "geometry", "Geometry Import",             option::required_arguments);

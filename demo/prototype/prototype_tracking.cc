@@ -265,6 +265,31 @@ int prototype_tracking(int argc,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Quiet Prototype Tracking Algorithm__________________________________________________________
+int quiet_prototype_tracking(int argc,
+                             char* argv[]) {
+  const auto options = reader::parse_input(argc, argv);
+  const auto detector_map = reader::import_detector_map(options.geometry_map_file);
+  const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
+  geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
+  for (const auto& path : reader::root::search_directory(options.root_directory)) {
+    for (const auto& event : reader::root::import_events(path, options, detector_map)) {
+      const auto collapsed_event = analysis::collapse(event, options.collapse_size);
+      analysis::full_event combined_rpc_hits, original_rpc_hits;
+      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, combined_rpc_hits, original_rpc_hits);
+      const auto layers = analysis::partition(full_event_points, options.layer_axis, options.layer_depth);
+      const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
+      const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
+      const auto tracks = analysis::fit_seeds(tracking_vector);
+      analysis::track_vector tracks_after_cut;
+      stat::chi2_per_dof_cut(tracks, 0.0L, 1.0L, tracks_after_cut);
+    }
+  }
+  geometry::close();
+  return 0;
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace MATHUSLA */
 
 //__Main Function: Prototype Tracker____________________________________________________________
