@@ -184,7 +184,8 @@ constexpr real propagate_sum(const real error,
 template<class ...Args>
 constexpr real propagate_average(const real error,
                                  const Args... rest) {
-  return propagate_independent_sum(error, rest...) / std::sqrt(util::type::count_v<Args...>);
+  return propagate_sum(error, rest...)
+    / std::sqrt(static_cast<real>(util::type::count_v<Args...>));
 }
 //----------------------------------------------------------------------------------------------
 

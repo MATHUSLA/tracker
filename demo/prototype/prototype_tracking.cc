@@ -62,8 +62,9 @@ const analysis::full_hit construct_hit(const type::real top_time,
                                        const std::string& bottom_volume,
                                        const geometry::box_volume& combined) {
   const type::r4_point errors{
-    std::hypot(geometry::time_resolution_of(top_volume),
-               geometry::time_resolution_of(bottom_volume)) / std::sqrt(2.0L),
+    stat::error::propagate_average(
+      geometry::time_resolution_of(top_volume),
+      geometry::time_resolution_of(bottom_volume)),
     combined.max.x - combined.min.x,
     combined.max.y - combined.min.y,
     combined.max.z - combined.min.z};
