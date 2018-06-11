@@ -62,8 +62,9 @@ const analysis::full_hit construct_hit(const type::real top_time,
                                        const std::string& bottom_volume,
                                        const geometry::box_volume& combined) {
   const type::r4_point errors{
-    std::hypot(geometry::time_resolution_of(top_volume),
-               geometry::time_resolution_of(bottom_volume)) / 2.0L,
+    stat::error::propagate_average(
+      geometry::time_resolution_of(top_volume),
+      geometry::time_resolution_of(bottom_volume)),
     combined.max.x - combined.min.x,
     combined.max.y - combined.min.y,
     combined.max.z - combined.min.z};
@@ -108,7 +109,7 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
         const auto bottom_point = bottom[bottom_index];
 
         if (bottom_index == bottom_size) {
-          event.push_back(analysis::add_errors(top_point));
+          event.push_back(analysis::add_width(top_point));
           ++top_index;
           bottom_index = 0;
           continue;
@@ -124,8 +125,8 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
           const auto new_hit = construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined);
           event.push_back(new_hit);
           combined_rpc_hits.push_back(new_hit);
-          original_rpc_hits.push_back(analysis::add_errors(top_point));
-          original_rpc_hits.push_back(analysis::add_errors(bottom_point));
+          original_rpc_hits.push_back(analysis::add_width(top_point));
+          original_rpc_hits.push_back(analysis::add_width(bottom_point));
           discard_list.set(bottom_index);
           ++top_index;
           bottom_index = 0;
@@ -135,22 +136,22 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
       }
 
       for (; top_index < top_size; ++top_index) {
-        event.push_back(analysis::add_errors(top[top_index]));
+        event.push_back(analysis::add_width(top[top_index]));
       }
       for (bottom_index = 0; bottom_index < bottom_size; ++bottom_index) {
         if (!discard_list[bottom_index])
-          event.push_back(analysis::add_errors(bottom[bottom_index]));
+          event.push_back(analysis::add_width(bottom[bottom_index]));
       }
       ++layer_index;
     } else {
       util::algorithm::back_insert_transform(top, event,
-        [](const auto& part){ return analysis::add_errors(part); });
+        [](const auto& part){ return analysis::add_width(part); });
     }
   }
 
   if (layer_index == partition_size - 1) {
     util::algorithm::back_insert_transform(parts.back(), event,
-      [](const auto& part){ return analysis::add_errors(part); });
+      [](const auto& part){ return analysis::add_width(part); });
   }
 
   util::algorithm::reverse(event);
@@ -197,7 +198,7 @@ void draw_track(plot::canvas& canvas,
   for (const auto& point : full_event) {
     const auto center = type::reduce_to_r3(point);
     const plot::color color{brightness, brightness, brightness};
-    canvas.add_box(center, point.error.x, point.error.y, point.error.z, 2.5, color);
+    canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     canvas.add_point(center, 0.3, color);
     brightness += step;
   }

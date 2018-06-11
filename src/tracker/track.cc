@@ -47,9 +47,9 @@ real _track_squared_residual(const real t0,
                              const real vz,
                              const full_hit& point) {
   const auto dt = (point.z - z0) / vz;
-  const auto t_res = (dt + t0 - point.t) / point.error.t;
-  const auto x_res = (std::fma(dt, vx, x0) - point.x) / point.error.x;
-  const auto y_res = (std::fma(dt, vy, y0) - point.y) / point.error.y;
+  const auto t_res = (dt + t0 - point.t) / point.width.t;
+  const auto x_res = (std::fma(dt, vx, x0) - point.x) / point.width.x;
+  const auto y_res = (std::fma(dt, vy, y0) - point.y) / point.width.y;
   return t_res*t_res + 12*x_res*x_res + 12*y_res*y_res;
 }
 //----------------------------------------------------------------------------------------------
@@ -63,14 +63,14 @@ _track_parameters _guess_track(const full_event& points) {
   const auto& first = points.front();
   const auto& last = points.back();
   const auto dt = last.t - first.t;
-  const auto time_error = first.error.t;
-  return {{first.t,                 time_error,         0, 0},
-          {first.x,                 100*units::length,  0, 0},
-          {first.y,                 100*units::length,  0, 0},
-          {first.z,                 100*units::length,  0, 0},
-          {(last.x - first.x) / dt, 50*units::velocity, 0, 0},
-          {(last.y - first.y) / dt, 50*units::velocity, 0, 0},
-          {(last.z - first.z) / dt, 50*units::velocity, 0, 0}};
+  const auto time_error = first.width.t;
+  return {{first.t,                 time_error/std::sqrt(12.0L), 0, 0},
+          {first.x,                 20*units::length,  0, 0},
+          {first.y,                 20*units::length,  0, 0},
+          {first.z,                 20*units::length,  0, 0},
+          {(last.x - first.x) / dt, 1*units::velocity, 0, 0},
+          {(last.y - first.y) / dt, 1*units::velocity, 0, 0},
+          {(last.z - first.z) / dt, 1*units::velocity, 0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -179,7 +179,7 @@ void _fit_event_minuit(const full_event& points,
 
 track::track(const std::vector<hit>& points,
              const track::fit_settings& settings)
-    : track(add_errors(points), settings) {}
+    : track(add_width(points), settings) {}
 
 //__Track Constructor___________________________________________________________________________
 track::track(const std::vector<full_hit>& points,
@@ -187,7 +187,7 @@ track::track(const std::vector<full_hit>& points,
     : _full_event(points), _settings(settings) {
 
   auto fit_track = _guess_track(_full_event);
-  _fit_event_minuit(_full_event, _settings, fit_track, _covariance_matrix);
+  _fit_event_minuit(_full_event, _settings, fit_track, _covariance);
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);
@@ -200,7 +200,7 @@ track::track(const std::vector<full_hit>& points,
   const auto& full_event_begin = _full_event.cbegin();
   const auto& full_event_end = _full_event.cend();
 
-  std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi_squared),
+  std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi2),
     [&](const auto& point) {
       return _track_squared_residual(
         _t0.value, _x0.value, _y0.value, _z0.value, _vx.value, _vy.value, _vz.value,
@@ -247,22 +247,62 @@ real track::error(const track::parameter p) const {
 
 //__Relativistic Beta for the Track_____________________________________________________________
 real track::beta() const {
-  return std::sqrt(util::math::fused_product(
-    _vx.value, _vx.value, _vy.value, _vy.value, _vz.value, _vz.value)) / units::speed_of_light;
+  return util::math::hypot(_vx.value, _vy.value, _vz.value) / units::speed_of_light;
 }
 //----------------------------------------------------------------------------------------------
 
-//__Relativistic Beta for the Track_____________________________________________________________
+//__Error in Relativistic Beta for the Track____________________________________________________
 real track::beta_error() const {
-  // FIXME: Bad Error Estimate, only uses first order approximation
-  return 2.0L * std::sqrt(util::math::fused_product(
-    _vx.error, _vx.error, _vy.error, _vy.error, _vz.error, _vz.error)) / units::speed_of_light;
+  // TODO: check correctness
+  constexpr auto c_inv = 1.0L / units::speed_of_light;
+  constexpr auto c_inv2 = c_inv * c_inv;
+  const real_array<9> covariance{
+    _covariance[6*3+3] * c_inv2, _covariance[6*3+4] * c_inv2, _covariance[6*3+5] * c_inv2,
+    _covariance[6*4+3] * c_inv2, _covariance[6*4+4] * c_inv2, _covariance[6*4+5] * c_inv2,
+    _covariance[6*5+3] * c_inv2, _covariance[6*5+4] * c_inv2, _covariance[6*5+5] * c_inv2};
+  const real_array<3> gradient{
+    2 * _vx.value * c_inv, 2 * _vy.value * c_inv, 2 * _vz.value * c_inv};
+  return std::sqrt(stat::error::propagate(gradient, covariance));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Unit Vector along Track_____________________________________________________________________
+const r3_point track::unit() const {
+  return r3_point{_vx.value, _vy.value, _vz.value} / util::math::hypot(_vx.value, _vy.value, _vz.value);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Error in Unit Vector along Track____________________________________________________________
+const r3_point track::unit_error() const {
+  // TODO: check correctness
+  const auto base = 1.0L / std::pow(util::math::square(_vx.value, _vy.value, _vz.value), 1.5L);
+  const real_array<9> covariance{
+    _covariance[6*3+3], _covariance[6*3+4], _covariance[6*3+5],
+    _covariance[6*4+3], _covariance[6*4+4], _covariance[6*4+5],
+    _covariance[6*5+3], _covariance[6*5+4], _covariance[6*5+5]};
+  const real_array<3> x_gradient{
+    base * util::math::square(_vy.value, _vz.value),
+    base * -_vx.value * _vy.value,
+    base * -_vx.value * _vz.value};
+  const real_array<3> y_gradient{
+    base * -_vy.value * _vz.value,
+    base * util::math::square(_vz.value, _vx.value),
+    base * -_vy.value * _vz.value};
+  const real_array<3> z_gradient{
+    base * -_vz.value * _vx.value,
+    base * -_vy.value * _vz.value,
+    base * util::math::square(_vx.value, _vy.value)};
+  return {
+    std::sqrt(stat::error::propagate(x_gradient, covariance)),
+    std::sqrt(stat::error::propagate(y_gradient, covariance)),
+    std::sqrt(stat::error::propagate(z_gradient, covariance))
+  };
 }
 //----------------------------------------------------------------------------------------------
 
 //__Chi-Squared Test Statistic__________________________________________________________________
 real track::chi_squared() const {
-  return std::accumulate(_delta_chi_squared.cbegin(), _delta_chi_squared.cend(), 0.0L);
+  return std::accumulate(_delta_chi2.cbegin(), _delta_chi2.cend(), 0.0L);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -312,7 +352,7 @@ real track::covariance(const track::parameter p,
                            - (p == track::parameter::X0 || p == track::parameter::Y0);
         const auto q_index = _shift_covariance_index(q)
                            - (q == track::parameter::X0 || q == track::parameter::Y0);
-        return _covariance_matrix[6 * p_index + q_index];
+        return _covariance[6 * p_index + q_index];
       }
     case Coordinate::X:
       if (p == track::parameter::X0 || q == track::parameter::X0) {
@@ -320,19 +360,19 @@ real track::covariance(const track::parameter p,
       } else {
         const auto p_index = _shift_covariance_index(p) - (p == track::parameter::Y0);
         const auto q_index = _shift_covariance_index(q) - (q == track::parameter::Y0);
-        return _covariance_matrix[6 * p_index + q_index];
+        return _covariance[6 * p_index + q_index];
       }
     case Coordinate::Y:
       if (p == track::parameter::Y0 || q == track::parameter::Y0) {
         return 0;
       } else {
-        return _covariance_matrix[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+        return _covariance[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
       }
     case Coordinate::Z:
       if (p == track::parameter::Z0 || q == track::parameter::Z0) {
         return 0;
       } else {
-        return _covariance_matrix[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+        return _covariance[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
       }
   }
 }
@@ -411,7 +451,8 @@ std::ostream& operator<<(std::ostream& os,
 
   os.precision(6);
   os << "* Dynamics: \n"
-     << "    beta:  " << track.beta()  << "  (+/- " << track.beta_error() << ")\n";
+     << "    beta:  " << track.beta()  << "  (+/- " << track.beta_error() << ")\n"
+     << "    unit:  " << track.unit()  << "  (+/- " << track.unit_error() << ")\n";
 
   return os << bar;
 }

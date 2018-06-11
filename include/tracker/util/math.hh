@@ -24,33 +24,51 @@
 
 namespace MATHUSLA {
 
-namespace util { ///////////////////////////////////////////////////////////////////////////////
-
-namespace math { ///////////////////////////////////////////////////////////////////////////////
+namespace util { namespace math { //////////////////////////////////////////////////////////////
 
 //__Fused Multiply-Add__________________________________________________________________________
 template<class T>
-T fused_product(const T& left,
-                const T& right) {
+constexpr const T fused_product(const T& left,
+                                const T& right) {
   return left * right;
 }
 template<class T, class... Ts>
-T fused_product(const T& left,
-                const T& right,
-                const Ts&... rest) {
+constexpr const T fused_product(const T& left,
+                                const T& right,
+                                const Ts&... rest) {
   return std::fma(left, right, fused_product(rest...));
 }
-template<class InputIt1, class InputIt2, class T>
-T range_fused_product(InputIt1 first1,
-                      InputIt1 last1,
-                      InputIt2 first2,
-                      T value) {
+template<class T, class InputIt1, class InputIt2>
+constexpr const T range_fused_product(InputIt1 first1,
+                                      InputIt1 last1,
+                                      InputIt2 first2,
+                                      T value) {
   while (first1 != last1) {
     value = std::fma(*first1, *first2, std::move(value));
     ++first1;
     ++first2;
   }
   return value;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Sum of Squares using Fused Multiply-Add_____________________________________________________
+template<class T, class... Ts>
+constexpr const T square(const T& value) {
+  return value * value;
+}
+template<class T, class... Ts>
+constexpr const T square(const T& value,
+                         const Ts&... rest) {
+  return std::fma(value, value, square(rest...));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Hypotenuse using Fused Multiply-Add_________________________________________________________
+template<class T, class... Ts>
+constexpr const T hypot(const T& value,
+                        const Ts&... rest) {
+  return std::sqrt(square(value, rest...));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -92,9 +110,7 @@ constexpr bool within(const T& first,
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace math */ /////////////////////////////////////////////////////////////////////////
-
-} /* namespace util */ /////////////////////////////////////////////////////////////////////////
+} } /* namespace util::math */ /////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 

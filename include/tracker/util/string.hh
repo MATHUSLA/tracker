@@ -22,11 +22,11 @@
 
 #include <string>
 
+#include <tracker/util/type.hh>
+
 namespace MATHUSLA {
 
-namespace util { ///////////////////////////////////////////////////////////////////////////////
-
-namespace string { /////////////////////////////////////////////////////////////////////////////
+namespace util { namespace string { ////////////////////////////////////////////////////////////
 
 //__Split String on Delimeters__________________________________________________________________
 template <class Range>
@@ -71,20 +71,15 @@ std::string join(const Range& tokens,
 //__Remove Leading and Trailing Spaces__________________________________________________________
 inline std::string& strip(std::string& string) {
   const auto end = string.end();
-
   auto forward = string.cbegin();
-  while (std::isspace(*forward) && forward != end) ++forward;
-
+  while (util::type::isspace(*forward) && forward != end) ++forward;
   auto reverse = string.crbegin();
-  while (std::isspace(*reverse) && reverse.base() != forward) ++reverse;
-
+  while (util::type::isspace(*reverse) && reverse.base() != forward) ++reverse;
   return string = std::string(forward, reverse.base());
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace string */ ///////////////////////////////////////////////////////////////////////
-
-} /* namespace util */ /////////////////////////////////////////////////////////////////////////
+} } /* namespace util::string */ ///////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 
