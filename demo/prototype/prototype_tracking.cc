@@ -225,13 +225,14 @@ int prototype_tracking(int argc,
 
   plot::init();
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
-  for (const auto& path : reader::root::search_directory(options.root_directory)) {
-    std::cout << path << "\n\n";
+  std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
+  for (const auto& path : reader::root::search_directory(options.data_directory)) {
+    std::cout << "FILE: " << path << "\n\n";
     uint_fast64_t counter{};
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
       const auto event_name = path + "__e" + std::to_string(counter++);
       plot::canvas canvas(event_name);
-      std::cout << event_name << "\n";
+      std::cout << "EVENT: " << event_name << "\n";
 
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
       canvas.add_points(collapsed_event, 0.8, plot::color::BLUE);
@@ -272,7 +273,7 @@ int quiet_prototype_tracking(int argc,
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
   const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
-  for (const auto& path : reader::root::search_directory(options.root_directory)) {
+  for (const auto& path : reader::root::search_directory(options.data_directory)) {
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
       analysis::full_event combined_rpc_hits, original_rpc_hits;
