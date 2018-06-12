@@ -40,8 +40,8 @@ namespace MATHUSLA {
 //__Combine Pair of Hits if they Occur in Overlapping RPCs______________________________________
 const geometry::box_volume combine_rpc_volume_pair(const geometry::box_volume& first,
                                                    const geometry::box_volume& second) {
-  auto out = geometry::coordinatewise_intersection(first, second);
   const auto union_volume = geometry::coordinatewise_union(first, second);
+  auto out = geometry::coordinatewise_intersection(first, second);
   out.min.z = union_volume.min.z;
   out.center.z = union_volume.center.z;
   out.max.z = union_volume.max.z;
@@ -225,14 +225,15 @@ int prototype_tracking(int argc,
 
   plot::init();
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
+
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
+  plot::histogram histogram(options.data_directory, "Chi-Squared Distribution", "chi^2/dof", "N", 50, 0, 5);
   for (const auto& path : reader::root::search_directory(options.data_directory)) {
+
     std::cout << "FILE: " << path << "\n\n";
-    uint_fast64_t counter{};
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
-      const auto event_name = path + "__e" + std::to_string(counter++);
-      plot::canvas canvas(event_name);
-      std::cout << "EVENT: " << event_name << "\n";
+      plot::canvas canvas(path);
+      std::cout << "EVENT: " << canvas.name() << "\n";
 
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
       canvas.add_points(collapsed_event, 0.8, plot::color::BLUE);
@@ -253,6 +254,7 @@ int prototype_tracking(int argc,
 
       for (const auto& track : tracks_after_cut) {
         draw_track(canvas, track);
+        histogram.insert(track.chi_squared_per_dof());
         std::cout << track << "\n";
       }
       canvas.draw();
@@ -260,6 +262,7 @@ int prototype_tracking(int argc,
       std::cout << "\n" << std::string(100, '=') << "\n\n";
     }
   }
+  histogram.draw();
   geometry::close();
   plot::end();
   return 0;

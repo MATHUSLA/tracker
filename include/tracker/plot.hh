@@ -64,12 +64,71 @@ inline bool operator!=(const color& left,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Plotting Histogram Type_____________________________________________________________________
+class histogram {
+public:
+  histogram(const std::string& name,
+            const size_t bins,
+            const real min,
+            const real max);
+  histogram(const std::string& name,
+            const std::string& title,
+            const size_t bins,
+            const real min,
+            const real max);
+  histogram(const std::string& name,
+            const std::string& title,
+            const std::string& x_title,
+            const std::string& y_title,
+            const size_t bins,
+            const real min,
+            const real max);
+  histogram(histogram&& other) = default;
+  ~histogram();
+
+  histogram& operator=(histogram&& other) = default;
+
+  static histogram load(const std::string& path,
+                        const std::string& name="histogram");
+
+  const std::string name() const;
+  const std::string title() const;
+  const std::string x_title() const;
+  const std::string y_title() const;
+
+  bool empty() const;
+  size_t count() const;
+  real min_x() const;
+  real max_x() const;
+  real mean() const;
+
+  real bin_value(const size_t index) const;
+  real value(const real point) const;
+
+  size_t insert(const real point);
+  void increment(const size_t index,
+                 const real weight=1);
+
+  void scale(const real weight);
+
+  void draw();
+  void clear();
+
+  bool save(const std::string& path) const;
+
+private:
+  histogram();
+  struct histogram_impl;
+  std::unique_ptr<histogram_impl> _impl;
+};
+//----------------------------------------------------------------------------------------------
+
 //__Plotting Canvas Type________________________________________________________________________
 class canvas {
 public:
   canvas(const std::string& name="canvas",
-         const integer width=900,
-         const integer height=600);
+         const size_t width=900,
+         const size_t height=600);
   canvas(canvas&& other) = default;
   ~canvas();
 
@@ -79,8 +138,8 @@ public:
                      const std::string& name="canvas");
 
   const std::string name() const;
-  integer width() const;
-  integer height() const;
+  size_t width() const;
+  size_t height() const;
   bool empty() const;
 
   void draw();

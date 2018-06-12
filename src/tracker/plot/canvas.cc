@@ -1,5 +1,5 @@
 /*
- * src/tracker/plot.cc
+ * src/tracker/plot/canvas.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -22,7 +22,6 @@
 #include <sstream>
 #include <unordered_map>
 
-#include <ROOT/TApplication.h>
 #include <ROOT/TCanvas.h>
 #include <ROOT/TPolyLine3D.h>
 #include <ROOT/TPolyMarker3D.h>
@@ -36,11 +35,6 @@ namespace MATHUSLA { namespace TRACKER {
 namespace plot { ///////////////////////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
-
-//__Plotting Application________________________________________________________________________
-TApplication* _app = nullptr;
-thread_local bool _app_on = false;
-//----------------------------------------------------------------------------------------------
 
 //__Convert RGB Color to TColor_________________________________________________________________
 Int_t _to_TColor_id(const color& color) {
@@ -106,46 +100,7 @@ const std::string _make_unique_name(const std::string& name) {
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
-//__Start Plotting Environment__________________________________________________________________
-void init(bool on) {
-  _app_on = on;
-  int argc = 1;
-  std::array<char*, 1> argv{strdup("app")};
-  if (!_app && _app_on)
-    _app = new TApplication("app", &argc, argv.data());
-}
-//----------------------------------------------------------------------------------------------
-
-//__End Plotting Environment____________________________________________________________________
-void end() {
-  if (_app) {
-    try {
-      _app->Run(true);
-      delete _app;
-      _app = nullptr;
-    } catch(...) {}
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Check if Plotting is On_____________________________________________________________________
-bool is_on() {
-  return _app_on;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Default Colors______________________________________________________________________________
-const color color::WHITE   = {255, 255, 255};
-const color color::BLACK   = {  0,   0,   0};
-const color color::RED     = {255,   0,   0};
-const color color::GREEN   = {  0, 255,   0};
-const color color::BLUE    = {  0,   0, 255};
-const color color::CYAN    = {  0, 255, 255};
-const color color::MAGENTA = {255,   0, 255};
-const color color::YELLOW  = {255, 255,   0};
-//----------------------------------------------------------------------------------------------
-
-//__Canvas Impl Constructor_____________________________________________________________________
+//__Canvas Implementation Definition____________________________________________________________
 struct canvas::canvas_impl {
   TCanvas* _canvas;
   TView3D* _view;
@@ -158,7 +113,9 @@ struct canvas::canvas_impl {
     _view->SetAutoRange(true);
   }
 
-  canvas_impl(const std::string& name, const integer width, const integer height)
+  canvas_impl(const std::string& name,
+              const size_t width,
+              const size_t height)
       : _canvas(new TCanvas(name.c_str(), name.c_str(), width, height)) {
     reset_view();
   }
@@ -167,11 +124,14 @@ struct canvas::canvas_impl {
   explicit canvas_impl(canvas_impl&& other) = default;
   canvas_impl& operator=(const canvas_impl& other) = default;
   canvas_impl& operator=(canvas_impl&& other) = default;
+  ~canvas_impl() = default;
 };
 //----------------------------------------------------------------------------------------------
 
 //__Canvas Constructor__________________________________________________________________________
-canvas::canvas(const std::string& name, const integer width, const integer height)
+canvas::canvas(const std::string& name,
+               const size_t width,
+               const size_t height)
     : _impl(std::make_unique<canvas_impl>(_make_unique_name(name), width, height)) {}
 //----------------------------------------------------------------------------------------------
 
@@ -182,16 +142,17 @@ canvas::~canvas() = default;
 //__Construct Canvas from File__________________________________________________________________
 canvas canvas::load(const std::string& path,
                     const std::string& name) {
-  TFile file(path.c_str(), "READ");
   canvas out;
+  TFile file(path.c_str(), "READ");
   if (!file.IsZombie()) {
     TCanvas* test = nullptr;
     file.GetObject(name.c_str(), test);
     if (test) {
       out._impl->_canvas = test;
     }
+    file.Close();
   }
-  return std::move(out);
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -202,13 +163,13 @@ const std::string canvas::name() const {
 //----------------------------------------------------------------------------------------------
 
 //__Canvas Width________________________________________________________________________________
-integer canvas::width() const {
+size_t canvas::width() const {
   return _impl->_canvas->GetWindowWidth();
 }
 //----------------------------------------------------------------------------------------------
 
 //__Canvas Height_______________________________________________________________________________
-integer canvas::height() const {
+size_t canvas::height() const {
   return _impl->_canvas->GetWindowHeight();
 }
 //----------------------------------------------------------------------------------------------

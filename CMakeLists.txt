@@ -27,7 +27,9 @@ find_package(ROOT   REQUIRED COMPONENTS MathCore Minuit)
 add_library(tracker SHARED
     src/tracker/analysis.cc
     src/tracker/geometry.cc
-    src/tracker/plot.cc
+    src/tracker/plot/canvas.cc
+    src/tracker/plot/histogram.cc
+    src/tracker/plot/plot.cc
     src/tracker/reader.cc
     src/tracker/stat.cc
     src/tracker/track.cc
@@ -35,7 +37,7 @@ add_library(tracker SHARED
 )
 target_compile_features(tracker PUBLIC cxx_std_14)
 
-# set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
+set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 
 target_link_libraries(tracker PUBLIC ${Geant4_LIBRARIES} ${ROOT_LIBRARIES})
 target_include_directories(tracker PRIVATE ${ROOT_INCLUDE_DIRS})
