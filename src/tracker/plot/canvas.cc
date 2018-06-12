@@ -244,7 +244,8 @@ void canvas::clear() {
 bool canvas::save(const std::string& path) const {
   TFile file(path.c_str(), "UPDATE");
   if (!file.IsZombie()) {
-    _impl->_canvas->Write();
+    file.cd();
+    file.WriteTObject(_impl->_canvas->Clone());
     file.Close();
     return true;
   }

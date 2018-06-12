@@ -227,7 +227,7 @@ int prototype_tracking(int argc,
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
-  plot::histogram histogram(options.data_directory, "Chi-Squared Distribution", "chi^2/dof", "N", 50, 0, 5);
+  plot::histogram histogram("chi_squared", "Chi-Squared Distribution", "chi^2/dof", "Track Count", 100, 0, 10);
   for (const auto& path : reader::root::search_directory(options.data_directory)) {
 
     std::cout << "FILE: " << path << "\n\n";
@@ -247,10 +247,10 @@ int prototype_tracking(int argc,
 
       const auto tracks = analysis::fit_seeds(tracking_vector);
       analysis::track_vector tracks_after_cut;
-      stat::chi2_per_dof_cut(tracks, 0.0L, 1.0L, tracks_after_cut);
+      //stat::chi2_per_dof_cut(tracks, 0.0L, 1.0L, tracks_after_cut);
 
-      std::cout << "Original Track Count: " << tracks.size() << "\n"
-                << "After Chi^2 Cut: " << tracks_after_cut.size() << "\n";
+      //std::cout << "Original Track Count: " << tracks.size() << "\n"
+      //          << "After Chi^2 Cut: " << tracks_after_cut.size() << "\n";
 
       for (const auto& track : tracks_after_cut) {
         draw_track(canvas, track);
@@ -263,6 +263,7 @@ int prototype_tracking(int argc,
     }
   }
   histogram.draw();
+  histogram.save(".temp/save_hist.root");
   geometry::close();
   plot::end();
   return 0;
@@ -275,7 +276,10 @@ int quiet_prototype_tracking(int argc,
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
   const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
+  plot::init(false);
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
+  std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
+  plot::histogram histogram("chi_squared", "Chi-Squared Distribution", "chi^2/dof", "Track Count", 200, 0, 10);
   for (const auto& path : reader::root::search_directory(options.data_directory)) {
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
@@ -285,11 +289,17 @@ int quiet_prototype_tracking(int argc,
       const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
       const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
       const auto tracks = analysis::fit_seeds(tracking_vector);
-      analysis::track_vector tracks_after_cut;
-      stat::chi2_per_dof_cut(tracks, 0.0L, 1.0L, tracks_after_cut);
+      analysis::track_vector tracks_after_cut = tracks;
+      // stat::chi2_per_dof_cut(tracks, 0.0L, 1.0L, tracks_after_cut);
+      for (const auto& track : tracks_after_cut) {
+        histogram.insert(track.chi_squared_per_dof());
+      }
     }
   }
+  histogram.save(options.data_directory + "/" + histogram.name() + ".root");
+  histogram.draw();
   geometry::close();
+  plot::end();
   return 0;
 }
 //----------------------------------------------------------------------------------------------
@@ -299,6 +309,6 @@ int quiet_prototype_tracking(int argc,
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc,
          char* argv[]) {
-  return MATHUSLA::prototype_tracking(argc, argv);
+  return MATHUSLA::quiet_prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

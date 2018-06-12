@@ -338,12 +338,12 @@ bool seeds_compatible(const event& first,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Join Two Seeds______________________________________________________________________________
+//__Join Two Seeds in Sequence__________________________________________________________________
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-const Event join(const Event& first,
-                 const Event& second,
-                 const size_t difference) {
+const Event sequential_join(const Event& first,
+                            const Event& second,
+                            const size_t difference) {
   const auto second_size = second.size();
   const auto overlap = first.size() - difference;
 
@@ -366,16 +366,31 @@ const Event join(const Event& first,
 
   return out;
 }
-const event join(const event& first,
+const event sequential_join(const event& first,
                  const event& second,
                  const size_t difference) {
-  return join<>(first, second, difference);
+  return sequential_join<>(first, second, difference);
 }
-const full_event join(const full_event& first,
+const full_event sequential_join(const full_event& first,
                       const full_event& second,
                       const size_t difference) {
-  return join<>(first, second, difference);
+  return sequential_join<>(first, second, difference);
 }
+//----------------------------------------------------------------------------------------------
+
+//__Join Two Seeds That Overlap_________________________________________________________________
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const Event overlap_join(const Event& first,
+                         const Event& second) {
+  Event out;
+  // TODO: implement
+  return out;
+}
+const event overlap_join(const event& first,
+                         const event& second);
+const full_event overlap_join(const full_event& first,
+                              const full_event& second);
 //----------------------------------------------------------------------------------------------
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
@@ -397,7 +412,7 @@ void _join_secondaries(const size_t seed_index,
   const auto size = indicies.size();
   for (size_t i = 0; i < size; ++i) {
     const auto& next_seed = seed_buffer[indicies[i]];
-    const auto& joined_seed = join(seed, next_seed, difference);
+    const auto& joined_seed = sequential_join(seed, next_seed, difference);
     if (!joined_seed.empty()) {
       seed_buffer.push_back(joined_seed);
       out.push_back(seed_buffer.size() - 1);
@@ -489,7 +504,6 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 const EventVector join_all(const EventVector& seeds) {
   const auto size = seeds.size();
-
   EventVector out;
   out.reserve(size); // FIXME: bad estimate?
 

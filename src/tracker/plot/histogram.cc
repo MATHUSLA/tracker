@@ -41,7 +41,7 @@ const std::string _make_unique_name(const std::string& name) {
   if (search != _names.end()) {
     return name + std::to_string(search->second++);
   } else {
-    const auto new_name = "hist_" + name;
+    const auto new_name = name;
     _names.insert({new_name, 1});
     return new_name;
   }
@@ -90,6 +90,7 @@ struct histogram::histogram_impl {
     const auto unique_name = _make_unique_name(name);
     _canvas = _build_TCanvas(unique_name, title);
     _hist = _build_TH1D(unique_name, title, bins, min, max);
+    _hist->SetDirectory(0);
     x_axis()->SetTitle(x_title.c_str());
     y_axis()->SetTitle(y_title.c_str());
   }
@@ -271,7 +272,8 @@ void histogram::clear() {
 bool histogram::save(const std::string& path) const {
   TFile file(path.c_str(), "UPDATE");
   if (!file.IsZombie()) {
-    _impl->_canvas->Write();
+    file.cd();
+    file.WriteTObject(_impl->_hist->Clone());
     file.Close();
     return true;
   }

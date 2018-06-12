@@ -136,13 +136,20 @@ bool seeds_compatible(const full_event& first,
                       const size_t difference);
 //----------------------------------------------------------------------------------------------
 
-//__Join Two Seeds______________________________________________________________________________
-const event join(const event& first,
-                 const event& second,
-                 const size_t difference);
-const full_event join(const full_event& first,
-                      const full_event& second,
-                      const size_t difference);
+//__Join Two Seeds in Sequence__________________________________________________________________
+const event sequential_join(const event& first,
+                            const event& second,
+                            const size_t difference);
+const full_event sequential_join(const full_event& first,
+                                 const full_event& second,
+                                 const size_t difference);
+//----------------------------------------------------------------------------------------------
+
+//__Join Two Seeds That Overlap_________________________________________________________________
+const event overlap_join(const event& first,
+                         const event& second);
+const full_event overlap_join(const full_event& first,
+                              const full_event& second);
 //----------------------------------------------------------------------------------------------
 
 //__Seed Join___________________________________________________________________________________
