@@ -40,8 +40,8 @@ std::ostream& print_range(const Range& range,
                           const std::string& spacer=" ",
                           const std::string& prefix="",
                           std::ostream& os=std::cout) {
-  const auto& begin = range.cbegin();
-  const auto& end = range.cend() - 1;
+  const auto begin = std::cbegin(range);
+  const auto end = std::cend(range) - 1;
   if (end - begin >= 0) {
     std::for_each(begin, end, [&](const auto& element) { os << prefix << element << spacer; });
     os << prefix << *end;

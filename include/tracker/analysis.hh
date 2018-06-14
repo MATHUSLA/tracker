@@ -127,15 +127,6 @@ const full_event_vector seed(const size_t n,
                              const real line_threshold);
 //----------------------------------------------------------------------------------------------
 
-//__Check if Seeds can be Joined________________________________________________________________
-bool seeds_compatible(const event& first,
-                      const event& second,
-                      const size_t difference);
-bool seeds_compatible(const full_event& first,
-                      const full_event& second,
-                      const size_t difference);
-//----------------------------------------------------------------------------------------------
-
 //__Join Two Seeds in Sequence__________________________________________________________________
 const event sequential_join(const event& first,
                             const event& second,
@@ -145,11 +136,21 @@ const full_event sequential_join(const full_event& first,
                                  const size_t difference);
 //----------------------------------------------------------------------------------------------
 
-//__Join Two Seeds That Overlap_________________________________________________________________
-const event overlap_join(const event& first,
-                         const event& second);
-const full_event overlap_join(const full_event& first,
-                              const full_event& second);
+//__Join Two Seeds Such That One is a Subset of the Other_______________________________________
+const event subset_join(const event& first,
+                        const event& second);
+const full_event subset_join(const full_event& first,
+                             const full_event& second);
+//----------------------------------------------------------------------------------------------
+
+//__Optimally Join All Seeds by Sequence________________________________________________________
+const event_vector sequential_join_all(const event_vector& seeds);
+const full_event_vector sequential_join_all(const full_event_vector& seeds);
+//----------------------------------------------------------------------------------------------
+
+//__Optimally Join All Seeds by Subset__________________________________________________________
+const event_vector subset_join_all(const event_vector& seeds);
+const full_event_vector subset_join_all(const full_event_vector& seeds);
 //----------------------------------------------------------------------------------------------
 
 //__Seed Join___________________________________________________________________________________

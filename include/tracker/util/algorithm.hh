@@ -70,6 +70,74 @@ constexpr UnaryFunction back_insert_transform(const InputRange& in,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Range Subset Inclusion______________________________________________________________________
+template<class Range1, class Range2>
+constexpr bool includes(const Range1& range1,
+                        const Range2& range2) {
+  auto first1 = std::cbegin(range1);
+  auto last1 = std::cend(range1);
+  auto first2 = std::cbegin(range2);
+  auto last2 = std::cend(range2);
+  for (; first2 != last2; ++first1) {
+    if (first1 == last1 || *first2 < *first1) return false;
+    if (!(*first1 < *first2)) ++first2;
+  }
+  return true;
+}
+template<class Range1, class Range2, class Compare>
+constexpr bool includes(const Range1& range1,
+                        const Range2& range2,
+                        Compare comp) {
+  auto first1 = std::cbegin(range1);
+  auto last1 = std::cend(range1);
+  auto first2 = std::cbegin(range2);
+  auto last2 = std::cend(range2);
+  for (; first2 != last2; ++first1) {
+    if (first1 == last1 || comp(*first2, *first1)) return false;
+    if (!comp(*first1, *first2)) ++first2;
+  }
+  return true;
+}
+//----------------------------------------------------------------------------------------------
+
+//__General Range Sorting Function______________________________________________________________
+template<class Range, class Compare>
+Range& sort_range(Range& range,
+                  const Compare comp) {
+  std::sort(range.begin(), range.end(), comp);
+  return range;
+}
+//----------------------------------------------------------------------------------------------
+
+//__General Range Stable Sorting Function_______________________________________________________
+template<class Range, class Compare>
+Range& stable_sort_range(Range& range,
+                         const Compare comp) {
+  std::stable_sort(range.begin(), range.end(), comp);
+  return range;
+}
+//----------------------------------------------------------------------------------------------
+
+//__General Range Copy Sorting Function_________________________________________________________
+template<class Range, class Compare>
+Range copy_sort_range(const Range& range,
+                      const Compare comp) {
+  auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
+  std::partial_sort_copy(range.cbegin(), range.cend(), copy.begin(), copy.end(), comp);
+  return copy;
+}
+//----------------------------------------------------------------------------------------------
+
+//__General Range Stable Sorting Function_______________________________________________________
+template<class Range, class Compare>
+Range stable_copy_sort_range(const Range& range,
+                             const Compare comp) {
+  auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
+  std::stable_sort(copy.begin(), copy.end(), comp);
+  return copy;
+}
+//----------------------------------------------------------------------------------------------
+
 } } /* namespace util::algorithm */ ////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */

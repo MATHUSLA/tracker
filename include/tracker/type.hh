@@ -24,7 +24,6 @@
 #define FP_FAST_FMAF
 #define FP_FAST_FMAL
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <limits>
@@ -34,6 +33,7 @@
 #include <vector>
 
 #include <tracker/util/math.hh>
+#include <tracker/util/algorithm.hh>
 
 namespace MATHUSLA {
 
@@ -1200,62 +1200,24 @@ constexpr real_array4<N> to_array(const real_vector4& vec) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-//__General Range Sorting Function______________________________________________________________
-template<class Range, class Compare>
-Range& sort_range(Range& range,
-                  const Compare comp) {
-  std::sort(range.begin(), range.end(), comp);
-  return range;
-}
-//----------------------------------------------------------------------------------------------
-
-//__General Range Stable Sorting Function_______________________________________________________
-template<class Range, class Compare>
-Range& stable_sort_range(Range& range,
-                         const Compare comp) {
-  std::stable_sort(range.begin(), range.end(), comp);
-  return range;
-}
-//----------------------------------------------------------------------------------------------
-
-//__General Range Copy Sorting Function_________________________________________________________
-template<class Range, class Compare>
-Range copy_sort_range(const Range& range,
-                      const Compare comp) {
-  auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
-  std::partial_sort_copy(range.cbegin(), range.cend(), copy.begin(), copy.end(), comp);
-  return copy;
-}
-//----------------------------------------------------------------------------------------------
-
-//__General Range Stable Sorting Function_______________________________________________________
-template<class Range, class Compare>
-Range stable_copy_sort_range(const Range& range,
-                             const Compare comp) {
-  auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
-  std::stable_sort(copy.begin(), copy.end(), comp);
-  return copy;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Coordinate-Wise Sorting Functors____________________________________________________________
-template<class C>
+template<class C = void>
 struct t_ordered {
   constexpr bool operator()(const C& a, const C& b) const { return a.t < b.t; }
 };
-template<class C>
+template<class C = void>
 struct x_ordered {
   constexpr bool operator()(const C& a, const C& b) const { return a.x < b.x; }
 };
-template<class C>
+template<class C = void>
 struct y_ordered {
   constexpr bool operator()(const C& a, const C& b) const { return a.y < b.y; }
 };
-template<class C>
+template<class C = void>
 struct z_ordered {
   constexpr bool operator()(const C& a, const C& b) const { return a.z < b.z; }
 };
-template<Coordinate R, class C>
+template<Coordinate R, class C = void>
 struct coordinate_ordered;
 template<class C>
 struct coordinate_ordered<Coordinate::T, C> {
@@ -1278,23 +1240,23 @@ struct coordinate_ordered<Coordinate::Z, C> {
 //__General Coordinate-Wise Sorting Functions___________________________________________________
 template<class Range>
 Range& t_sort(Range& range) {
-  return sort_range(range, t_ordered<typename Range::value_type>{});
+  return util::algorithm::sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range& x_sort(Range& range) {
-  return sort_range(range, x_ordered<typename Range::value_type>{});
+  return util::algorithm::sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range& y_sort(Range& range) {
-  return sort_range(range, y_ordered<typename Range::value_type>{});
+  return util::algorithm::sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range& z_sort(Range& range) {
-  return sort_range(range, z_ordered<typename Range::value_type>{});
+  return util::algorithm::sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<Coordinate C, class Range>
 Range& coordinate_sort(Range& range) {
-  return sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
+  return util::algorithm::sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
 }
 template<class Range>
 Range& coordinate_sort(const Coordinate coordinate,
@@ -1311,23 +1273,23 @@ Range& coordinate_sort(const Coordinate coordinate,
 //__General Coordinate-Wise Stable Sorting Functions____________________________________________
 template<class Range>
 Range& t_stable_sort(Range& range) {
-  return stable_sort_range(range, t_ordered<typename Range::value_type>{});
+  return util::algorithm::stable_sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range& x_stable_sort(Range& range) {
-  return stable_sort_range(range, x_ordered<typename Range::value_type>{});
+  return util::algorithm::stable_sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range& y_stable_sort(Range& range) {
-  return stable_sort_range(range, y_ordered<typename Range::value_type>{});
+  return util::algorithm::stable_sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range& z_stable_sort(Range& range) {
-  return stable_sort_range(range, z_ordered<typename Range::value_type>{});
+  return util::algorithm::stable_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<Coordinate C, class Range>
 Range& coordinate_stable_sort(Range& range) {
-  return stable_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
+  return util::algorithm::stable_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
 }
 template<class Range>
 Range& coordinate_stable_sort(const Coordinate coordinate,
@@ -1344,23 +1306,23 @@ Range& coordinate_stable_sort(const Coordinate coordinate,
 //__General Coordinate-Wise Copy Sorting Functions______________________________________________
 template<class Range>
 Range t_copy_sort(const Range& range) {
-  return copy_sort_range(range, t_ordered<typename Range::value_type>{});
+  return util::algorithm::copy_sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range x_copy_sort(const Range& range) {
-  return copy_sort_range(range, x_ordered<typename Range::value_type>{});
+  return util::algorithm::copy_sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range y_copy_sort(const Range& range) {
-  return copy_sort_range(range, y_ordered<typename Range::value_type>{});
+  return util::algorithm::copy_sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range z_copy_sort(const Range& range) {
-  return copy_sort_range(range, z_ordered<typename Range::value_type>{});
+  return util::algorithm::copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<Coordinate C, class Range>
 Range coordinate_copy_sort(const Range& range) {
-  return copy_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
+  return util::algorithm::copy_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
 }
 template<class Range>
 Range coordinate_copy_sort(const Coordinate coordinate,
@@ -1377,23 +1339,23 @@ Range coordinate_copy_sort(const Coordinate coordinate,
 //__General Coordinate-Wise Stable Sorting Functions____________________________________________
 template<class Range>
 Range t_stable_copy_sort(const Range& range) {
-  return stable_copy_sort_range(range, t_ordered<typename Range::value_type>{});
+  return util::algorithm::stable_copy_sort_range(range, t_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range x_stable_copy_sort(const Range& range) {
-  return stable_copy_sort_range(range, x_ordered<typename Range::value_type>{});
+  return util::algorithm::stable_copy_sort_range(range, x_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range y_stable_copy_sort(const Range& range) {
-  return stable_copy_sort_range(range, y_ordered<typename Range::value_type>{});
+  return util::algorithm::stable_copy_sort_range(range, y_ordered<typename Range::value_type>{});
 }
 template<class Range>
 Range z_stable_copy_sort(const Range& range) {
-  return stable_copy_sort_range(range, z_ordered<typename Range::value_type>{});
+  return util::algorithm::stable_copy_sort_range(range, z_ordered<typename Range::value_type>{});
 }
 template<Coordinate C, class Range>
 Range coordinate_stable_copy_sort(const Range& range) {
-  return stable_copy_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
+  return util::algorithm::stable_copy_sort_range(range, coordinate_ordered<C, typename Range::value_type>{});
 }
 template<class Range>
 Range coordinate_stable_copy_sort(const Coordinate coordinate,
