@@ -133,19 +133,19 @@ TTree* _unchecked_get_TTree(TFile* file,
 //----------------------------------------------------------------------------------------------
 
 //__Set TTree Branch Base Function______________________________________________________________
-constexpr void _set_TTree_branches(TTree* tree,
-                                   const std::string& name,
-                                   Double_t* value) {
+void _set_TTree_branches(TTree* tree,
+                         const std::string& name,
+                         Double_t* value) {
   tree->SetBranchAddress(name.c_str(), value);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Recursively Set TTree Branches______________________________________________________________
 template<class... Args>
-constexpr void _set_TTree_branches(TTree* tree,
-                                   const std::string& name,
-                                   Double_t* value,
-                                   Args ...args) {
+void _set_TTree_branches(TTree* tree,
+                         const std::string& name,
+                         Double_t* value,
+                         Args ...args) {
   _set_TTree_branches(tree, name, value);
   _set_TTree_branches(tree, args...);
 }
