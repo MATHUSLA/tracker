@@ -391,7 +391,7 @@ const hit track::back() const {
 //----------------------------------------------------------------------------------------------
 
 //__Get Event from Track________________________________________________________________________
-const event track::event() const {
+const std::vector<hit> track::event() const {
   std::vector<hit> out;
   out.reserve(_full_event.size());
   util::algorithm::back_insert_transform(_full_event, out,

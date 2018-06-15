@@ -100,8 +100,8 @@ public:
 
   const hit front() const;
   const hit back() const;
-  const event event() const;
-  const full_event& full_event() const { return _full_event; }
+  const std::vector<hit> event() const;
+  const std::vector<full_hit>& full_event() const { return _full_event; }
   const fit_settings& settings() const { return _settings; }
   const std::vector<std::string>& detectors() const { return _detectors; }
 
