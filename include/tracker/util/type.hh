@@ -32,9 +32,9 @@ namespace util { namespace type { //////////////////////////////////////////////
 template<class T>
 constexpr auto size(const T& t) -> decltype(t.size()) { return t.size(); }
 template<class T, std::size_t N>
-constexpr std::size_t size(const T (&t)[N]) noexcept { return N; }
+constexpr std::size_t size(const T (&)[N]) noexcept { return N; }
 template<class... Ts>
-constexpr std::size_t size(const Ts& ...ts) noexcept { return sizeof...(Ts); }
+constexpr std::size_t size(const Ts& ...) noexcept { return sizeof...(Ts); }
 //----------------------------------------------------------------------------------------------
 
 //__Size Ordering for Sorter____________________________________________________________________
