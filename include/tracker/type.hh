@@ -1022,9 +1022,9 @@ inline real operator*(const real_vector& left,
 //----------------------------------------------------------------------------------------------
 
 //__Real-Vector Weighted Product________________________________________________________________
-constexpr real weighted_product(const real_vector& left,
-                                const real_vector& weight,
-                                const real_vector& right) {
+inline real weighted_product(const real_vector& left,
+                             const real_vector& weight,
+                             const real_vector& right) {
   const auto left_size = left.size();
   const auto right_size = right.size();
   const auto weight_size = weight.size();
@@ -1043,8 +1043,8 @@ constexpr real weighted_product(const real_vector& left,
 //----------------------------------------------------------------------------------------------
 
 //__Real-Array Weighted Norm____________________________________________________________________
-constexpr real weighted_norm(const real_vector& vector,
-                             const real_vector& weight) {
+inline real weighted_norm(const real_vector& vector,
+                          const real_vector& weight) {
   return weighted_product(vector, weight, vector);
 }
 //----------------------------------------------------------------------------------------------

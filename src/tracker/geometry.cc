@@ -70,7 +70,7 @@ const G4AffineTransform _blank_transform;
 //----------------------------------------------------------------------------------------------
 
 //__Convert From G4ThreeVector to R3_Point______________________________________________________
-constexpr r3_point _to_r3_point(const G4ThreeVector& vector) {
+const r3_point _to_r3_point(const G4ThreeVector& vector) {
   return { vector.x(), vector.y(), vector.z() };
 }
 //----------------------------------------------------------------------------------------------

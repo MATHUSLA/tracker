@@ -21,6 +21,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 
 namespace MATHUSLA {
 

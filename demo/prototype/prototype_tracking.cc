@@ -284,22 +284,30 @@ int quiet_prototype_tracking(int argc,
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
-
-  const auto histogram_path = options.data_directory + "/statistics.root";
-  plot::histogram chi_squared_histogram("chi_squared",
-    "Chi-Squared Distribution", "chi^2/dof", "Track Count",
-    150, 0, 10);
-  plot::histogram beta_histogram("beta",
-    "Beta Distribution", "beta", "Track Count",
-    100, 0, 2);
-  plot::histogram event_density_histogram("event_density",
-    "Event Density Distribution", "Track Count", "Event Count",
-    10000, 0, 10000);
+  const auto histogram_path_prefix = options.data_directory + "/statistics";
 
   uint_fast64_t counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory)) {
+    std::cout << "Path: " << path << "\n";
+
+    const auto histogram_path = histogram_path_prefix + std::to_string(counter) + ".root";
+    plot::histogram chi_squared_histogram("chi_squared",
+      "Chi-Squared Distribution", "chi^2/dof", "Track Count",
+      200, 0, 10);
+    plot::histogram beta_histogram("beta",
+      "Beta Distribution", "beta", "Track Count",
+      200, 0, 2);
+    plot::histogram event_density_histogram("event_density",
+      "Event Density Distribution", "Track Count", "Event Count",
+      1000, 0, 100);
+
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
-      std::cout << "EVENT: " << path << counter << "\n";
+      std::cout << "Event " << counter << " with " << event.size() << " hits.\n";
+
+    if (event.empty()) {
+      ++counter;
+      continue;
+    }
 
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
       analysis::full_event combined_rpc_hits, original_rpc_hits;
@@ -314,11 +322,11 @@ int quiet_prototype_tracking(int argc,
         beta_histogram.insert(track.beta());
       }
 
-      if (tracks.size() > 20) {
+      if (tracks.size() > 2000) {
         const auto counter_string = std::to_string(counter);
         plot::histogram individual_chi_square_histogram("event" + counter_string + "_chi_squared",
           "Event" + counter_string + " Chi-Squared Distribution", "chi^2/dof", "Track Count",
-          150, 0, 10);
+          200, 0, 10);
         for (const auto& track : tracks) {
           individual_chi_square_histogram.insert(track.chi_squared_per_dof());
         }
@@ -326,6 +334,9 @@ int quiet_prototype_tracking(int argc,
       }
 
       event_density_histogram.insert(tracks.size());
+
+      std::cout << "Track Count: " <<  tracks.size() << "\n";
+      std::cout << "Track Density: " << tracks.size() / static_cast<type::real>(event.size()) << "\n";
 
       ++counter;
     }
