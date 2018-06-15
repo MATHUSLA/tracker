@@ -159,7 +159,8 @@ bool _in_volume(const r3_point& point,
   const auto& transform = gvolume.transform;
   const auto& translation = transform.NetTranslation();
   const auto& rotation = transform.NetRotation();
-  const auto& position = (rotation.inverse() * _to_G4ThreeVector(point)) - translation;
+  const auto& position = _to_local_transform(_to_G4ThreeVector(point), translation, rotation);
+  // (rotation.inverse() * _to_G4ThreeVector(point)) - translation;
   return volume->GetLogicalVolume()->GetSolid()->Inside(position);
 }
 //----------------------------------------------------------------------------------------------
@@ -167,7 +168,7 @@ bool _in_volume(const r3_point& point,
 //__Find Volume Hierarchy_______________________________________________________________________
 std::vector<_geometric_volume> _get_volume_hierarchy(const r3_point& point) {
   std::vector<_geometric_volume> out{};
-  _traverse_geometry([&](const auto& _, const auto& gvolume) {
+  _traverse_geometry([&](const auto&, const auto& gvolume) {
     if (_in_volume(point, gvolume))
       out.push_back(gvolume);
     return true;
@@ -183,7 +184,7 @@ _geometric_volume _get_volume(const r3_point& point) {
     return _geometry[search->second];
   } else {
     _geometric_volume out{};
-    _traverse_geometry([&](const auto& _, const auto& gvolume) {
+    _traverse_geometry([&](const auto&, const auto& gvolume) {
       if (_in_volume(point, gvolume))
         out = gvolume;
       return true;
@@ -270,7 +271,7 @@ real default_time_resolution() {
 const std::vector<std::string> volume_hierarchy(const std::string& name) {
   // TODO: finish
   std::vector<std::string> out{};
-  _traverse_geometry([&](const auto& _, const auto& __) {
+  _traverse_geometry([&](const auto&, const auto&) {
     out.push_back(name);
     return true;
   });

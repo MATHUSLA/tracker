@@ -251,10 +251,6 @@ int prototype_tracking(int argc,
       const auto tracks = analysis::fit_seeds(tracking_vector);
       analysis::track_vector tracks_after_cut = tracks;
 
-      // stat::chi2_per_dof_cut(tracks, 0.0L, 1.0L, tracks_after_cut);
-      // std::cout << "Original Track Count: " << tracks.size() << "\n"
-      //           << "After Chi^2 Cut: " << tracks_after_cut.size() << "\n";
-
       for (const auto& track : tracks_after_cut) {
         draw_track(canvas, track);
         histogram.insert(track.chi_squared_per_dof());
@@ -340,11 +336,10 @@ int quiet_prototype_tracking(int argc,
 
       ++counter;
     }
+    chi_squared_histogram.save(histogram_path);
+    beta_histogram.save(histogram_path);
+    event_density_histogram.save(histogram_path);
   }
-
-  chi_squared_histogram.save(histogram_path);
-  beta_histogram.save(histogram_path);
-  event_density_histogram.save(histogram_path);
 
   geometry::close();
   plot::end();
@@ -357,6 +352,6 @@ int quiet_prototype_tracking(int argc,
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc,
          char* argv[]) {
-  return MATHUSLA::quiet_prototype_tracking(argc, argv);
+  return MATHUSLA::prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

@@ -1,0 +1,8 @@
+command: ./simulation -q -j4 -s scripts/test.mac energy 100 count 10000
+
+where test.mac =
+  /det/select Prototype
+  /gen/select basic
+  /gen/basic/ke {energy}
+  /run/beamOn {count
+
