@@ -27,6 +27,8 @@
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
 
+#include <tracker/util/io.hh> // FIXME: to remove
+
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace geometry = MATHUSLA::TRACKER::geometry;
@@ -40,8 +42,8 @@ namespace MATHUSLA {
 //__Combine Pair of Hits if they Occur in Overlapping RPCs______________________________________
 const geometry::box_volume combine_rpc_volume_pair(const geometry::box_volume& first,
                                                    const geometry::box_volume& second) {
-  auto out = geometry::coordinatewise_intersection(first, second);
   const auto union_volume = geometry::coordinatewise_union(first, second);
+  auto out = geometry::coordinatewise_intersection(first, second);
   out.min.z = union_volume.min.z;
   out.center.z = union_volume.center.z;
   out.max.z = union_volume.max.z;
@@ -106,7 +108,6 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
       while (top_index < top_size) {
         bottom_index = discard_list.first_unset(bottom_index);
         const auto top_point = top[top_index];
-        const auto bottom_point = bottom[bottom_index];
 
         if (bottom_index == bottom_size) {
           event.push_back(analysis::add_width(top_point));
@@ -114,6 +115,8 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
           bottom_index = 0;
           continue;
         }
+
+        const auto bottom_point = bottom[bottom_index];
 
         const auto top_volume = geometry::volume(top_point);
         const auto bottom_volume = geometry::volume(bottom_point);
@@ -225,13 +228,15 @@ int prototype_tracking(int argc,
 
   plot::init();
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
-  for (const auto& path : reader::root::search_directory(options.root_directory)) {
-    std::cout << path << "\n\n";
-    uint_fast64_t counter{};
+
+  std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
+  plot::histogram histogram("chi_squared", "Chi-Squared Distribution", "chi^2/dof", "Track Count", 100, 0, 10);
+  for (const auto& path : reader::root::search_directory(options.data_directory)) {
+
+    std::cout << "FILE: " << path << "\n\n";
     for (const auto& event : reader::root::import_events(path, options, detector_map)) {
-      const auto event_name = path + "__e" + std::to_string(counter++);
-      plot::canvas canvas(event_name);
-      std::cout << event_name << "\n";
+      plot::canvas canvas(path);
+      std::cout << "EVENT: " << canvas.name() << "\n";
 
       const auto collapsed_event = analysis::collapse(event, options.collapse_size);
       canvas.add_points(collapsed_event, 0.8, plot::color::BLUE);
@@ -244,21 +249,98 @@ int prototype_tracking(int argc,
       const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
 
       const auto tracks = analysis::fit_seeds(tracking_vector);
-      analysis::track_vector tracks_after_cut;
-      stat::chi2_per_dof_cut(tracks, 0.0L, 1.0L, tracks_after_cut);
-
-      std::cout << "Original Track Count: " << tracks.size() << "\n"
-                << "After Chi^2 Cut: " << tracks_after_cut.size() << "\n";
+      analysis::track_vector tracks_after_cut = tracks;
 
       for (const auto& track : tracks_after_cut) {
         draw_track(canvas, track);
+        histogram.insert(track.chi_squared_per_dof());
         std::cout << track << "\n";
       }
       canvas.draw();
 
-      std::cout << "\n" << std::string(100, '=') << "\n\n";
+      std::cout << "\n" << std::string(99, '=') << "\n\n";
     }
   }
+  histogram.draw();
+  histogram.save(".temp/save_hist.root");
+  geometry::close();
+  plot::end();
+  return 0;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Quiet Prototype Tracking Algorithm__________________________________________________________
+int quiet_prototype_tracking(int argc,
+                             char* argv[]) {
+  const auto options = reader::parse_input(argc, argv);
+  const auto detector_map = reader::import_detector_map(options.geometry_map_file);
+  const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
+
+  plot::init(false);
+  geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
+
+  std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
+  const auto histogram_path_prefix = options.data_directory + "/statistics";
+
+  uint_fast64_t counter{};
+  for (const auto& path : reader::root::search_directory(options.data_directory)) {
+    std::cout << "Path: " << path << "\n";
+
+    const auto histogram_path = histogram_path_prefix + std::to_string(counter) + ".root";
+    plot::histogram chi_squared_histogram("chi_squared",
+      "Chi-Squared Distribution", "chi^2/dof", "Track Count",
+      200, 0, 10);
+    plot::histogram beta_histogram("beta",
+      "Beta Distribution", "beta", "Track Count",
+      200, 0, 2);
+    plot::histogram event_density_histogram("event_density",
+      "Event Density Distribution", "Track Count", "Event Count",
+      1000, 0, 100);
+
+    for (const auto& event : reader::root::import_events(path, options, detector_map)) {
+      std::cout << "Event " << counter << " with " << event.size() << " hits.\n";
+
+    if (event.empty()) {
+      ++counter;
+      continue;
+    }
+
+      const auto collapsed_event = analysis::collapse(event, options.collapse_size);
+      analysis::full_event combined_rpc_hits, original_rpc_hits;
+      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, combined_rpc_hits, original_rpc_hits);
+      const auto layers = analysis::partition(full_event_points, options.layer_axis, options.layer_depth);
+      const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
+      const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
+      const auto tracks = analysis::fit_seeds(tracking_vector);
+
+      for (const auto& track : tracks) {
+        chi_squared_histogram.insert(track.chi_squared_per_dof());
+        beta_histogram.insert(track.beta());
+      }
+
+      if (tracks.size() > 2000) {
+        const auto counter_string = std::to_string(counter);
+        plot::histogram individual_chi_square_histogram("event" + counter_string + "_chi_squared",
+          "Event" + counter_string + " Chi-Squared Distribution", "chi^2/dof", "Track Count",
+          200, 0, 10);
+        for (const auto& track : tracks) {
+          individual_chi_square_histogram.insert(track.chi_squared_per_dof());
+        }
+        individual_chi_square_histogram.save(histogram_path);
+      }
+
+      event_density_histogram.insert(tracks.size());
+
+      std::cout << "Track Count: " <<  tracks.size() << "\n";
+      std::cout << "Track Density: " << tracks.size() / static_cast<type::real>(event.size()) << "\n";
+
+      ++counter;
+    }
+    chi_squared_histogram.save(histogram_path);
+    beta_histogram.save(histogram_path);
+    event_density_histogram.save(histogram_path);
+  }
+
   geometry::close();
   plot::end();
   return 0;
@@ -270,6 +352,6 @@ int prototype_tracking(int argc,
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc,
          char* argv[]) {
-  return MATHUSLA::prototype_tracking(argc, argv);
+  return MATHUSLA::quiet_prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

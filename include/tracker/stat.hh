@@ -185,7 +185,7 @@ template<class ...Args>
 constexpr real propagate_average(const real error,
                                  const Args... rest) {
   return propagate_sum(error, rest...)
-    / std::sqrt(static_cast<real>(util::type::count_v<Args...>));
+    / std::sqrt(static_cast<real>(util::type::size(rest...)));
 }
 //----------------------------------------------------------------------------------------------
 

@@ -21,17 +21,35 @@
 #pragma once
 
 #include <cctype>
+#include <iterator>
 #include <type_traits>
 
 namespace MATHUSLA {
 
 namespace util { namespace type { //////////////////////////////////////////////////////////////
 
-//__Parameter Pack Count________________________________________________________________________
+//__Get Constexpr Size__________________________________________________________________________
+template<class T>
+constexpr auto size(const T& t) -> decltype(t.size()) { return t.size(); }
+template<class T, std::size_t N>
+constexpr std::size_t size(const T (&)[N]) noexcept { return N; }
 template<class... Ts>
-struct count { static const std::size_t value = sizeof...(Ts); };
-template<class ...Ts>
-constexpr std::size_t count_v = count<Ts...>::value;
+constexpr std::size_t size(const Ts& ...) noexcept { return sizeof...(Ts); }
+//----------------------------------------------------------------------------------------------
+
+//__Size Ordering for Sorter____________________________________________________________________
+template<class C = void>
+struct size_ordered {
+  constexpr bool operator()(const C& a, const C& b) const { return size(a) < size(b); }
+};
+template<class C = void>
+struct size_less {
+  constexpr bool operator()(const C& a, const C& b) const { return size(a) < size(b); }
+};
+template<class C = void>
+struct size_greater {
+  constexpr bool operator()(const C& a, const C& b) const { return size(a) > size(b); }
+};
 //----------------------------------------------------------------------------------------------
 
 //__Check Type of Character_____________________________________________________________________

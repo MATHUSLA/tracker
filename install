@@ -58,5 +58,5 @@ make -j8
 if [[ ! "$?" -eq 0 ]]; then
     echo -e "\nBuild Failed!\n"
 else
-    if [[ "$RUN_BUILD" -eq 1 ]]; then cd ..; ./build/demo/prototype $OTHER_ARGS; fi;
+    if [[ "$RUN_BUILD" -eq 1 ]]; then cd ..; ./build/demo/prototype/prototype $OTHER_ARGS; fi;
 fi

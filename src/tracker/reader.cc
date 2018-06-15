@@ -113,7 +113,7 @@ BinaryFunction _traverse_file(const std::string& path,
     TKey* key = nullptr;
     while ((key = static_cast<TKey*>(next())))
       f(file, key);
-    delete key;
+    file->Close();
   }
   return std::move(f);
 }
@@ -184,7 +184,6 @@ const analysis::event_vector import_events(const std::string& path,
       out.push_back(points);
     }
   });
-  delete tree;
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -214,7 +213,6 @@ const analysis::event_vector import_events(const std::string& path,
       out.push_back(points);
     }
   });
-  delete tree;
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -224,8 +222,8 @@ const analysis::event_vector import_events(const std::string& path,
                                            const tracking_options& options,
                                            const geometry::detector_map& map) {
   return options.mode == reader::CollectionMode::Detector
-    ? import_events(path, options.root_t_key, options.root_detector_key, map)
-    : import_events(path, options.root_t_key, options.root_x_key, options.root_y_key, options.root_z_key);
+    ? import_events(path, options.data_t_key, options.data_detector_key, map)
+    : import_events(path, options.data_t_key, options.data_x_key, options.data_y_key, options.data_z_key);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -233,9 +231,9 @@ const analysis::event_vector import_events(const std::string& path,
 const analysis::event_vector import_events(const std::string& path,
                                            const tracking_options& options) {
   return options.mode == reader::CollectionMode::Detector
-    ? import_events(path, options.root_t_key, options.root_detector_key,
+    ? import_events(path, options.data_t_key, options.data_detector_key,
         import_detector_map(options.geometry_map_file))
-    : import_events(path, options.root_t_key, options.root_x_key, options.root_y_key, options.root_z_key);
+    : import_events(path, options.data_t_key, options.data_x_key, options.data_y_key, options.data_z_key);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -479,15 +477,15 @@ const tracking_options read(const std::string& path) {
           _continuation_string, "\" Before Map Entries.\n");
 
       } else if (key == "root-data") {
-        _parse_key_value_file_path(key, value, out.root_directory);
+        _parse_key_value_file_path(key, value, out.data_directory);
       } else if (key == "root-position-keys") {
         _parse_key_value_data_keys(key, value,
-          out.mode, out.root_t_key, out.root_x_key, out.root_y_key, out.root_z_key);
+          out.mode, out.data_t_key, out.data_x_key, out.data_y_key, out.data_z_key);
       } else if (key == "root-position-error-keys") {
         _parse_key_value_data_keys(key, value,
-          out.mode, out.root_dt_key, out.root_dx_key, out.root_dy_key, out.root_dz_key);
+          out.mode, out.data_dt_key, out.data_dx_key, out.data_dy_key, out.data_dz_key);
       } else if (key == "root-detector-key") {
-        out.root_detector_key = value;
+        out.data_detector_key = value;
       } else if (key == "geometry-default-time-error") {
         _parse_key_value_positive_real(key, value, out.default_time_error);
       } else if (key == "collapse-size") {
@@ -525,7 +523,6 @@ void _exit_on_missing_path(const std::string& path,
 const tracking_options parse_input(int& argc,
                                    char* argv[]) {
   using util::cli::option;
-
   option help_opt    ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
   option verbose_opt ('v', "",         "Verbosity",                   option::required_arguments);
   option geo_opt     ('g', "geometry", "Geometry Import",             option::required_arguments);
@@ -551,16 +548,16 @@ const tracking_options parse_input(int& argc,
     out = script::read(script_opt.argument);
     geo_opt.count += !out.geometry_file.empty();
     map_opt.count += !out.geometry_map_file.empty();
-    data_opt.count += !out.root_directory.empty();
+    data_opt.count += !out.data_directory.empty();
   } else {
     out.geometry_file = geo_opt.count ? geo_opt.argument : "";
     out.geometry_map_file = map_opt.count ? map_opt.argument : "";
-    out.root_directory = data_opt.count ? data_opt.argument : "";
+    out.data_directory = data_opt.count ? data_opt.argument : "";
   }
 
   if (geo_opt.count) _exit_on_missing_path(out.geometry_file, "Geometry File");
   if (map_opt.count) _exit_on_missing_path(out.geometry_map_file, "Geometry Map");
-  if (data_opt.count) _exit_on_missing_path(out.root_directory, "ROOT Directory");
+  if (data_opt.count) _exit_on_missing_path(out.data_directory, "ROOT Directory");
 
   return out;
 }

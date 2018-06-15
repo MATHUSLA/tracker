@@ -24,10 +24,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 find_package(Geant4 REQUIRED COMPONENTS gdml)
 find_package(ROOT   REQUIRED COMPONENTS MathCore Minuit)
 
+include(${Geant4_USE_FILE})
+
 add_library(tracker SHARED
     src/tracker/analysis.cc
     src/tracker/geometry.cc
-    src/tracker/plot.cc
+    src/tracker/plot/canvas.cc
+    src/tracker/plot/histogram.cc
+    src/tracker/plot/plot.cc
     src/tracker/reader.cc
     src/tracker/stat.cc
     src/tracker/track.cc
@@ -35,10 +39,16 @@ add_library(tracker SHARED
 )
 target_compile_features(tracker PUBLIC cxx_std_14)
 
-# set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
+set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 
-target_link_libraries(tracker PUBLIC ${Geant4_LIBRARIES} ${ROOT_LIBRARIES})
-target_include_directories(tracker PRIVATE ${ROOT_INCLUDE_DIRS})
+target_link_libraries(tracker PUBLIC
+    ${Geant4_LIBRARIES}
+    ${ROOT_LIBRARIES})
+
+target_include_directories(tracker PUBLIC
+    ${Geant4_INCLUDE_DIRS}
+    ${ROOT_INCLUDE_DIRS})
+
 target_include_directories(tracker PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)

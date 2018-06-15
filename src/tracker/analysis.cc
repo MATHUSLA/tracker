@@ -25,6 +25,9 @@
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
+#include <tracker/util/type.hh>
+
+#include <iostream> // TODO: remove
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -330,20 +333,12 @@ const full_event_vector seed(const size_t n,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Check if Seeds can be Joined________________________________________________________________
-bool seeds_compatible(const event& first,
-                      const event& second,
-                      const size_t difference) {
-  return std::equal(first.cbegin() + difference, first.cend(), second.cbegin());
-}
-//----------------------------------------------------------------------------------------------
-
-//__Join Two Seeds______________________________________________________________________________
+//__Join Two Seeds in Sequence__________________________________________________________________
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-const Event join(const Event& first,
-                 const Event& second,
-                 const size_t difference) {
+const Event sequential_join(const Event& first,
+                            const Event& second,
+                            const size_t difference) {
   const auto second_size = second.size();
   const auto overlap = first.size() - difference;
 
@@ -366,15 +361,37 @@ const Event join(const Event& first,
 
   return out;
 }
-const event join(const event& first,
+const event sequential_join(const event& first,
                  const event& second,
                  const size_t difference) {
-  return join<>(first, second, difference);
+  return sequential_join<>(first, second, difference);
 }
-const full_event join(const full_event& first,
+const full_event sequential_join(const full_event& first,
                       const full_event& second,
                       const size_t difference) {
-  return join<>(first, second, difference);
+  return sequential_join<>(first, second, difference);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Join Two Seeds Such That One is a Subset of the Other_______________________________________
+template<class Event,
+  typename Point = typename Event::value_type,
+  typename = std::enable_if_t<is_r4_type_v<Point>>>
+const Event subset_join(const Event& first,
+                        const Event& second) {
+  if (first.size() >= second.size()) {
+    return util::algorithm::includes(first, second, type::t_ordered<Point>{}) ? first : Event{};
+  } else {
+    return util::algorithm::includes(second, first, type::t_ordered<Point>{}) ? second : Event{};
+  }
+}
+const event subset_join(const event& first,
+                        const event& second) {
+  return subset_join<>(first, second);
+}
+const full_event subset_join(const full_event& first,
+                             const full_event& second) {
+  return subset_join<>(first, second);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -397,7 +414,7 @@ void _join_secondaries(const size_t seed_index,
   const auto size = indicies.size();
   for (size_t i = 0; i < size; ++i) {
     const auto& next_seed = seed_buffer[indicies[i]];
-    const auto& joined_seed = join(seed, next_seed, difference);
+    const auto& joined_seed = sequential_join(seed, next_seed, difference);
     if (!joined_seed.empty()) {
       seed_buffer.push_back(joined_seed);
       out.push_back(seed_buffer.size() - 1);
@@ -484,12 +501,11 @@ void _full_join(EventVector& seed_buffer,
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
-//__Seed Join___________________________________________________________________________________
+//__Optimally Join All Seeds by Sequence________________________________________________________
 template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
-const EventVector join_all(const EventVector& seeds) {
+const EventVector sequential_join_all(const EventVector& seeds) {
   const auto size = seeds.size();
-
   EventVector out;
   out.reserve(size); // FIXME: bad estimate?
 
@@ -506,6 +522,71 @@ const EventVector join_all(const EventVector& seeds) {
   joined.push(initial_seeds);
   _full_join(seed_buffer, 1, 2, joined, singular, out);
   return out;
+}
+const event_vector sequential_join_all(const event_vector& seeds) {
+  return sequential_join_all<>(seeds);
+}
+const full_event_vector sequential_join_all(const full_event_vector& seeds) {
+  return sequential_join_all<>(seeds);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Optimally Join All Seeds by Subset__________________________________________________________
+template<class EventVector,
+  typename Event = typename EventVector::value_type,
+  typename Point = typename Event::value_type,
+  typename = std::enable_if_t<is_r4_type_v<Point>>>
+const EventVector subset_join_all(const EventVector& seeds) {
+  const auto size = seeds.size();
+  EventVector out;
+  out.reserve(size); // FIXME: bad estimate?
+
+  const auto sorted = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
+
+  util::bit_vector joined_list(size);
+
+  size_t top_index = 0, bottom_index = 1;
+  while (top_index < size) {
+    bottom_index = joined_list.first_unset(bottom_index);
+
+    const auto top_seed = sorted[top_index];
+    if (bottom_index == size) {
+      out.push_back(top_seed);
+      joined_list.set(top_index);
+      top_index = joined_list.first_unset(1 + top_index);
+      bottom_index = 1 + top_index;
+      continue;
+    }
+    const auto bottom_seed = sorted[bottom_index];
+    if (util::algorithm::includes(top_seed, bottom_seed, type::t_ordered<Point>{})) {
+      joined_list.set(bottom_index);
+      top_index = joined_list.first_unset(1 + top_index);
+      bottom_index = 1 + top_index;
+    } else {
+      bottom_index = joined_list.first_unset(1 + bottom_index);
+    }
+  }
+
+  for (size_t i = 0; i < size; ++i) {
+    if (!joined_list[i])
+      out.push_back(sorted[i]);
+  }
+
+  return out;
+}
+const event_vector subset_join_all(const event_vector& seeds) {
+  return subset_join_all<>(seeds);
+}
+const full_event_vector subset_join_all(const full_event_vector& seeds) {
+  return subset_join_all<>(seeds);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seed Join___________________________________________________________________________________
+template<class EventVector,
+  typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
+const EventVector join_all(const EventVector& seeds) {
+  return subset_join_all<>(sequential_join_all<>(seeds));
 }
 const event_vector join_all(const event_vector& seeds) {
   return join_all<>(seeds);

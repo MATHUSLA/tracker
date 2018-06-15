@@ -40,8 +40,8 @@ std::ostream& print_range(const Range& range,
                           const std::string& spacer=" ",
                           const std::string& prefix="",
                           std::ostream& os=std::cout) {
-  const auto& begin = range.cbegin();
-  const auto& end = range.cend() - 1;
+  const auto begin = std::cbegin(range);
+  const auto end = std::cend(range) - 1;
   if (end - begin >= 0) {
     std::for_each(begin, end, [&](const auto& element) { os << prefix << element << spacer; });
     os << prefix << *end;
@@ -73,18 +73,24 @@ inline bool path_exists(const std::string& path) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Escape Character____________________________________________________________________________
+inline std::ostream& escape(std::ostream& os=std::cout) {
+  return os << "\x1B";
+}
+//----------------------------------------------------------------------------------------------
+
 //__Bold, Italicise, and Underline Text_________________________________________________________
 inline std::ostream& bold(std::ostream& os=std::cout) {
-  return os << "\e[1m";
+  return escape(os) << "[1m";
 }
 inline std::ostream& italics(std::ostream& os=std::cout) {
-  return os << "\e[3m";
+  return escape(os) << "[3m";
 }
 inline std::ostream& underline(std::ostream& os=std::cout) {
-  return os << "\e[4m";
+  return escape(os) << "[4m";
 }
 inline std::ostream& reset_font(std::ostream& os=std::cout) {
-  return os << "\e[0m";
+  return escape(os) << "[0m";
 }
 //----------------------------------------------------------------------------------------------
 
