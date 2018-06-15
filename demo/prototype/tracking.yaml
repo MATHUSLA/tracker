@@ -8,7 +8,7 @@ line-width:    80
 seed-size:     3
 
 # Data
-root-data: demo/prototype/mc_study/data
+root-data: demo/prototype/mc_study/stat
 root-position-keys: Time # , X, Y, Z
 root-position-error-keys: dT #, dX, dY, dZ
 root-detector-key: Detector

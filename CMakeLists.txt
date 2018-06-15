@@ -27,16 +27,23 @@ find_package(ROOT   REQUIRED COMPONENTS MathCore Minuit)
 include(${Geant4_USE_FILE})
 
 add_library(tracker SHARED
-    src/tracker/analysis.cc
+    src/tracker/analysis/analysis.cc
+    src/tracker/analysis/track.cc
+    src/tracker/analysis/vertex.cc
+
     src/tracker/geometry.cc
+
     src/tracker/plot/canvas.cc
     src/tracker/plot/histogram.cc
     src/tracker/plot/plot.cc
+
     src/tracker/reader.cc
+
     src/tracker/stat.cc
-    src/tracker/track.cc
+
     src/tracker/util/command_line_parser.cc
 )
+
 target_compile_features(tracker PUBLIC cxx_std_14)
 
 set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
