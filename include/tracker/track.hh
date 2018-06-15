@@ -134,4 +134,4 @@ const track_vector fit_seeds(const full_event_vector& seeds,
 
 } } /* namespace MATHUSLA::TRACKER */
 
-#endif /* TRACKER__ANALYSIS_HH */
+#endif /* TRACKER__TRACK_HH */

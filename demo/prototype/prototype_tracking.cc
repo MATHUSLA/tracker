@@ -286,7 +286,7 @@ int quiet_prototype_tracking(int argc,
   for (const auto& path : reader::root::search_directory(options.data_directory)) {
     std::cout << "Path: " << path << "\n";
 
-    const auto histogram_path = histogram_path_prefix + std::to_string(counter) + ".root";
+    const auto histogram_path = histogram_path_prefix /*std::to_string(counter)*/ + ".root";
     plot::histogram chi_squared_histogram("chi_squared",
       "Chi-Squared Distribution", "chi^2/dof", "Track Count",
       200, 0, 10);
