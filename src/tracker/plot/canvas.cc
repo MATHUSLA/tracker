@@ -44,7 +44,7 @@ Int_t _to_TColor_id(const color& color) {
 
 //__Style Type__________________________________________________________________________________
 struct _style {
-  color color;
+  color rgb;
   real size;
 };
 //----------------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ struct _style_hash {
       << std::setfill('0')
       << std::uppercase
       << std::setw(6)
-      << ((style.color.r << 16) | (style.color.g << 8) | style.color.b)
+      << ((style.rgb.r << 16) | (style.rgb.g << 8) | style.rgb.b)
       << '_'
       << std::dec
       << std::setw(17)
@@ -73,7 +73,7 @@ struct _style_hash {
 //__Style Equality Functor______________________________________________________________________
 struct _style_equal {
   bool operator()(const _style& left, const _style& right) const {
-    return left.color == right.color && left.size == right.size;
+    return left.rgb == right.rgb && left.size == right.size;
   }
 };
 //----------------------------------------------------------------------------------------------
@@ -197,7 +197,7 @@ void canvas::draw() {
     if (begin != end) {
       const auto& style = (*begin).first;
       polymarker->SetMarkerSize(style.size);
-      polymarker->SetMarkerColor(_to_TColor_id(style.color));
+      polymarker->SetMarkerColor(_to_TColor_id(style.rgb));
       polymarker->Draw();
     }
   }
