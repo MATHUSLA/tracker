@@ -57,6 +57,21 @@ constexpr bool operator==(const full_hit& left,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Calculate Number of Hits per unit Length____________________________________________________
+const r4_point event_density(const event& points);
+const r4_point event_density(const full_event& points);
+//----------------------------------------------------------------------------------------------
+
+//__Calculate Number of Hits per unit Volume____________________________________________________
+// real event_volume_density(const event& points);
+// real event_volume_density(const full_event& points);
+//----------------------------------------------------------------------------------------------
+
+//__Calculate Number of Hits per Geometric Element______________________________________________
+real geometric_event_density(const event& points);
+real geometric_event_density(const full_event& points);
+//----------------------------------------------------------------------------------------------
+
 //__Find The Errors Associated with a Hit from Geometry_________________________________________
 const full_hit add_width(const hit& point);
 const full_event add_width(const event& points);
@@ -69,10 +84,10 @@ const full_event centralize(const full_event& points,
                             const Coordinate coordinate);
 //----------------------------------------------------------------------------------------------
 
-//__Collapse Points by R4 Interval______________________________________________________________
-const event collapse(const event& points,
+//__Compress Points by R4 Interval______________________________________________________________
+const event compress(const event& points,
                      const r4_point& ds);
-const full_event collapse(const full_event& points,
+const full_event compress(const full_event& points,
                           const r4_point& ds);
 //----------------------------------------------------------------------------------------------
 
@@ -97,25 +112,30 @@ const full_event_partition repartition(const full_event_partition& previous,
                                        const real interval);
 //----------------------------------------------------------------------------------------------
 
+//__Calculate Density of Partition______________________________________________________________
+// real partition_density(const event_partition& points);
+// real partition_density(const full_event_partition& points);
+//----------------------------------------------------------------------------------------------
+
 //__Fast Check if Points Form a Line____________________________________________________________
-bool fast_line_check(const event& points,
-                     const real threshold,
-                     const Coordinate x1,
-                     const Coordinate x2);
-bool fast_line_check(const full_event& points,
-                     const real threshold,
-                     const Coordinate x1,
-                     const Coordinate x2);
-bool fast_line_check(const event& points,
-                     const real threshold,
-                     const Coordinate x1,
-                     const Coordinate x2,
-                     const Coordinate x3);
-bool fast_line_check(const full_event& points,
-                     const real threshold,
-                     const Coordinate x1,
-                     const Coordinate x2,
-                     const Coordinate x3);
+bool is_linear(const event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2);
+bool is_linear(const full_event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2);
+bool is_linear(const event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2,
+               const Coordinate x3);
+bool is_linear(const full_event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2,
+               const Coordinate x3);
 //----------------------------------------------------------------------------------------------
 
 //__Seeding Algorithm___________________________________________________________________________

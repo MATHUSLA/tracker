@@ -92,7 +92,7 @@ void _collect_paths(TSystemDirectory* dir,
   if (!dir || !dir->GetListOfFiles()) return;
   for (const auto&& obj : *dir->GetListOfFiles()) {
     const auto file = static_cast<TSystemFile*>(obj);
-    const auto&& name = std::string(file->GetName());
+    const auto name = std::string(file->GetName());
     if (!file->IsDirectory()) {
       if (ext == "" || name.substr(1 + name.find_last_of(".")) == ext)
         paths.push_back(std::string(file->GetTitle()) + "/" + name);
@@ -154,9 +154,10 @@ void _set_TTree_branches(TTree* tree,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Search and Collect ROOT File Paths__________________________________________________________
-const std::vector<std::string> search_directory(const std::string& path) {
+const std::vector<std::string> search_directory(const std::string& path,
+                                                const std::string& ext) {
   std::vector<std::string> paths{};
-  _collect_paths(new TSystemDirectory("data", path.c_str()), paths, "root");
+  _collect_paths(new TSystemDirectory("search", path.c_str()), paths, ext);
   return paths;
 }
 //----------------------------------------------------------------------------------------------
@@ -251,7 +252,7 @@ const std::array<std::string, 11> _allowed_keys{{
   "root-data",
   "root-position-keys",
   "root-detector-key",
-  "collapse-size",
+  "compression-size",
   "layer-axis",
   "layer-depth",
   "line-width",
@@ -488,8 +489,8 @@ const tracking_options read(const std::string& path) {
         out.data_detector_key = value;
       } else if (key == "geometry-default-time-error") {
         _parse_key_value_positive_real(key, value, out.default_time_error);
-      } else if (key == "collapse-size") {
-        _parse_key_value_r4_point(key, value, out.collapse_size);
+      } else if (key == "compression-size") {
+        _parse_key_value_r4_point(key, value, out.compression_size);
       } else if (key == "layer-axis") {
         _parse_key_value_r3_coordinate(key, value, out.layer_axis);
       } else if (key == "layer-depth") {

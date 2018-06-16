@@ -20,180 +20,33 @@
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
-#include <tracker/stat.hh>
 #include <tracker/track.hh>
 #include <tracker/units.hh>
 
-#include <tracker/util/algorithm.hh>
-#include <tracker/util/bit_vector.hh>
-
-#include <tracker/util/io.hh> // FIXME: to remove
+#include "geometry.hh"
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace geometry = MATHUSLA::TRACKER::geometry;
 namespace plot     = MATHUSLA::TRACKER::plot;
-namespace stat     = MATHUSLA::TRACKER::stat;
 namespace reader   = MATHUSLA::TRACKER::reader;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
 
-//__Combine Pair of Hits if they Occur in Overlapping RPCs______________________________________
-const geometry::box_volume combine_rpc_volume_pair(const geometry::box_volume& first,
-                                                   const geometry::box_volume& second) {
-  const auto union_volume = geometry::coordinatewise_union(first, second);
-  auto out = geometry::coordinatewise_intersection(first, second);
-  out.min.z = union_volume.min.z;
-  out.center.z = union_volume.center.z;
-  out.max.z = union_volume.max.z;
-  return out;
+//__Find Tracks for Prototype___________________________________________________________________
+const analysis::track_vector find_tracks(const analysis::event& event,
+                                         const reader::tracking_options& options) {
+  analysis::full_event combined_rpc_hits, original_rpc_hits;
+  const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
+  const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
+  const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
+  const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
+  return analysis::fit_seeds(tracking_vector);
 }
 //----------------------------------------------------------------------------------------------
 
-//__Check If RPC Combine Created a Valid Strip Overlap__________________________________________
-constexpr bool was_combine_successful(const geometry::box_volume& combined) {
-  return (combined.min.x || combined.max.x) && (combined.min.y || combined.max.y);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Construct True Hit from RPC Hit Volumes_____________________________________________________
-const analysis::full_hit construct_hit(const type::real top_time,
-                                       const type::real bottom_time,
-                                       const std::string& top_volume,
-                                       const std::string& bottom_volume,
-                                       const geometry::box_volume& combined) {
-  const type::r4_point errors{
-    stat::error::propagate_average(
-      geometry::time_resolution_of(top_volume),
-      geometry::time_resolution_of(bottom_volume)),
-    combined.max.x - combined.min.x,
-    combined.max.y - combined.min.y,
-    combined.max.z - combined.min.z};
-  return {(top_time + bottom_time) / 2.0L, combined.center.x, combined.center.y, combined.center.z,
-          errors};
-}
-//----------------------------------------------------------------------------------------------
-
-//__Combine All Hits that Occur in Overlapping RPCs_____________________________________________
-const analysis::full_event combine_rpc_hits(const analysis::event& points,
-                                            const type::real time_threshold,
-                                            analysis::full_event& combined_rpc_hits,
-                                            analysis::full_event& original_rpc_hits) {
-  static const analysis::real z_lower = 24.0L * units::length;
-  static const analysis::real z_upper = 45.0L * units::length;
-  using namespace util::math;
-
-  const auto size = points.size();
-  if (size == 0)
-    return {};
-
-  analysis::full_event event;
-  event.reserve(size);
-
-  const auto parts = analysis::partition(points, type::Coordinate::Z, z_lower).parts;
-  const auto partition_size = parts.size();
-
-  size_t layer_index = 0;
-  for (; layer_index < partition_size - 1; ++layer_index) {
-    const auto top = parts[layer_index];
-    const auto bottom = parts[layer_index + 1];
-
-    if (within(top.front().z, bottom.back().z, z_lower, z_upper)) {
-      const auto top_size = top.size();
-      const auto bottom_size = bottom.size();
-      util::bit_vector discard_list(bottom_size);
-
-      size_t top_index = 0, bottom_index = 0;
-      while (top_index < top_size) {
-        bottom_index = discard_list.first_unset(bottom_index);
-        const auto top_point = top[top_index];
-
-        if (bottom_index == bottom_size) {
-          event.push_back(analysis::add_width(top_point));
-          ++top_index;
-          bottom_index = 0;
-          continue;
-        }
-
-        const auto bottom_point = bottom[bottom_index];
-
-        const auto top_volume = geometry::volume(top_point);
-        const auto bottom_volume = geometry::volume(bottom_point);
-        const auto combined = combine_rpc_volume_pair(
-          geometry::limits_of(top_volume),
-          geometry::limits_of(bottom_volume));
-
-        if (was_combine_successful(combined) && within(top_point.t, bottom_point.t, time_threshold)) {
-          const auto new_hit = construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined);
-          event.push_back(new_hit);
-          combined_rpc_hits.push_back(new_hit);
-          original_rpc_hits.push_back(analysis::add_width(top_point));
-          original_rpc_hits.push_back(analysis::add_width(bottom_point));
-          discard_list.set(bottom_index);
-          ++top_index;
-          bottom_index = 0;
-        } else {
-          ++bottom_index;
-        }
-      }
-
-      for (; top_index < top_size; ++top_index) {
-        event.push_back(analysis::add_width(top[top_index]));
-      }
-      for (bottom_index = 0; bottom_index < bottom_size; ++bottom_index) {
-        if (!discard_list[bottom_index])
-          event.push_back(analysis::add_width(bottom[bottom_index]));
-      }
-      ++layer_index;
-    } else {
-      util::algorithm::back_insert_transform(top, event,
-        [](const auto& part){ return analysis::add_width(part); });
-    }
-  }
-
-  if (layer_index == partition_size - 1) {
-    util::algorithm::back_insert_transform(parts.back(), event,
-      [](const auto& part){ return analysis::add_width(part); });
-  }
-
-  util::algorithm::reverse(event);
-  return event;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Reset Seed Vector Using RPC Combination Hits________________________________________________
-const analysis::full_event_vector reset_seeds(const analysis::full_event_vector& joined_seeds,
-                                              const analysis::full_event& combined_rpc_hits,
-                                              const analysis::full_event& original_rpc_hits) {
-  const auto combined_size = combined_rpc_hits.size();
-  if (combined_size == 0)
-    return joined_seeds;
-
-  analysis::full_event_vector out;
-  out.reserve(joined_seeds.size());
-  for (const auto& seed : joined_seeds) {
-    analysis::full_event next;
-    for (const auto& hit : seed) {
-      size_t rpc_index = 0;
-      for (; rpc_index < combined_size; ++rpc_index) {
-        if (hit == combined_rpc_hits[rpc_index]) {
-          next.push_back(original_rpc_hits[2 * rpc_index]);
-          next.push_back(original_rpc_hits[2 * rpc_index + 1]);
-          break;
-        }
-      }
-      if (rpc_index == combined_size)
-        next.push_back(hit);
-    }
-    next.shrink_to_fit();
-    out.push_back(type::t_sort(next));
-  }
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Add Track to Canvas_________________________________________________________________________
+//__Add Track and Intersecting Geometry to Canvas_______________________________________________
 void draw_track(plot::canvas& canvas,
                 const analysis::track& track) {
   const auto& full_event = track.full_event();
@@ -212,10 +65,8 @@ void draw_track(plot::canvas& canvas,
 
 //__Add Detector Centers to Canvas______________________________________________________________
 void draw_detector_centers(plot::canvas& canvas) {
-  for (const auto& name
-      : geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"})) {
+  for (const auto& name : prototype_geometry())
     canvas.add_point(geometry::limits_of(name).center, 0.25, plot::color::MAGENTA);
-  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -238,20 +89,17 @@ int prototype_tracking(int argc,
       plot::canvas canvas(path);
       std::cout << "EVENT: " << canvas.name() << "\n";
 
-      const auto collapsed_event = analysis::collapse(event, options.collapse_size);
-      canvas.add_points(collapsed_event, 0.8, plot::color::BLUE);
+      const auto compressed_event = analysis::compress(event, options.compression_size);
+      const auto density = analysis::geometric_event_density(compressed_event);
+      std::cout << "Geometric Event Density: " << density << "\n";
+
+      if (density > 2) continue;
+
+      canvas.add_points(compressed_event, 0.8, plot::color::BLUE);
       draw_detector_centers(canvas);
 
-      analysis::full_event combined_rpc_hits, original_rpc_hits;
-      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, combined_rpc_hits, original_rpc_hits);
-      const auto layers = analysis::partition(full_event_points, options.layer_axis, options.layer_depth);
-      const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
-      const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-
-      const auto tracks = analysis::fit_seeds(tracking_vector);
-      analysis::track_vector tracks_after_cut = tracks;
-
-      for (const auto& track : tracks_after_cut) {
+      const auto tracks = find_tracks(compressed_event, options);
+      for (const auto& track : tracks) {
         draw_track(canvas, track);
         histogram.insert(track.chi_squared_per_dof());
         std::cout << track << "\n";
@@ -280,13 +128,17 @@ int quiet_prototype_tracking(int argc,
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
-  const auto histogram_path_prefix = options.data_directory + "/statistics";
+  const auto statistics_path_prefix = options.data_directory + "/statistics";
 
-  uint_fast64_t counter{};
+  uint_fast64_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory)) {
     std::cout << "Path: " << path << "\n";
 
-    const auto histogram_path = histogram_path_prefix /*std::to_string(counter)*/ + ".root";
+    const auto imported_events = reader::root::import_events(path, options, detector_map);
+    if (imported_events.size() == 0)
+      continue;
+
+    const auto statistics_path = statistics_path_prefix /*std::to_string(path_counter)*/ + ".root";
     plot::histogram chi_squared_histogram("chi_squared",
       "Chi-Squared Distribution", "chi^2/dof", "Track Count",
       200, 0, 10);
@@ -295,50 +147,63 @@ int quiet_prototype_tracking(int argc,
       200, 0, 2);
     plot::histogram event_density_histogram("event_density",
       "Event Density Distribution", "Track Count", "Event Count",
-      1000, 0, 100);
+      100, 0, 100);
 
-    for (const auto& event : reader::root::import_events(path, options, detector_map)) {
-      std::cout << "Event " << counter << " with " << event.size() << " hits.\n";
+     uint_fast64_t event_counter{};
+    for (const auto& event : imported_events) {
+      std::cout << "Event " << event_counter << " with " << event.size() << " hits.\n";
 
-    if (event.empty()) {
-      ++counter;
-      continue;
-    }
+      if (event.empty()) {
+        ++event_counter;
+        continue;
+      }
 
-      const auto collapsed_event = analysis::collapse(event, options.collapse_size);
-      analysis::full_event combined_rpc_hits, original_rpc_hits;
-      const auto full_event_points = combine_rpc_hits(collapsed_event, 2 * units::time, combined_rpc_hits, original_rpc_hits);
-      const auto layers = analysis::partition(full_event_points, options.layer_axis, options.layer_depth);
-      const auto seeds = analysis::seed(options.seed_size, layers, options.line_width);
-      const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-      const auto tracks = analysis::fit_seeds(tracking_vector);
+      const auto compressed_event = analysis::compress(event, options.compression_size);
+      const auto compression_gain = event.size() / static_cast<type::real>(compressed_event.size());
+      std::cout << "  Compression Gain: " << compression_gain << "\n";
 
+      const auto density = modified_geometry_event_density(compressed_event);
+      std::cout << "  Event Density: " << density * 100.0L << "%\n";
+
+      if (density >= 0.2) {
+        ++event_counter;
+        continue;
+      }
+
+      const auto tracks = find_tracks(compressed_event, options);
       for (const auto& track : tracks) {
         chi_squared_histogram.insert(track.chi_squared_per_dof());
         beta_histogram.insert(track.beta());
       }
 
-      if (tracks.size() > 2000) {
-        const auto counter_string = std::to_string(counter);
-        plot::histogram individual_chi_square_histogram("event" + counter_string + "_chi_squared",
-          "Event" + counter_string + " Chi-Squared Distribution", "chi^2/dof", "Track Count",
+      if (tracks.size() > 1000) {
+        const auto name = "event" + std::to_string(event_counter);
+        plot::histogram individual_chi_square_histogram(name + "_chi_squared",
+          name + " Chi-Squared Distribution", "chi^2/dof", "Track Count",
           200, 0, 10);
+        plot::canvas individual_canvas(name);
         for (const auto& track : tracks) {
           individual_chi_square_histogram.insert(track.chi_squared_per_dof());
+          draw_track(individual_canvas, track);
         }
-        individual_chi_square_histogram.save(histogram_path);
+        individual_chi_square_histogram.save(statistics_path);
+        individual_canvas.draw();
+        individual_canvas.save(statistics_path);
       }
 
       event_density_histogram.insert(tracks.size());
 
-      std::cout << "Track Count: " <<  tracks.size() << "\n";
-      std::cout << "Track Density: " << tracks.size() / static_cast<type::real>(event.size()) << "\n";
+      std::cout << "  Track Count: "
+                << tracks.size() << "\n";
+      std::cout << "  Track Density: "
+                << tracks.size() / static_cast<type::real>(event.size()) * 100.0L << "%\n";
 
-      ++counter;
+      ++event_counter;
     }
-    chi_squared_histogram.save(histogram_path);
-    beta_histogram.save(histogram_path);
-    event_density_histogram.save(histogram_path);
+    chi_squared_histogram.save(statistics_path);
+    beta_histogram.save(statistics_path);
+    event_density_histogram.save(statistics_path);
+    ++path_counter;
   }
 
   geometry::close();

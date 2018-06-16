@@ -41,6 +41,59 @@ std::ostream& operator<<(std::ostream& os,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Calculate Number of Hits per unit Length____________________________________________________
+template<class Event,
+  typename Point = typename Event::value_type,
+  typename = std::enable_if_t<is_r4_type_v<Point>>>
+const r4_point event_density(const Event& points) {
+  const auto size = points.size();
+  if (size == 0)
+    return {};
+  const auto begin = points.cbegin();
+  const auto end = points.cend();
+  const auto t_range = std::minmax_element(begin, end, t_ordered<Point>{});
+  const auto x_range = std::minmax_element(begin, end, x_ordered<Point>{});
+  const auto y_range = std::minmax_element(begin, end, y_ordered<Point>{});
+  const auto z_range = std::minmax_element(begin, end, z_ordered<Point>{});
+  return r4_point{util::math::abs(t_range.second->t - t_range.first->t),
+                  util::math::abs(x_range.second->x - x_range.first->x),
+                  util::math::abs(y_range.second->y - y_range.first->y),
+                  util::math::abs(z_range.second->z - z_range.first->z)} / size;
+}
+const r4_point event_density(const event& points) {
+  return event_density<>(points);
+}
+const r4_point event_density(const full_event& points) {
+  return event_density<>(points);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Calculate Number of Hits per Geometric Element______________________________________________
+template<class Event,
+  typename Point = typename Event::value_type,
+  typename = std::enable_if_t<is_r4_type_v<Point>>>
+real geometric_event_density(const Event& points) {
+  const auto size = points.size();
+  if (size == 0)
+    return 0;
+
+  geometry::structure_vector structures;
+  util::algorithm::back_insert_transform(points, structures,
+    [](const auto& point) { return geometry::volume(reduce_to_r4(point)); });
+
+  std::sort(structures.begin(), structures.end());
+  const auto end = std::unique(structures.begin(), structures.end());
+
+  return size / static_cast<real>(std::distance(structures.begin(), end));
+}
+real geometric_event_density(const event& points) {
+  return geometric_event_density<>(points);
+}
+real geometric_event_density(const full_event& points) {
+  return geometric_event_density<>(points);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Find The Errors Associated with a Hit from Geometry_________________________________________
 const full_hit add_width(const hit& point) {
   const auto volume = geometry::volume(point);
@@ -82,10 +135,10 @@ const full_event centralize(const full_event& points,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Collapse Points by R4 Interval______________________________________________________________
+//__Compress Points by R4 Interval______________________________________________________________
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-const Event collapse(const Event& points,
+const Event compress(const Event& points,
                      const r4_point& ds) {
   const auto size = points.size();
   if (size <= 1) return points;
@@ -134,13 +187,13 @@ const Event collapse(const Event& points,
 
   return out;
 }
-const event collapse(const event& points,
+const event compress(const event& points,
                      const r4_point& ds) {
-  return collapse<>(points, ds);
+  return compress<>(points, ds);
 }
-const full_event collapse(const full_event& points,
+const full_event compress(const full_event& points,
                           const r4_point& ds) {
-  return collapse<>(points, ds);
+  return compress<>(points, ds);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -225,10 +278,10 @@ const full_event_partition repartition(const full_event_partition& previous,
 //__Fast Check if Points Form a Line____________________________________________________________
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-bool fast_line_check_2d(const Event& points,
-                        const real threshold,
-                        const Coordinate x1,
-                        const Coordinate x2) {
+bool is_linear_2d(const Event& points,
+                  const real threshold,
+                  const Coordinate x1,
+                  const Coordinate x2) {
   const auto& line_begin = points.front();
   const auto& line_end = points.back();
   return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,
@@ -237,42 +290,42 @@ bool fast_line_check_2d(const Event& points,
 }
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-bool fast_line_check_3d(const Event& points,
-                        const real threshold,
-                        const Coordinate x1,
-                        const Coordinate x2,
-                        const Coordinate x3) {
+bool is_linear_3d(const Event& points,
+                  const real threshold,
+                  const Coordinate x1,
+                  const Coordinate x2,
+                  const Coordinate x3) {
   const auto& line_begin = points.front();
   const auto& line_end = points.back();
   return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,
     [&](const auto max, const auto& point) {
         return std::max(max, point_line_distance(point, line_begin, line_end, x1, x2, x3)); });
 }
-bool fast_line_check(const event& points,
-                     const real threshold,
-                     const Coordinate x1,
-                     const Coordinate x2) {
-  return fast_line_check_2d<>(points, threshold, x1, x2);
+bool is_linear(const event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2) {
+  return is_linear_2d<>(points, threshold, x1, x2);
 }
-bool fast_line_check(const full_event& points,
-                     const real threshold,
-                     const Coordinate x1,
-                     const Coordinate x2) {
-  return fast_line_check_2d<>(points, threshold, x1, x2);
+bool is_linear(const full_event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2) {
+  return is_linear_2d<>(points, threshold, x1, x2);
 }
-bool fast_line_check(const event& points,
-                     const real threshold,
-                     const Coordinate x1,
-                     const Coordinate x2,
-                     const Coordinate x3) {
-  return fast_line_check_3d<>(points, threshold, x1, x2, x3);
+bool is_linear(const event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2,
+               const Coordinate x3) {
+  return is_linear_3d<>(points, threshold, x1, x2, x3);
 }
-bool fast_line_check(const full_event& points,
-                     const real threshold,
-                     const Coordinate x1,
-                     const Coordinate x2,
-                     const Coordinate x3) {
-  return fast_line_check_3d<>(points, threshold, x1, x2, x3);
+bool is_linear(const full_event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2,
+               const Coordinate x3) {
+  return is_linear_3d<>(points, threshold, x1, x2, x3);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -315,7 +368,7 @@ const EventVector seed(const size_t n,
       }
     }
 
-    if (fast_line_check(t_sort(tuple), line_threshold, Coordinate::X, Coordinate::Y, Coordinate::Z))
+    if (is_linear(t_sort(tuple), line_threshold, Coordinate::X, Coordinate::Y, Coordinate::Z))
       out.push_back(tuple);
   });
 
@@ -488,7 +541,7 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 void _full_join(EventVector& seed_buffer,
                 const size_t difference,
-                const size_t max_difference,
+                // TODO: const size_t max_difference,
                 seed_queue& joined,
                 seed_queue& singular,
                 EventVector& out) {
@@ -520,7 +573,7 @@ const EventVector sequential_join_all(const EventVector& seeds) {
     initial_seeds.push_back(i);
 
   joined.push(initial_seeds);
-  _full_join(seed_buffer, 1, 2, joined, singular, out);
+  _full_join(seed_buffer, 1, joined, singular, out);
   return out;
 }
 const event_vector sequential_join_all(const event_vector& seeds) {

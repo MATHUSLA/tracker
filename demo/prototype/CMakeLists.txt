@@ -17,7 +17,7 @@
 
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
-add_executable(prototype prototype_tracking.cc)
+add_executable(prototype prototype_tracking.cc geometry.cc)
 target_compile_features(prototype PUBLIC cxx_std_14)
 
 target_link_libraries(prototype PUBLIC tracker)

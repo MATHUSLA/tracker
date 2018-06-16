@@ -1,21 +1,21 @@
 ### MATHUSLA Prototype TRACKING SCRIPT ###
 
 # Thresholds and Settings
-collapse-size: 10, 10, 10, 10
-layer-axis:    Z
-layer-depth:   500
-line-width:    80
-seed-size:     3
+compression-size: 10, 10, 10, 10
+layer-axis:       Z
+layer-depth:      500
+line-width:       80
+seed-size:        3
 
 # Data
-root-data: demo/prototype/mc_study/stat
+root-data: demo/prototype/mc_study/stat  # .temp/delta_ray_studies/other
 root-position-keys: Time # , X, Y, Z
 root-position-error-keys: dT #, dX, dY, dZ
 root-detector-key: Detector
 
 # Geometry Setup
-geometry-file: demo/prototype/world.prototype.gdml
-geometry-map-file: demo/prototype/detector_map.txt
+geometry-file: demo/prototype/resources/world.prototype.gdml
+geometry-map-file: demo/prototype/resources/detector_map.txt
 geometry-default-time-error: 2
 # geometry-time-error-map: ...
 # geometry-map:

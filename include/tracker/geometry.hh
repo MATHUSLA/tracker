@@ -30,12 +30,17 @@ namespace geometry { ///////////////////////////////////////////////////////////
 
 using namespace type;
 
-//__Detector Map________________________________________________________________________________
-using detector_map = std::unordered_map<integer, std::string>;
+//__Geometry Structure Types____________________________________________________________________
+using structure_value = std::string;
+using structure_vector = std::vector<structure_value>;
+//----------------------------------------------------------------------------------------------
+
+//__Geometry Detector Map_______________________________________________________________________
+using detector_map = std::unordered_map<integer, structure_value>;
 //----------------------------------------------------------------------------------------------
 
 //__Geometry Time Resolution Map________________________________________________________________
-using time_resolution_map = std::unordered_map<std::string, real>;
+using time_resolution_map = std::unordered_map<structure_value, real>;
 //----------------------------------------------------------------------------------------------
 
 //__Geometry Navigation System__________________________________________________________________
@@ -50,11 +55,11 @@ const std::string& current_geometry_path();
 //----------------------------------------------------------------------------------------------
 
 //__List of all Geometry Volumes________________________________________________________________
-const std::vector<std::string> full_structure();
+const structure_vector full_structure();
 //----------------------------------------------------------------------------------------------
 
 //__List of all Geometry Volumes Except those in the List_______________________________________
-const std::vector<std::string> full_structure_except(const std::vector<std::string>& names);
+const structure_vector full_structure_except(const structure_vector& names);
 //----------------------------------------------------------------------------------------------
 
 //__Get Default Time Resolution for Detector Volumes____________________________________________
@@ -68,19 +73,19 @@ real default_time_resolution();
 
 //__Volume Containment Check____________________________________________________________________
 bool is_inside_volume(const r3_point& point,
-                      const std::string& name);
+                      const structure_value& name);
 bool is_inside_volume(const r4_point& point,
-                      const std::string& name);
+                      const structure_value& name);
 //----------------------------------------------------------------------------------------------
 
 //__Volume Hierarchy Search_____________________________________________________________________
-const std::vector<std::string> volume_hierarchy(const r3_point& point);
-const std::vector<std::string> volume_hierarchy(const r4_point& point);
+const structure_vector volume_hierarchy(const r3_point& point);
+const structure_vector volume_hierarchy(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
 //__Volume Search_______________________________________________________________________________
-const std::string volume(const r3_point& point);
-const std::string volume(const r4_point& point);
+const structure_value volume(const r3_point& point);
+const structure_value volume(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
 //__Box Volume__________________________________________________________________________________
@@ -94,11 +99,11 @@ std::ostream& operator<<(std::ostream& os,
 //----------------------------------------------------------------------------------------------
 
 //__Limit Box of a Volume_______________________________________________________________________
-const box_volume limits_of(const std::string& name);
+const box_volume limits_of(const structure_value& name);
 //----------------------------------------------------------------------------------------------
 
 //__Time Error on a Detector Component__________________________________________________________
-real time_resolution_of(const std::string& name);
+real time_resolution_of(const structure_value& name);
 //----------------------------------------------------------------------------------------------
 
 //__Compute Intersection of Box Volumes_________________________________________________________
@@ -129,7 +134,7 @@ constexpr bool is_inside_volume(const r4_point& point,
 //----------------------------------------------------------------------------------------------
 
 //__Find Center of Geometry_____________________________________________________________________
-const r3_point find_center(const std::string& name);
+const r3_point find_center(const structure_value& name);
 const r3_point find_center(const r3_point& point);
 const r4_point find_center(const r4_point& point);
 //----------------------------------------------------------------------------------------------

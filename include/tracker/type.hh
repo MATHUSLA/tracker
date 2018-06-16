@@ -32,8 +32,8 @@
 #include <type_traits>
 #include <vector>
 
-#include <tracker/util/math.hh>
 #include <tracker/util/algorithm.hh>
+#include <tracker/util/math.hh>
 
 namespace MATHUSLA {
 
@@ -45,11 +45,10 @@ using real = long double;
 //----------------------------------------------------------------------------------------------
 
 //__RN Point Types______________________________________________________________________________
-struct r2_point { real    x, y;    };
-struct r3_point { real    x, y, z; };
-struct r4_point { real t, x, y, z; };
-
-enum class Coordinate { T, X, Y, Z };
+struct r2_point { real     x, y;    };
+struct r3_point { real     x, y, z; };
+struct r4_point { real  t, x, y, z; };
+enum class Coordinate { T, X, Y, Z  };
 //----------------------------------------------------------------------------------------------
 
 //__RN Point Type Reflection____________________________________________________________________

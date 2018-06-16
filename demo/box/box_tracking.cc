@@ -24,6 +24,8 @@
 #include <tracker/track.hh>
 #include <tracker/units.hh>
 
+#include "geometry.hh"
+
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace geometry = MATHUSLA::TRACKER::geometry;

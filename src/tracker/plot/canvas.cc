@@ -205,7 +205,6 @@ void canvas::draw() {
   for (const auto& poly_line : _impl->_poly_lines)
     poly_line->Draw();
 
-
   if (!_impl->_has_updated) {
     _impl->_view->ShowAxis();
     auto axis = TAxis3D::GetPadAxis();

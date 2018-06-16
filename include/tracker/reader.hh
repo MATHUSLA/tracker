@@ -51,7 +51,7 @@ struct tracking_options {
   std::string    data_detector_key  = "Detector";
   CollectionMode mode               = CollectionMode::Detector;
   real           default_time_error = 2 * units::time;
-  r4_point       collapse_size      = {0, 0, 0, 0};
+  r4_point       compression_size   = {0, 0, 0, 0};
   Coordinate     layer_axis         = Coordinate::Z;
   real           layer_depth        = 50 * units::length;
   real           line_width         = 1;
@@ -70,7 +70,8 @@ const geometry::time_resolution_map import_time_resolution_map(const std::string
 namespace root { ///////////////////////////////////////////////////////////////////////////////
 
 //__ROOT Directory Search_______________________________________________________________________
-const std::vector<std::string> search_directory(const std::string& path);
+const std::vector<std::string> search_directory(const std::string& path,
+                                                const std::string& ext="root");
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import___________________________________________________________________________

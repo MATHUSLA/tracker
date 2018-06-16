@@ -168,7 +168,7 @@ real propagate(const real_array<N>& gradient,
 template<std::size_t N>
 real propagate(const real_vector& gradient,
                const real_vector& covariance) {
-  return propagate(to_array<N>(gradient), to_array<N>(covariance));
+  return propagate(to_array<N>(gradient), to_array<N*N>(covariance));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -185,7 +185,7 @@ template<class ...Args>
 constexpr real propagate_average(const real error,
                                  const Args... rest) {
   return propagate_sum(error, rest...)
-    / std::sqrt(static_cast<real>(util::type::size(rest...)));
+    / std::sqrt(1.0L + static_cast<real>(util::type::size(rest...)));
 }
 //----------------------------------------------------------------------------------------------
 

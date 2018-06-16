@@ -22,6 +22,10 @@
 
 #include <tracker/util/algorithm.hh>
 
+#define FP_FAST_FMA
+#define FP_FAST_FMAF
+#define FP_FAST_FMAL
+
 namespace MATHUSLA {
 
 namespace util { namespace math { //////////////////////////////////////////////////////////////
