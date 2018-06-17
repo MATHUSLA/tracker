@@ -1,11 +1,12 @@
 ### MATHUSLA Prototype TRACKING SCRIPT ###
 
 # Thresholds and Settings
-compression-size: 10, 10, 10, 10
-layer-axis:       Z
-layer-depth:      500
-line-width:       80
-seed-size:        3
+compression-size:    10, 10, 10, 10
+layer-axis:          Z
+layer-depth:         500
+line-width:          80
+seed-size:           3
+event-density-limit: 0.2
 
 # Data
 root-data: demo/prototype/mc_study/stat  # .temp/delta_ray_studies/other

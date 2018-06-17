@@ -222,7 +222,7 @@ const analysis::event_vector import_events(const std::string& path,
 const analysis::event_vector import_events(const std::string& path,
                                            const tracking_options& options,
                                            const geometry::detector_map& map) {
-  return options.mode == reader::CollectionMode::Detector
+  return options.collection_mode == reader::CollectionMode::Detector
     ? import_events(path, options.data_t_key, options.data_detector_key, map)
     : import_events(path, options.data_t_key, options.data_x_key, options.data_y_key, options.data_z_key);
 }
@@ -231,7 +231,7 @@ const analysis::event_vector import_events(const std::string& path,
 //__Import Events from ROOT File________________________________________________________________
 const analysis::event_vector import_events(const std::string& path,
                                            const tracking_options& options) {
-  return options.mode == reader::CollectionMode::Detector
+  return options.collection_mode == reader::CollectionMode::Detector
     ? import_events(path, options.data_t_key, options.data_detector_key,
         import_detector_map(options.geometry_map_file))
     : import_events(path, options.data_t_key, options.data_x_key, options.data_y_key, options.data_z_key);
@@ -481,10 +481,10 @@ const tracking_options read(const std::string& path) {
         _parse_key_value_file_path(key, value, out.data_directory);
       } else if (key == "root-position-keys") {
         _parse_key_value_data_keys(key, value,
-          out.mode, out.data_t_key, out.data_x_key, out.data_y_key, out.data_z_key);
+          out.collection_mode, out.data_t_key, out.data_x_key, out.data_y_key, out.data_z_key);
       } else if (key == "root-position-error-keys") {
         _parse_key_value_data_keys(key, value,
-          out.mode, out.data_dt_key, out.data_dx_key, out.data_dy_key, out.data_dz_key);
+          out.collection_mode, out.data_dt_key, out.data_dx_key, out.data_dy_key, out.data_dz_key);
       } else if (key == "root-detector-key") {
         out.data_detector_key = value;
       } else if (key == "geometry-default-time-error") {
@@ -499,6 +499,8 @@ const tracking_options read(const std::string& path) {
         _parse_key_value_positive_real(key, value, out.line_width);
       } else if (key == "seed-size") {
         _parse_key_value_size_type(key, value, out.seed_size);
+      } else if (key == "event-density-limit") {
+        _parse_key_value_positive_real(key, value, out.event_density_limit);
       } else {
         util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n");
       }

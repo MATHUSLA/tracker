@@ -130,7 +130,6 @@ int quiet_prototype_tracking(int argc,
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.data_directory + "/statistics";
 
-  uint_fast64_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory)) {
     std::cout << "Path: " << path << "\n";
 
@@ -149,7 +148,7 @@ int quiet_prototype_tracking(int argc,
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
 
-     uint_fast64_t event_counter{};
+    uint_fast64_t event_counter{};
     for (const auto& event : imported_events) {
       std::cout << "Event " << event_counter << " with " << event.size() << " hits.\n";
 
@@ -165,7 +164,7 @@ int quiet_prototype_tracking(int argc,
       const auto density = modified_geometry_event_density(compressed_event);
       std::cout << "  Event Density: " << density * 100.0L << "%\n";
 
-      if (density >= 0.2) {
+      if (density >= options.event_density_limit) {
         ++event_counter;
         continue;
       }
@@ -203,7 +202,6 @@ int quiet_prototype_tracking(int argc,
     chi_squared_histogram.save(statistics_path);
     beta_histogram.save(statistics_path);
     event_density_histogram.save(statistics_path);
-    ++path_counter;
   }
 
   geometry::close();

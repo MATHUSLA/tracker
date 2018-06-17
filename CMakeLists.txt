@@ -45,6 +45,7 @@ add_library(tracker SHARED
 )
 
 target_compile_features(tracker PUBLIC cxx_std_14)
+target_compile_options(tracker PUBLIC -Wno-missing-braces)
 
 set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 

@@ -669,7 +669,7 @@ constexpr r2_point_array<N> reduce_to_r2(const r3_point_array<N>& arr) {
   r2_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
-    out[i] = { arr_i.x, arr_i.y };
+    out[i] = {arr_i.x, arr_i.y};
   }
   return out;
 }
@@ -681,7 +681,7 @@ constexpr r2_point_array<N> reduce_to_r2(const r4_point_array<N>& arr) {
   r2_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
-    out[i] = { arr_i.x, arr_i.y };
+    out[i] = {arr_i.x, arr_i.y};
   }
   return out;
 }
@@ -693,7 +693,7 @@ constexpr r3_point_array<N> reduce_to_r3(const r4_point_array<N>& arr) {
   r3_point_array<N> out;
   for (std::size_t i = 0; i < N; ++i) {
     const auto& arr_i = arr[i];
-    out[i] = { arr_i.x, arr_i.y, arr_i.z };
+    out[i] = {arr_i.x, arr_i.y, arr_i.z};
   }
   return out;
 }
@@ -702,21 +702,21 @@ constexpr r3_point_array<N> reduce_to_r3(const r4_point_array<N>& arr) {
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
 constexpr real_array2<N> reduce_to_r2(const real_array3<N>& arr) {
-  return { arr.xs, arr.ys };
+  return {arr.xs, arr.ys};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
 constexpr real_array2<N> reduce_to_r2(const real_array4<N>& arr) {
-  return { arr.xs, arr.ys };
+  return {arr.xs, arr.ys};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Array-Wise Reduction of Dimension___________________________________________________________
 template<std::size_t N>
 constexpr real_array3<N> reduce_to_r3(const real_array4<N>& arr) {
-  return { arr.xs, arr.ys, arr.zs };
+  return {arr.xs, arr.ys, arr.zs};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -874,7 +874,7 @@ inline r2_point_vector reduce_to_r2(const r3_point_vector& vec) {
   r2_point_vector out;
   out.reserve(vec.size());
   std::for_each(vec.cbegin(), vec.cend(),
-    [&](const auto& point) { out.push_back({point.x, point.y}); });
+    [&](const auto& point) { out.push_back(reduce_to_r2(point)); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -884,7 +884,7 @@ inline r2_point_vector reduce_to_r2(const r4_point_vector& vec) {
   r2_point_vector out;
   out.reserve(vec.size());
   std::for_each(vec.cbegin(), vec.cend(),
-    [&](const auto& point) { out.push_back({point.x, point.y}); });
+    [&](const auto& point) { out.push_back(reduce_to_r2(point)); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -894,26 +894,26 @@ inline r3_point_vector reduce_to_r3(const r4_point_vector& vec) {
   r3_point_vector out;
   out.reserve(vec.size());
   std::for_each(vec.cbegin(), vec.cend(),
-    [&](const auto& point) { out.push_back({point.x, point.y, point.z}); });
+    [&](const auto& point) { out.push_back(reduce_to_r3(point)); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Vector-Wise Reduction of Dimension__________________________________________________________
 inline real_vector2 reduce_to_r2(const real_vector3& vec) {
-  return { vec.xs, vec.ys };
+  return {vec.xs, vec.ys};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Vector-Wise Reduction of Dimension__________________________________________________________
 inline real_vector2 reduce_to_r2(const real_vector4& vec) {
-  return { vec.xs, vec.ys };
+  return {vec.xs, vec.ys};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Vector-Wise Reduction of Dimension__________________________________________________________
 inline real_vector3 reduce_to_r3(const real_vector4& vec) {
-  return { vec.xs, vec.ys, vec.zs };
+  return {vec.xs, vec.ys, vec.zs};
 }
 //----------------------------------------------------------------------------------------------
 

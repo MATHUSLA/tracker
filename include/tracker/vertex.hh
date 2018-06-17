@@ -32,8 +32,27 @@ using namespace type;
 class vertex {
 public:
   vertex(const track_vector& tracks);
+
+  vertex(const vertex& rhs) = default;
+  vertex(vertex&& rhs)      = default;
+  vertex& operator=(const vertex& rhs) = default;
+  vertex& operator=(vertex&& rhs)      = default;
+
+  const r4_point point() const { return _point; }
+  const r4_point point_error() const;
+
+  real chi_squared() const;
+  size_t degrees_of_freedom() const;
+  real chi_squared_per_dof() const;
+  const real_vector& chi_squared_vector() const { return _delta_chi2; }
+
+  const track_vector tracks() const { return _tracks; };
+  size_t count() const { return _tracks.size(); }
+
 private:
   track_vector _tracks;
+  real_vector _delta_chi2;
+  r4_point _point;
 };
 //----------------------------------------------------------------------------------------------
 

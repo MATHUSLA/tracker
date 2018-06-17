@@ -62,7 +62,7 @@ thread_local G4VPhysicalVolume* _world;
 thread_local std::unordered_map<structure_value, _geometric_volume> _geometry;
 thread_local std::vector<structure_value> _geometry_insertion_order;
 thread_local real _default_time_resolution = 2 * units::time;
-thread_local std::unordered_map<structure_value, real> _time_resolution_map;
+thread_local time_resolution_map _time_resolution_map;
 thread_local std::unordered_map<r3_point, structure_value, r3_point_hash> _name_cache;
 //thread_local std::unordered_map<std::string, box_volume> _box_cache;
 const G4VoxelLimits _blank_voxels;
@@ -212,7 +212,7 @@ void open(const std::string& path,
   _manager->InitializeGeometry();
   _setup_geometry({_world, G4AffineTransform()});
   _default_time_resolution = default_time_error;
-  // add time_resolution_map
+  _time_resolution_map = map;
   std::cout << _bar << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
@@ -255,7 +255,8 @@ const structure_vector full_structure_except(const std::vector<std::string>& nam
   std::for_each(_geometry.cbegin(), _geometry.cend(),
     [&](const auto& element) {
       const auto& name = element.first;
-      if (std::find(names_begin, names_end, name) == names_end) out.push_back(name);
+      if (std::find(names_begin, names_end, name) == names_end)
+        out.push_back(name);
     });
   return out;
 }

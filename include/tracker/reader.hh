@@ -36,26 +36,27 @@ enum class CollectionMode { Position, Detector };
 
 //__Tracking Options Structure__________________________________________________________________
 struct tracking_options {
-  std::string    geometry_file      = "";
-  std::string    geometry_map_file  = "";
-  std::string    geometry_time_file = "";
-  std::string    data_directory     = "";
-  std::string    data_t_key         = "T";
-  std::string    data_x_key         = "X";
-  std::string    data_y_key         = "Y";
-  std::string    data_z_key         = "Z";
-  std::string    data_dt_key        = "dT";
-  std::string    data_dx_key        = "dX";
-  std::string    data_dy_key        = "dY";
-  std::string    data_dz_key        = "dZ";
-  std::string    data_detector_key  = "Detector";
-  CollectionMode mode               = CollectionMode::Detector;
-  real           default_time_error = 2 * units::time;
-  r4_point       compression_size   = {0, 0, 0, 0};
-  Coordinate     layer_axis         = Coordinate::Z;
-  real           layer_depth        = 50 * units::length;
-  real           line_width         = 1;
-  size_t         seed_size          = 3;
+  std::string    geometry_file       = "";
+  std::string    geometry_map_file   = "";
+  std::string    geometry_time_file  = "";
+  std::string    data_directory      = "";
+  std::string    data_t_key          = "T";
+  std::string    data_x_key          = "X";
+  std::string    data_y_key          = "Y";
+  std::string    data_z_key          = "Z";
+  std::string    data_dt_key         = "dT";
+  std::string    data_dx_key         = "dX";
+  std::string    data_dy_key         = "dY";
+  std::string    data_dz_key         = "dZ";
+  std::string    data_detector_key   = "Detector";
+  CollectionMode collection_mode     = CollectionMode::Detector;
+  real           default_time_error  = 2 * units::time;
+  r4_point       compression_size    = {0, 0, 0, 0};
+  Coordinate     layer_axis          = Coordinate::Z;
+  real           layer_depth         = 50 * units::length;
+  real           line_width          = 1;
+  size_t         seed_size           = 3;
+  real           event_density_limit = 1;
 };
 //----------------------------------------------------------------------------------------------
 
