@@ -29,7 +29,7 @@ namespace MATHUSLA { namespace TRACKER {
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 //__Vertex Constructor__________________________________________________________________________
-vertex::vertex(const track_vector& tracks) {
+vertex::vertex(const track_vector& tracks) : _tracks(tracks) {
 
 }
 //----------------------------------------------------------------------------------------------
