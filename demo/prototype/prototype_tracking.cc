@@ -215,6 +215,6 @@ int quiet_prototype_tracking(int argc,
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc,
          char* argv[]) {
-  return MATHUSLA::quiet_prototype_tracking(argc, argv);
+  return MATHUSLA::prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

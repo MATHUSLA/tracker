@@ -45,10 +45,10 @@ real _track_squared_residual(const real t0,
                              const real vz,
                              const full_hit& point) {
   const auto dt = (point.z - z0) / vz;
-  const auto t_res = (dt + t0 - point.t) / point.width.t;
+  const auto t_res = (dt + t0              - point.t) / point.width.t;
   const auto x_res = (std::fma(dt, vx, x0) - point.x) / point.width.x;
   const auto y_res = (std::fma(dt, vy, y0) - point.y) / point.width.y;
-  return t_res*t_res + 12*x_res*x_res + 12*y_res*y_res;
+  return t_res*t_res + 12.0L*x_res*x_res + 12.0L*y_res*y_res;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -58,17 +58,31 @@ struct _track_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 
 //__Fast Guess of Initial Track Parameters______________________________________________________
 _track_parameters _guess_track(const full_event& points) {
+  using namespace stat::type;
+  using namespace stat::error;
+
   const auto& first = points.front();
   const auto& last = points.back();
-  const auto dt = last.t - first.t;
-  const auto time_error = first.width.t;
-  return {{first.t,                 time_error/std::sqrt(12.0L), 0, 0},
-          {first.x,                 20*units::length,  0, 0},
-          {first.y,                 20*units::length,  0, 0},
-          {first.z,                 20*units::length,  0, 0},
-          {(last.x - first.x) / dt, 1*units::velocity, 0, 0},
-          {(last.y - first.y) / dt, 1*units::velocity, 0, 0},
-          {(last.z - first.z) / dt, 1*units::velocity, 0, 0}};
+
+  const uncertain_real first_t(first.t, first.width.t);
+  const uncertain_real first_x(first.x, uniform(first.width.x));
+  const uncertain_real first_y(first.y, uniform(first.width.y));
+  const uncertain_real first_z(first.z, uniform(first.width.z));
+  const auto dt = uncertain_real(last.t, last.width.t)          - first_t;
+  const auto dx = uncertain_real(last.x, uniform(last.width.x)) - first_x;
+  const auto dy = uncertain_real(last.y, uniform(last.width.y)) - first_y;
+  const auto dz = uncertain_real(last.z, uniform(last.width.z)) - first_z;
+  const auto vx = dx / dt;
+  const auto vy = dy / dt;
+  const auto vz = dz / dt;
+
+  return {{first_t, first_t.error, 0, 0},
+          {first_x, first_x.error, 0, 0},
+          {first_y, first_y.error, 0, 0},
+          {first_z, first_z.error, 0, 0},
+          {vx,      vx.error,      0, 0},
+          {vy,      vy.error,      0, 0},
+          {vz,      vz.error,      0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -160,16 +174,14 @@ void _fit_event_minuit(const full_event& points,
   vz.value = value;
   vz.error = error;
 
-  constexpr std::size_t dimension = 6;
+  constexpr const std::size_t dimension = 6;
   Double_t matrix[dimension][dimension];
   minuit.mnemat(&matrix[0][0], dimension);
   covariance_matrix.clear();
   covariance_matrix.reserve(dimension * dimension);
-  for (std::size_t i = 0; i < dimension; ++i) {
-    for (std::size_t j = 0; j < dimension; ++j) {
+  for (std::size_t i = 0; i < dimension; ++i)
+    for (std::size_t j = 0; j < dimension; ++j)
       covariance_matrix.push_back(matrix[i][j]);
-    }
-  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -251,7 +263,6 @@ real track::beta() const {
 
 //__Error in Relativistic Beta for the Track____________________________________________________
 real track::beta_error() const {
-  // TODO: check correctness
   constexpr auto c_inv = 1.0L / units::speed_of_light;
   constexpr auto c_inv2 = c_inv * c_inv;
   const real_array<9> covariance{
@@ -272,7 +283,6 @@ const r3_point track::unit() const {
 
 //__Error in Unit Vector along Track____________________________________________________________
 const r3_point track::unit_error() const {
-  // TODO: check correctness
   const auto base = 1.0L / std::pow(util::math::square(_vx.value, _vy.value, _vz.value), 1.5L);
   const real_array<9> covariance{
     _covariance[6*3+3], _covariance[6*3+4], _covariance[6*3+5],
@@ -393,7 +403,7 @@ const std::vector<hit> track::event() const {
   std::vector<hit> out;
   out.reserve(_full_event.size());
   util::algorithm::back_insert_transform(_full_event, out,
-    [](const auto& full_point) { return hit{full_point.t, full_point.x, full_point.y, full_point.z}; });
+    [](const auto& point) { return reduce_to_r4(point); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -419,9 +429,8 @@ std::ostream& operator<<(std::ostream& os,
   const auto points = track.event();
   const auto detectors = track.detectors();
   const auto size = points.size();
-  for (size_t i = 0; i < size; ++i) {
+  for (size_t i = 0; i < size; ++i)
     os << "      " << detectors[i] << " " << points[i] << "\n";
-  }
   os << "\n    back:  " << track.back()  << "\n";
 
   os.precision(7);

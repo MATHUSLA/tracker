@@ -9,7 +9,7 @@ seed-size:           3
 event-density-limit: 0.2
 
 # Data
-root-data: demo/prototype/mc_study/stat  # .temp/delta_ray_studies/other
+root-data: .temp/delta_ray_studies/other  # demo/prototype/mc_study/stat
 root-position-keys: Time # , X, Y, Z
 root-position-error-keys: dT #, dX, dY, dZ
 root-detector-key: Detector

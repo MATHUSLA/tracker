@@ -31,6 +31,8 @@ using namespace type;
 //__Vertex Object_______________________________________________________________________________
 class vertex {
 public:
+  enum class parameter { T, X, Y, Z };
+
   vertex(const track_vector& tracks);
 
   vertex(const vertex& rhs) = default;
@@ -38,21 +40,44 @@ public:
   vertex& operator=(const vertex& rhs) = default;
   vertex& operator=(vertex&& rhs)      = default;
 
-  const r4_point point() const { return _point; }
+  const r4_point point() const;
   const r4_point point_error() const;
+
+  const fit_parameter t() const { return _t; }
+  const fit_parameter x() const { return _x; }
+  const fit_parameter y() const { return _y; }
+  const fit_parameter z() const { return _z; }
+  const fit_parameter fit_of(const parameter p) const;
+
+  real t_value() const { return _t.value; }
+  real x_value() const { return _x.value; }
+  real y_value() const { return _y.value; }
+  real z_value() const { return _z.value; }
+  real value(const parameter p) const;
+
+  real t_error() const { return _t.error; }
+  real x_error() const { return _x.error; }
+  real y_error() const { return _y.error; }
+  real z_error() const { return _z.error; }
+  real error(const parameter p) const;
 
   real chi_squared() const;
   size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
   const real_vector& chi_squared_vector() const { return _delta_chi2; }
 
+  real variance(const parameter p) const;
+  real covariance(const parameter p,
+                  const parameter q) const;
+  const real_vector& covariance_matrix() const { return _covariance; }
+
   const track_vector tracks() const { return _tracks; };
   size_t count() const { return _tracks.size(); }
 
 private:
+  fit_parameter _t, _x, _y, _z;
   track_vector _tracks;
-  real_vector _delta_chi2;
-  r4_point _point;
+  real_vector _delta_chi2, _covariance;
 };
 //----------------------------------------------------------------------------------------------
 

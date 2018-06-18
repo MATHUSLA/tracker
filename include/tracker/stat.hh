@@ -20,8 +20,11 @@
 #define TRACKER__STAT_HH
 #pragma once
 
+#include <tuple>
+
 #include <tracker/type.hh>
 
+#include <tracker/util/algorithm.hh>
 #include <tracker/util/math.hh>
 #include <tracker/util/type.hh>
 
@@ -189,7 +192,170 @@ constexpr real propagate_average(const real error,
 }
 //----------------------------------------------------------------------------------------------
 
+namespace detail { /////////////////////////////////////////////////////////////////////////////
+
+//__Take Product of Event Arguments_____________________________________________________________
+constexpr real even_argument_product(const real x,
+                                     const real) {
+  return x;
+}
+template<class ...Args>
+constexpr real even_argument_product(const real x,
+                                     const real,
+                                     const Args ...args) {
+  return x * even_argument_product(args...);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fused Product of Ratio of Consecutive Arguments_____________________________________________
+constexpr real ratio_fused_product(const real x,
+                                   const real y) {
+  return util::math::square(y / x);
+}
+template<class ...Args>
+constexpr real ratio_fused_product(const real x,
+                                   const real y,
+                                   const Args ...args) {
+  return std::fma(y / x, y / x, ratio_fused_product(args...));
+}
+//----------------------------------------------------------------------------------------------
+
+} /* namespace detail */ ///////////////////////////////////////////////////////////////////////
+
+//__Propagate Error in Product of Independent Errors____________________________________________
+template<class ...Args>
+constexpr real propagate_product(const real value,
+                                 const real error,
+                                 const Args... rest) {
+  return util::math::abs(detail::even_argument_product(value, error, rest...))
+    * std::sqrt(detail::ratio_fused_product(value, error, rest...));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Error of Uniform Random Variable____________________________________________________________
+inline real uniform(const real width) {
+  return util::math::abs(width / std::sqrt(12.0L));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Error of Uniform Random Variable____________________________________________________________
+inline real uniform(const real a,
+                    const real b) {
+  return uniform(b - a);
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace error */ ////////////////////////////////////////////////////////////////////////
+
+namespace type { ///////////////////////////////////////////////////////////////////////////////
+
+//__Self-Propagating Uncertainty Type___________________________________________________________
+template<class T>
+struct uncertain {
+  T value, error;
+
+  uncertain(T v, T e) : value(v), error(e) {}
+
+  static uncertain from_sum(T v1, T e1, T v2, T e2);
+  static uncertain from_difference(T v1, T e1, T v2, T e2);
+  static uncertain from_product(T v1, T e1, T v2, T e2);
+  static uncertain from_quotient(T v1, T e1, T v2, T e2);
+
+  uncertain(const uncertain& other) = default;
+  uncertain(uncertain&& other) = default;
+  uncertain& operator=(const uncertain& other) = default;
+  uncertain& operator=(uncertain&& other) = default;
+
+  operator T() const { return value; }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Self-Propagating Real Number Alias__________________________________________________________
+using uncertain_real = uncertain<real>;
+//----------------------------------------------------------------------------------------------
+
+//__Sum of Uncertainty Types____________________________________________________________________
+template<class T>
+constexpr uncertain<T> operator+=(uncertain<T>& left,
+                                 const uncertain<T>& right) {
+  left.error = stat::error::propagate_sum(left.error, right.error);
+  left.value += right.value;
+  return left;
+}
+template<class T>
+constexpr uncertain<T> operator+(uncertain<T> left,
+                                 const uncertain<T>& right) {
+  return left += right;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Difference of Uncertainty Types_____________________________________________________________
+template<class T>
+constexpr uncertain<T> operator-=(uncertain<T>& left,
+                                 const uncertain<T>& right) {
+  left.error = stat::error::propagate_sum(left.error, right.error);
+  left.value -= right.value;
+  return left;
+}
+template<class T>
+constexpr uncertain<T> operator-(uncertain<T> left,
+                                 const uncertain<T>& right) {
+  return left -= right;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Product of Uncertainty Types________________________________________________________________
+template<class T>
+constexpr uncertain<T> operator*=(uncertain<T>& left,
+                                 const uncertain<T>& right) {
+  left.error = stat::error::propagate_product(left.value, left.error,
+                                              right.value, right.error);
+  left.value *= right.value;
+  return left;
+}
+template<class T>
+constexpr uncertain<T> operator*(uncertain<T> left,
+                                 const uncertain<T>& right) {
+  return left *= right;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Quotient of Uncertainty Types_______________________________________________________________
+template<class T>
+constexpr uncertain<T> operator/=(uncertain<T>& left,
+                                 const uncertain<T>& right) {
+  left.error = stat::error::propagate_product(left.value, left.error,
+                                              1.0L / right.value, right.error);
+  left.value /= right.value;
+  return left;
+}
+template<class T>
+constexpr uncertain<T> operator/(uncertain<T> left,
+                                 const uncertain<T>& right) {
+  return left /= right;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Specialty Factory Constructors______________________________________________________________
+template<class T>
+uncertain<T> uncertain<T>::from_sum(T v1, T e1, T v2, T e2) {
+  return uncertain<T>(v1, e1) + uncertain<T>(v2, e2);
+}
+template<class T>
+uncertain<T> uncertain<T>::from_difference(T v1, T e1, T v2, T e2) {
+  return uncertain<T>(v1, e1) - uncertain<T>(v2, e2);
+}
+template<class T>
+uncertain<T> uncertain<T>::from_product(T v1, T e1, T v2, T e2) {
+  return uncertain<T>(v1, e1) * uncertain<T>(v2, e2);
+}
+template<class T>
+uncertain<T> uncertain<T>::from_quotient(T v1, T e1, T v2, T e2) {
+  return uncertain<T>(v1, e1) / uncertain<T>(v2, e2);
+}
+//----------------------------------------------------------------------------------------------
+
+} /* namespace type */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace stat */ /////////////////////////////////////////////////////////////////////////
 
