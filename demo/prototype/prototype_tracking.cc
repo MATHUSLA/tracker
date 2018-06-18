@@ -21,6 +21,7 @@
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
 #include <tracker/track.hh>
+#include <tracker/vertex.hh>
 #include <tracker/units.hh>
 
 #include "geometry.hh"
@@ -46,6 +47,13 @@ const analysis::track_vector find_tracks(const analysis::event& event,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Add Detector Centers to Canvas______________________________________________________________
+void draw_detector_centers(plot::canvas& canvas) {
+  for (const auto& name : prototype_geometry())
+    canvas.add_point(geometry::limits_of(name).center, 0.25, plot::color::MAGENTA);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________
 void draw_track(plot::canvas& canvas,
                 const analysis::track& track) {
@@ -63,10 +71,16 @@ void draw_track(plot::canvas& canvas,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Add Detector Centers to Canvas______________________________________________________________
-void draw_detector_centers(plot::canvas& canvas) {
-  for (const auto& name : prototype_geometry())
-    canvas.add_point(geometry::limits_of(name).center, 0.25, plot::color::MAGENTA);
+//__Add Track and Intersecting Geometry to Canvas_______________________________________________
+void draw_vertex(plot::canvas& canvas,
+                const analysis::vertex& vertex) {
+  const auto point = vertex.point();
+  const auto point_error = vertex.point_error();
+  canvas.add_box(point, point_error.x, point_error.y, point_error.z, 2.5, plot::color::GREEN);
+  canvas.add_point(point, 2, plot::color::GREEN);
+  for (const auto& track : vertex.tracks()) {
+    canvas.add_line(track(point.z), track.back(), 1.5, plot::color::GREEN);
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -104,6 +118,11 @@ int prototype_tracking(int argc,
         histogram.insert(track.chi_squared_per_dof());
         std::cout << track << "\n";
       }
+
+      const analysis::vertex vertex(tracks);
+      draw_vertex(canvas, vertex);
+      std::cout << vertex << "\n";
+
       canvas.draw();
 
       std::cout << "\n" << std::string(99, '=') << "\n\n";
