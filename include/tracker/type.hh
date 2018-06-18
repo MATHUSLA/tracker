@@ -1050,6 +1050,16 @@ inline real weighted_norm(const real_vector& vector,
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
+//__Real Array to Vector Transformation_________________________________________________________
+template<std::size_t N>
+real_vector to_vector(const real_array<N>& arr) {
+  real_vector out;
+  out.reserve(N);
+  std::copy(arr.cbegin(), arr.cend(), std::back_inserter(out));
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__R2-Point Array to Vector Transformation_____________________________________________________
 template<std::size_t N>
 r2_point_vector to_vector(const r2_point_array<N>& arr) {
@@ -1124,6 +1134,15 @@ real_vector4 to_vector(const real_array4<N>& arr) {
     out.ys.push_back(arr.ys[i]);
     out.zs.push_back(arr.zs[i]);
   }
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real Vector to Array Transformation_________________________________________________________
+template<std::size_t N>
+constexpr real_array<N> to_array(const real_vector& vec) {
+  real_array<N> out;
+  std::copy(vec.cbegin(), vec.cend(), out.begin());
   return out;
 }
 //----------------------------------------------------------------------------------------------

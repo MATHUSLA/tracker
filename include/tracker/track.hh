@@ -54,7 +54,10 @@ public:
   track& operator=(const track& rhs) = default;
   track& operator=(track&& rhs)      = default;
 
-  const hit operator()(const real z) const;
+  const r4_point operator()(const real p) const;
+
+  const r4_point point(const real t) const;
+  const r4_point point_error(const real t) const;
 
   const fit_parameter t0() const { return _t0; }
   const fit_parameter x0() const { return _x0; }
@@ -111,6 +114,7 @@ private:
   real_vector _delta_chi2, _covariance;
   std::vector<std::string> _detectors;
   fit_settings _settings;
+  Coordinate _direction;
 };
 //----------------------------------------------------------------------------------------------
 

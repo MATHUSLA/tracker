@@ -20,8 +20,6 @@
 #define TRACKER__STAT_HH
 #pragma once
 
-#include <tuple>
-
 #include <tracker/type.hh>
 
 #include <tracker/util/algorithm.hh>

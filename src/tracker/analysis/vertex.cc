@@ -22,7 +22,9 @@
 
 #include <tracker/stat.hh>
 
+#include <tracker/util/error.hh>
 #include <tracker/util/io.hh>
+#include <tracker/util/math.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -30,20 +32,73 @@ namespace analysis { ///////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
+const stat::type::uncertain_real _vertex_track_r3_distance(const real t,
+                                                           const real x,
+                                                           const real y,
+                                                           const real z,
+                                                           const track& track) {
+  const auto track_point = track.point(t);
+  const auto dx = track_point.x - x;
+  const auto dy = track_point.y - y;
+  const auto dz = track_point.z - z;
+  const auto total_dt = track.t0_value() - t;
+  const auto distance = util::math::hypot(dx, dy, dz);
+  const auto inverse_distance = 1.0L / distance;
+  const auto dx_by_D = inverse_distance * dx;
+  const auto dy_by_D = inverse_distance * dy;
+  const auto dz_by_D = inverse_distance * dz;
+  const real_array<6UL> gradient{
+    -util::math::fused_product(track.vx_value(), dx_by_D, track.vy_value(), dy_by_D, track.vz_value(), dz_by_D),
+    dx_by_D,
+    dy_by_D,
+    total_dt * dx_by_D,
+    total_dt * dy_by_D,
+    total_dt * dz_by_D};
+  const auto covariance = to_array<36UL>(track.covariance_matrix());
+  return stat::type::uncertain_real(distance, stat::error::propagate(gradient, covariance));
+}
+
+//__Calculate Squared Residual of Vertex wrt Track______________________________________________
+real _vertex_squared_residual(const stat::type::uncertain_real& distance) {
+  return util::math::square(distance.value / distance.error);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Calculate Squared Residual of Vertex wrt Track______________________________________________
+real _vertex_squared_residual(const real t,
+                              const real x,
+                              const real y,
+                              const real z,
+                              const track& track) {
+  return _vertex_squared_residual(_vertex_track_r3_distance(t, x, y, z, track));
+}
+//----------------------------------------------------------------------------------------------
+
 //__Vertex Parameter Type_______________________________________________________________________
 struct _vertex_parameters { fit_parameter t, x, y, z; };
 //----------------------------------------------------------------------------------------------
 
 //__Fast Guess of Initial Track Parameters______________________________________________________
 _vertex_parameters _guess_vertex(const track_vector& tracks) {
-  return {};
+  // TODO: fix error propagation
+  const auto average_point = std::accumulate(tracks.cbegin(), tracks.cend(), r4_point{},
+    [](const auto& sum, const auto& track) { return sum + track.front(); })
+    / static_cast<real>(tracks.size());
+  return {{average_point.t, 1, 0, 0},
+          {average_point.x, 1, 0, 0},
+          {average_point.y, 1, 0, 0},
+          {average_point.z, 1, 0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
 thread_local track_vector&& _nll_fit_tracks = {};
 void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
-  out = 0;
+  out = std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
+    [&](const auto sum, const auto& track) {
+      const auto distance = _vertex_track_r3_distance(x[0], x[1], x[2], x[3], track);
+      return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
+  });
 }
 //----------------------------------------------------------------------------------------------
 
@@ -52,10 +107,10 @@ void _fit_tracks_minuit(const track_vector& tracks,
                         _vertex_parameters& parameters,
                         real_vector& covariance_matrix) {
   TMinuit minuit;
-  //minuit.SetGraphicsMode(settings.graphics_on);
-  //minuit.SetPrintLevel(settings.print_level);
-  //minuit.SetErrorDef(settings.error_def);
-  //minuit.SetMaxIterations(settings.max_iterations);
+  minuit.SetGraphicsMode(false);
+  minuit.SetPrintLevel(-1);
+  minuit.SetErrorDef(0.5);
+  minuit.SetMaxIterations(600);
 
   minuit.Command("SET STR 2");
 
@@ -71,25 +126,21 @@ void _fit_tracks_minuit(const track_vector& tracks,
   _nll_fit_tracks = tracks;
   minuit.SetFCN(_gaussian_nll);
 
-  /*
   Int_t error_flag;
-  auto command_parameters = settings.command_parameters;
   minuit.mnexcm(
-    settings.command_name.c_str(),
-    command_parameters.data(),
-    command_parameters.size(),
+    "MIGRAD",
+    nullptr,
+    0,
     error_flag);
 
   switch (error_flag) {
     case 1:
     case 2:
-    case 3: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"", settings.command_name,
-                              "\". Exited with Error Code ", error_flag, ".\n");
+    case 3: util::error::exit("[FATAL ERROR] MINUIT Exited with Error Code ", error_flag, ".\n");
     //case 4: util::error::exit("[FATAL ERROR] MINUIT Exited Abnormally ",
     //                          "with Error Code ", error_flag, ".\n");
     default: break;
   }
-  */
 
   Double_t value, error;
   minuit.GetParameter(0, value, error);
@@ -128,6 +179,12 @@ vertex::vertex(const track_vector& tracks) : _tracks(tracks) {
   _y = std::move(fit_vertex.y);
   _z = std::move(fit_vertex.z);
 
+  const auto& tracks_begin = _tracks.cbegin();
+  const auto& tracks_end = _tracks.cend();
+
+  std::transform(tracks_begin, tracks_end, std::back_inserter(_delta_chi2),
+    [&](const auto& track) {
+      return _vertex_squared_residual(_t.value, _x.value, _y.value, _z.value, track); });
 }
 //----------------------------------------------------------------------------------------------
 
