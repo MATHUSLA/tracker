@@ -167,9 +167,29 @@ track::track(const std::vector<full_hit>& points,
 
 //__Get Position of Track at Fixed Z____________________________________________________________
 const r4_point track::operator()(const real p) const {
-  // TODO: specialize for each fit parameter
-  const auto dt = (p - _z0.value) / _vz.value;
-  return {dt + _t0.value, std::fma(dt, _vx.value, _x0.value), std::fma(dt, _vy.value, _y0.value), p};
+  switch (_direction) {
+    case Coordinate::T: {
+      return point(p);
+    } case Coordinate::X: {
+      const auto dt = (p - _x0.value) / _vx.value;
+      return {dt + _t0.value,
+              p,
+              std::fma(dt, _vy.value, _y0.value),
+              std::fma(dt, _vz.value, _z0.value)};
+    } case Coordinate::Y: {
+      const auto dt = (p - _y0.value) / _vy.value;
+      return {dt + _t0.value,
+              std::fma(dt, _vx.value, _x0.value),
+              p,
+              std::fma(dt, _vz.value, _z0.value)};
+    } case Coordinate::Z: {
+      const auto dt = (p - _z0.value) / _vz.value;
+      return {dt + _t0.value,
+              std::fma(dt, _vx.value, _x0.value),
+              std::fma(dt, _vy.value, _y0.value),
+              p};
+    }
+  }
 }
 //----------------------------------------------------------------------------------------------
 

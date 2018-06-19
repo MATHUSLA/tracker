@@ -37,7 +37,7 @@ static const bool                graphics       = false;
 static const integer             print_level    = -1;
 static const double              error_def      = 0.5;
 static const integer             max_iterations = 400;
-static const std::string&        strategy       = "STET STR 2";
+static const std::string&        strategy       = "SET STR 2";
 //----------------------------------------------------------------------------------------------
 
 } /* namespace settings */ /////////////////////////////////////////////////////////////////////

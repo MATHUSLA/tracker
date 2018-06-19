@@ -43,21 +43,24 @@ const stat::type::uncertain_real _vertex_track_r3_distance(const real t,
   const auto dx = track_point.x - x;
   const auto dy = track_point.y - y;
   const auto dz = track_point.z - z;
-  const auto total_dt = track.t0_value() - t;
+  const auto total_dt = t - track.t0_value();
   const auto distance = util::math::hypot(dx, dy, dz);
   const auto inverse_distance = 1.0L / distance;
   const auto dx_by_D = inverse_distance * dx;
   const auto dy_by_D = inverse_distance * dy;
   const auto dz_by_D = inverse_distance * dz;
   const real_array<6UL> gradient{
-    -util::math::fused_product(track.vx_value(), dx_by_D, track.vy_value(), dy_by_D, track.vz_value(), dz_by_D),
+    util::math::fused_product(track.vx_value(), dx_by_D,
+                              track.vy_value(), dy_by_D,
+                              track.vz_value(), dz_by_D),
     dx_by_D,
     dy_by_D,
     total_dt * dx_by_D,
     total_dt * dy_by_D,
     total_dt * dz_by_D};
-  const auto covariance = to_array<36UL>(track.covariance_matrix());
-  return stat::type::uncertain_real(distance, stat::error::propagate(gradient, covariance));
+  return stat::type::uncertain_real(
+    distance,
+    stat::error::propagate(gradient, to_array<36UL>(track.covariance_matrix())));
 }
 
 //__Calculate Squared Residual of Vertex wrt Track______________________________________________
