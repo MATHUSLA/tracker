@@ -32,22 +32,12 @@ using namespace type;
 class track {
 public:
   enum class parameter { T0, X0, Y0, Z0, VX, VY, VZ };
-  struct fit_settings {
-    fit_settings() {}
-    Coordinate          parameter_direction = Coordinate::Z;
-    std::string         command_name        = "MIGRAD";
-    std::vector<double> command_parameters  = {};
-    bool                graphics_on         = false;
-    integer             print_level         = -1;
-    double              error_def           = 0.5;
-    integer             max_iterations      = 300;
-  };
 
   track(const event& points,
-        const fit_settings& settings={});
+        const Coordinate direction=Coordinate::Z);
 
   track(const full_event& points,
-        const fit_settings& settings={});
+        const Coordinate direction=Coordinate::Z);
 
   track(const track& rhs) = default;
   track(track&& rhs)      = default;
@@ -105,15 +95,15 @@ public:
   const hit back() const;
   const std::vector<hit> event() const;
   const std::vector<full_hit>& full_event() const { return _full_event; }
-  const fit_settings& settings() const { return _settings; }
   const std::vector<std::string>& detectors() const { return _detectors; }
+
+  Coordinate direction() const { return _direction; }
 
 private:
   fit_parameter _t0, _x0, _y0, _z0, _vx, _vy, _vz;
   std::vector<full_hit> _full_event;
   real_vector _delta_chi2, _covariance;
   std::vector<std::string> _detectors;
-  fit_settings _settings;
   Coordinate _direction;
 };
 //----------------------------------------------------------------------------------------------
@@ -129,9 +119,9 @@ using track_vector = std::vector<track>;
 
 //__Fit all Seeds to Tracks_____________________________________________________________________
 const track_vector fit_seeds(const event_vector& seeds,
-                             const track::fit_settings& settings={});
+                             const Coordinate direction=Coordinate::Z);
 const track_vector fit_seeds(const full_event_vector& seeds,
-                             const track::fit_settings& settings={});
+                             const Coordinate direction=Coordinate::Z);
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////

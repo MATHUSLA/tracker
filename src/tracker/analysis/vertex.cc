@@ -26,6 +26,8 @@
 #include <tracker/util/io.hh>
 #include <tracker/util/math.hh>
 
+#include "analysis_helper.hh"
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
@@ -106,64 +108,17 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 void _fit_tracks_minuit(const track_vector& tracks,
                         _vertex_parameters& parameters,
                         real_vector& covariance_matrix) {
-  TMinuit minuit;
-  minuit.SetGraphicsMode(false);
-  minuit.SetPrintLevel(-1);
-  minuit.SetErrorDef(0.5);
-  minuit.SetMaxIterations(600);
-
-  minuit.Command("SET STR 2");
-
-  auto& t = parameters.t;
-  minuit.DefineParameter(0, "T", t.value, t.error, t.min, t.max);
-  auto& x = parameters.x;
-  minuit.DefineParameter(1, "X", x.value, x.error, x.min, x.max);
-  auto& y = parameters.y;
-  minuit.DefineParameter(2, "Y", y.value, y.error, y.min, y.max);
-  auto& z = parameters.z;
-  minuit.DefineParameter(3, "Z", z.value, z.error, z.min, z.max);
-
   _nll_fit_tracks = tracks;
-  minuit.SetFCN(_gaussian_nll);
+  auto& t = parameters.t;
+  auto& x = parameters.x;
+  auto& y = parameters.y;
+  auto& z = parameters.z;
 
-  Int_t error_flag;
-  minuit.mnexcm(
-    "MIGRAD",
-    nullptr,
-    0,
-    error_flag);
-
-  switch (error_flag) {
-    case 1:
-    case 2:
-    case 3: util::error::exit("[FATAL ERROR] MINUIT Exited with Error Code ", error_flag, ".\n");
-    //case 4: util::error::exit("[FATAL ERROR] MINUIT Exited Abnormally ",
-    //                          "with Error Code ", error_flag, ".\n");
-    default: break;
-  }
-
-  Double_t value, error;
-  minuit.GetParameter(0, value, error);
-  t.value = value;
-  t.error = error;
-  minuit.GetParameter(1, value, error);
-  x.value = value;
-  x.error = error;
-  minuit.GetParameter(2, value, error);
-  y.value = value;
-  y.error = error;
-  minuit.GetParameter(3, value, error);
-  z.value = value;
-  z.error = error;
-
-  constexpr const std::size_t dimension = 4;
-  Double_t matrix[dimension][dimension];
-  minuit.mnemat(&matrix[0][0], dimension);
-  covariance_matrix.clear();
-  covariance_matrix.reserve(dimension * dimension);
-  for (std::size_t i = 0; i < dimension; ++i)
-    for (std::size_t j = 0; j < dimension; ++j)
-      covariance_matrix.push_back(matrix[i][j]);
+  TMinuit minuit;
+  helper::minuit::initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
+  helper::minuit::execute(minuit, _gaussian_nll);
+  helper::minuit::get_parameters(minuit, t, x, y, z);
+  helper::minuit::get_covariance<4UL>(minuit, covariance_matrix);
 }
 //----------------------------------------------------------------------------------------------
 

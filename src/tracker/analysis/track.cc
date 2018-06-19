@@ -29,6 +29,8 @@
 #include <tracker/util/io.hh>
 #include <tracker/util/math.hh>
 
+#include "analysis_helper.hh"
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
@@ -97,107 +99,48 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
 void _fit_event_minuit(const full_event& points,
-                       const track::fit_settings& settings,
+                       const Coordinate direction,
                        _track_parameters& parameters,
                        real_vector& covariance_matrix) {
-  TMinuit minuit;
-  minuit.SetGraphicsMode(settings.graphics_on);
-  minuit.SetPrintLevel(settings.print_level);
-  minuit.SetErrorDef(settings.error_def);
-  minuit.SetMaxIterations(settings.max_iterations);
-
-  minuit.Command("SET STR 2");
-
   auto& t0 = parameters.t0;
-  minuit.DefineParameter(0, "T0", t0.value, t0.error, t0.min, t0.max);
   auto& x0 = parameters.x0;
-  minuit.DefineParameter(1, "X0", x0.value, x0.error, x0.min, x0.max);
   auto& y0 = parameters.y0;
-  minuit.DefineParameter(2, "Y0", y0.value, y0.error, y0.min, y0.max);
   auto& z0 = parameters.z0;
-  minuit.DefineParameter(3, "Z0", z0.value, z0.error, z0.min, z0.max);
   auto& vx = parameters.vx;
-  minuit.DefineParameter(4, "VX", vx.value, vx.error, vx.min, vx.max);
   auto& vy = parameters.vy;
-  minuit.DefineParameter(5, "VY", vy.value, vy.error, vy.min, vy.max);
   auto& vz = parameters.vz;
-  minuit.DefineParameter(6, "VZ", vz.value, vz.error, vz.min, vz.max);
+  _nll_fit_event = points;
 
-  switch (settings.parameter_direction) {
+  TMinuit minuit;
+  helper::minuit::initialize(minuit,
+    "T0", t0, "X0", x0, "Y0", y0, "Z0", z0, "VX", vx, "VY", vy, "VZ", vz);
+
+  switch (direction) {
     case Coordinate::T: minuit.FixParameter(0); break;
     case Coordinate::X: minuit.FixParameter(1); break;
     case Coordinate::Y: minuit.FixParameter(2); break;
     case Coordinate::Z: minuit.FixParameter(3); break;
   }
 
-  _nll_fit_event = points;
-  minuit.SetFCN(_gaussian_nll);
-
-  Int_t error_flag;
-  auto command_parameters = settings.command_parameters;
-  minuit.mnexcm(
-    settings.command_name.c_str(),
-    command_parameters.data(),
-    command_parameters.size(),
-    error_flag);
-
-  switch (error_flag) {
-    case 1:
-    case 2:
-    case 3: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"", settings.command_name,
-                              "\". Exited with Error Code ", error_flag, ".\n");
-    //case 4: util::error::exit("[FATAL ERROR] MINUIT Exited Abnormally ",
-    //                          "with Error Code ", error_flag, ".\n");
-    default: break;
-  }
-
-  Double_t value, error;
-  minuit.GetParameter(0, value, error);
-  t0.value = value;
-  t0.error = error;
-  minuit.GetParameter(1, value, error);
-  x0.value = value;
-  x0.error = error;
-  minuit.GetParameter(2, value, error);
-  y0.value = value;
-  y0.error = error;
-  minuit.GetParameter(3, value, error);
-  z0.value = value;
-  z0.error = error;
-  minuit.GetParameter(4, value, error);
-  vx.value = value;
-  vx.error = error;
-  minuit.GetParameter(5, value, error);
-  vy.value = value;
-  vy.error = error;
-  minuit.GetParameter(6, value, error);
-  vz.value = value;
-  vz.error = error;
-
-  constexpr const std::size_t dimension = 6;
-  Double_t matrix[dimension][dimension];
-  minuit.mnemat(&matrix[0][0], dimension);
-  covariance_matrix.clear();
-  covariance_matrix.reserve(dimension * dimension);
-  for (std::size_t i = 0; i < dimension; ++i)
-    for (std::size_t j = 0; j < dimension; ++j)
-      covariance_matrix.push_back(matrix[i][j]);
+  helper::minuit::execute(minuit, _gaussian_nll);
+  helper::minuit::get_parameters(minuit, t0, x0, y0, z0, vx, vy, vz);
+  helper::minuit::get_covariance<6UL>(minuit, covariance_matrix);
 }
 //----------------------------------------------------------------------------------------------
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 track::track(const std::vector<hit>& points,
-             const track::fit_settings& settings)
-    : track(add_width(points), settings) {}
+             const Coordinate direction)
+    : track(add_width(points), direction) {}
 
 //__Track Constructor___________________________________________________________________________
 track::track(const std::vector<full_hit>& points,
-             const track::fit_settings& settings)
-    : _full_event(points), _settings(settings) {
+             const Coordinate direction)
+    : _full_event(points), _direction(direction) {
 
   auto fit_track = _guess_track(_full_event);
-  _fit_event_minuit(_full_event, _settings, fit_track, _covariance);
+  _fit_event_minuit(_full_event, _direction, fit_track, _covariance);
 
   _t0 = std::move(fit_track.t0);
   _x0 = std::move(fit_track.x0);
@@ -283,12 +226,13 @@ real track::beta() const {
 real track::beta_error() const {
   constexpr auto c_inv = 1.0L / units::speed_of_light;
   constexpr auto c_inv2 = c_inv * c_inv;
+  constexpr auto twice_c_inv = 2.0L * c_inv;
   const real_array<9> covariance{
     _covariance[6*3+3] * c_inv2, _covariance[6*3+4] * c_inv2, _covariance[6*3+5] * c_inv2,
     _covariance[6*4+3] * c_inv2, _covariance[6*4+4] * c_inv2, _covariance[6*4+5] * c_inv2,
     _covariance[6*5+3] * c_inv2, _covariance[6*5+4] * c_inv2, _covariance[6*5+5] * c_inv2};
   const real_array<3> gradient{
-    2 * _vx.value * c_inv, 2 * _vy.value * c_inv, 2 * _vz.value * c_inv};
+    twice_c_inv * _vx.value, twice_c_inv * _vy.value, twice_c_inv * _vz.value};
   return std::sqrt(stat::error::propagate(gradient, covariance));
 }
 //----------------------------------------------------------------------------------------------
@@ -369,7 +313,7 @@ constexpr std::size_t _shift_covariance_index(const track::parameter p) {
 //__Get Covariance between Track Parameters_____________________________________________________
 real track::covariance(const track::parameter p,
                        const track::parameter q) const {
-  switch (_settings.parameter_direction) {
+  switch (_direction) {
     case Coordinate::T:
       if (p == track::parameter::T0 || q == track::parameter::T0) {
         return 0;
@@ -487,20 +431,20 @@ std::ostream& operator<<(std::ostream& os,
 template<class EventVector,
     typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 const track_vector fit_seeds(const EventVector& seeds,
-                             const track::fit_settings& settings) {
+                             const Coordinate direction) {
   track_vector out;
   out.reserve(seeds.size());
   for (const auto& seed : seeds)
-    out.emplace_back(seed, settings);
+    out.emplace_back(seed, direction);
   return out;
 }
 const track_vector fit_seeds(const event_vector& seeds,
-                             const track::fit_settings& settings) {
-  return fit_seeds<>(seeds, settings);
+                             const Coordinate direction) {
+  return fit_seeds<>(seeds, direction);
 }
 const track_vector fit_seeds(const full_event_vector& seeds,
-                             const track::fit_settings& settings) {
-  return fit_seeds<>(seeds, settings);
+                             const Coordinate direction) {
+  return fit_seeds<>(seeds, direction);
 }
 //----------------------------------------------------------------------------------------------
 
