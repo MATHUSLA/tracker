@@ -181,12 +181,27 @@ constexpr real propagate_sum(const real error,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Propagate Error in Sum of Independent Errors________________________________________________
+template<class Range>
+constexpr real propagate_sum(const Range& range) {
+  return util::math::range_hypot(range);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Propagate Error in Average of Independent Errors____________________________________________
 template<class ...Args>
 constexpr real propagate_average(const real error,
                                  const Args... rest) {
   return propagate_sum(error, rest...)
     / std::sqrt(1.0L + static_cast<real>(util::type::size(rest...)));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Propagate Error in Average of Independent Errors____________________________________________
+template<class Range>
+constexpr real propagate_average(const Range& range) {
+  return propagate_sum(range)
+    / std::sqrt(static_cast<real>(std::cend(range) - std::cbegin(range)));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -208,7 +223,7 @@ constexpr real even_argument_product(const real x,
 //__Fused Product of Ratio of Consecutive Arguments_____________________________________________
 constexpr real ratio_fused_product(const real x,
                                    const real y) {
-  return util::math::square(y / x);
+  return util::math::sum_squares(y / x);
 }
 template<class ...Args>
 constexpr real ratio_fused_product(const real x,
@@ -227,6 +242,21 @@ constexpr real propagate_product(const real value,
                                  const Args... rest) {
   return util::math::abs(detail::even_argument_product(value, error, rest...))
     * std::sqrt(detail::ratio_fused_product(value, error, rest...));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Propagate Error in Product of Independent Errors____________________________________________
+template<class Range>
+constexpr real propagate_product(const Range& range) {
+  real product = 1.0L, ratio_sum_squares = 0.0L;
+  const auto begin = std::cbegin(range);
+  const auto end = std::cend(range);
+  for (auto it = begin; it != end; it += 2) {
+    product *= *it;
+    const auto ratio = *(it+1) / *it;
+    ratio_sum_squares = std::fma(ratio, ratio, std::move(ratio_sum_squares));
+  }
+  return util::math::abs(product) * std::sqrt(ratio_sum_squares);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -258,6 +288,8 @@ struct uncertain {
   static uncertain from_difference(T v1, T e1, T v2, T e2);
   static uncertain from_product(T v1, T e1, T v2, T e2);
   static uncertain from_quotient(T v1, T e1, T v2, T e2);
+  static uncertain from_uniform(T v, T width);
+  static uncertain from_uniform(T v, T a, T b);
 
   uncertain(const uncertain& other) = default;
   uncertain(uncertain&& other) = default;
@@ -336,20 +368,43 @@ constexpr uncertain<T> operator/(uncertain<T> left,
 
 //__Specialty Factory Constructors______________________________________________________________
 template<class T>
-uncertain<T> uncertain<T>::from_sum(T v1, T e1, T v2, T e2) {
-  return uncertain<T>(v1, e1) + uncertain<T>(v2, e2);
+uncertain<T> uncertain<T>::from_sum(T value1,
+                                    T error1,
+                                    T value2,
+                                    T error2) {
+  return uncertain<T>(value1, error1) + uncertain<T>(value2, error2);
 }
 template<class T>
-uncertain<T> uncertain<T>::from_difference(T v1, T e1, T v2, T e2) {
-  return uncertain<T>(v1, e1) - uncertain<T>(v2, e2);
+uncertain<T> uncertain<T>::from_difference(T value1,
+                                           T error1,
+                                           T value2,
+                                           T error2) {
+  return uncertain<T>(value1, error1) - uncertain<T>(value2, error2);
 }
 template<class T>
-uncertain<T> uncertain<T>::from_product(T v1, T e1, T v2, T e2) {
-  return uncertain<T>(v1, e1) * uncertain<T>(v2, e2);
+uncertain<T> uncertain<T>::from_product(T value1,
+                                        T error1,
+                                        T value2,
+                                        T error2) {
+  return uncertain<T>(value1, error1) * uncertain<T>(value2, error2);
 }
 template<class T>
-uncertain<T> uncertain<T>::from_quotient(T v1, T e1, T v2, T e2) {
-  return uncertain<T>(v1, e1) / uncertain<T>(v2, e2);
+uncertain<T> uncertain<T>::from_quotient(T value1,
+                                         T error1,
+                                         T value2,
+                                         T error2) {
+  return uncertain<T>(value1, error1) / uncertain<T>(value2, error2);
+}
+template<class T>
+uncertain<T> uncertain<T>::from_uniform(T value,
+                                        T width) {
+  return uncertain<T>(value, stat::error::uniform(width));
+}
+template<class T>
+uncertain<T> uncertain<T>::from_uniform(T value,
+                                        T a,
+                                        T b) {
+  return uncertain<T>(value, stat::error::uniform(a, b));
 }
 //----------------------------------------------------------------------------------------------
 

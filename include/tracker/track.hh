@@ -21,6 +21,7 @@
 #pragma once
 
 #include <tracker/analysis.hh>
+#include <tracker/geometry.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -32,6 +33,10 @@ using namespace type;
 class track {
 public:
   enum class parameter { T0, X0, Y0, Z0, VX, VY, VZ };
+  struct fit_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
+
+  static constexpr std::size_t free_parameter_count = 6UL;
+  using covariance_matrix_type = real_array<free_parameter_count * free_parameter_count>;
 
   track(const event& points,
         const Coordinate direction=Coordinate::Z);
@@ -49,31 +54,48 @@ public:
   const r4_point point(const real t) const;
   const r4_point point_error(const real t) const;
 
-  const fit_parameter t0() const { return _t0; }
-  const fit_parameter x0() const { return _x0; }
-  const fit_parameter y0() const { return _y0; }
-  const fit_parameter z0() const { return _z0; }
-  const fit_parameter vx() const { return _vx; }
-  const fit_parameter vy() const { return _vy; }
-  const fit_parameter vz() const { return _vz; }
+  const r4_point at_t(const real t) const;
+  const r4_point at_x(const real x) const;
+  const r4_point at_y(const real y) const;
+  const r4_point at_z(const real z) const;
+  const r4_point at(const Coordinate c,
+                    const real r) const;
+
+  const r4_point error_at_t(const real t) const;
+  const r4_point error_at_x(const real x) const;
+  const r4_point error_at_y(const real y) const;
+  const r4_point error_at_z(const real z) const;
+  const r4_point error_at(const Coordinate c,
+                          const real r) const;
+
+  const fit_parameters guess_fit() const { return _guess; }
+  const fit_parameters final_fit() const { return _final; }
+
+  const fit_parameter t0() const { return _final.t0; }
+  const fit_parameter x0() const { return _final.x0; }
+  const fit_parameter y0() const { return _final.y0; }
+  const fit_parameter z0() const { return _final.z0; }
+  const fit_parameter vx() const { return _final.vx; }
+  const fit_parameter vy() const { return _final.vy; }
+  const fit_parameter vz() const { return _final.vz; }
   const fit_parameter fit_of(const parameter p) const;
 
-  real t0_value() const { return _t0.value; }
-  real x0_value() const { return _x0.value; }
-  real y0_value() const { return _y0.value; }
-  real z0_value() const { return _z0.value; }
-  real vx_value() const { return _vx.value; }
-  real vy_value() const { return _vy.value; }
-  real vz_value() const { return _vz.value; }
+  real t0_value() const { return _final.t0.value; }
+  real x0_value() const { return _final.x0.value; }
+  real y0_value() const { return _final.y0.value; }
+  real z0_value() const { return _final.z0.value; }
+  real vx_value() const { return _final.vx.value; }
+  real vy_value() const { return _final.vy.value; }
+  real vz_value() const { return _final.vz.value; }
   real value(const parameter p) const;
 
-  real t0_error() const { return _t0.error; }
-  real x0_error() const { return _x0.error; }
-  real y0_error() const { return _y0.error; }
-  real z0_error() const { return _z0.error; }
-  real vx_error() const { return _vx.error; }
-  real vy_error() const { return _vy.error; }
-  real vz_error() const { return _vz.error; }
+  real t0_error() const { return _final.t0.error; }
+  real x0_error() const { return _final.x0.error; }
+  real y0_error() const { return _final.y0.error; }
+  real z0_error() const { return _final.z0.error; }
+  real vx_error() const { return _final.vx.error; }
+  real vy_error() const { return _final.vy.error; }
+  real vz_error() const { return _final.vz.error; }
   real error(const parameter p) const;
 
   real beta() const;
@@ -89,21 +111,26 @@ public:
   real variance(const parameter p) const;
   real covariance(const parameter p,
                   const parameter q) const;
-  const real_vector& covariance_matrix() const { return _covariance; }
+  const covariance_matrix_type& covariance_matrix() const { return _covariance; }
 
   const hit front() const;
   const hit back() const;
   const std::vector<hit> event() const;
+
+  const full_hit full_front() const { return _full_event.front(); }
+  const full_hit full_back() const { return _full_event.back(); }
   const std::vector<full_hit>& full_event() const { return _full_event; }
-  const std::vector<std::string>& detectors() const { return _detectors; }
+
+  const geometry::structure_vector& detectors() const { return _detectors; }
 
   Coordinate direction() const { return _direction; }
 
 private:
-  fit_parameter _t0, _x0, _y0, _z0, _vx, _vy, _vz;
+  fit_parameters _guess, _final;
   std::vector<full_hit> _full_event;
-  real_vector _delta_chi2, _covariance;
-  std::vector<std::string> _detectors;
+  real_vector _delta_chi2;
+  covariance_matrix_type _covariance;
+  geometry::structure_vector _detectors;
   Coordinate _direction;
 };
 //----------------------------------------------------------------------------------------------

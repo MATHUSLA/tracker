@@ -34,12 +34,13 @@ namespace analysis { ///////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
+//__Calculate Distance from Vertex to Track_____________________________________________________
 const stat::type::uncertain_real _vertex_track_r3_distance(const real t,
                                                            const real x,
                                                            const real y,
                                                            const real z,
                                                            const track& track) {
-  const auto track_point = track.point(t);
+  const auto track_point = track.at_t(t);
   const auto dx = track_point.x - x;
   const auto dy = track_point.y - y;
   const auto dz = track_point.z - z;
@@ -60,12 +61,13 @@ const stat::type::uncertain_real _vertex_track_r3_distance(const real t,
     total_dt * dz_by_D};
   return stat::type::uncertain_real(
     distance,
-    stat::error::propagate(gradient, to_array<36UL>(track.covariance_matrix())));
+    stat::error::propagate(gradient, track.covariance_matrix()));
 }
+//----------------------------------------------------------------------------------------------
 
 //__Calculate Squared Residual of Vertex wrt Track______________________________________________
 real _vertex_squared_residual(const stat::type::uncertain_real& distance) {
-  return util::math::square(distance.value / distance.error);
+  return util::math::sum_squares(distance.value / distance.error);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -79,20 +81,43 @@ real _vertex_squared_residual(const real t,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Vertex Parameter Type_______________________________________________________________________
-struct _vertex_parameters { fit_parameter t, x, y, z; };
-//----------------------------------------------------------------------------------------------
-
 //__Fast Guess of Initial Track Parameters______________________________________________________
-_vertex_parameters _guess_vertex(const track_vector& tracks) {
-  // TODO: fix error propagation
-  const auto average_point = std::accumulate(tracks.cbegin(), tracks.cend(), r4_point{},
-    [](const auto& sum, const auto& track) { return sum + track.front(); })
-    / static_cast<real>(tracks.size());
-  return {{average_point.t, 1, 0, 0},
-          {average_point.x, 1, 0, 0},
-          {average_point.y, 1, 0, 0},
-          {average_point.z, 1, 0, 0}};
+vertex::fit_parameters _guess_vertex(const track_vector& tracks) {
+  const auto size = tracks.size();
+
+  std::vector<full_hit> track_fronts;
+  track_fronts.reserve(size);
+  util::algorithm::back_insert_transform(tracks, track_fronts, [](const auto& track) {
+    const auto full_front = track.full_front();
+    const auto front_z = full_front.t;
+    const auto point = track.at_z(front_z);
+    const auto error = track.error_at_z(front_z);
+    return full_hit{point.t, point.x, point.y, point.z,
+             r4_point{error.t, error.x, error.y, stat::error::uniform(full_front.width.z)}};
+  });
+
+  real_vector t_errors, x_errors, y_errors, z_errors;
+  t_errors.reserve(size);
+  util::algorithm::back_insert_transform(track_fronts, t_errors,
+    [](const auto& front) { return front.width.t; });
+  x_errors.reserve(size);
+  util::algorithm::back_insert_transform(track_fronts, x_errors,
+    [](const auto& front) { return stat::error::uniform(front.width.x); });
+  y_errors.reserve(size);
+  util::algorithm::back_insert_transform(track_fronts, y_errors,
+    [](const auto& front) { return stat::error::uniform(front.width.y); });
+  z_errors.reserve(size);
+  util::algorithm::back_insert_transform(track_fronts, z_errors,
+    [](const auto& front) { return stat::error::uniform(front.width.z); });
+
+  const auto average_point = std::accumulate(track_fronts.cbegin(), track_fronts.cend(), r4_point{},
+    [](const auto sum, const auto& point) { return sum + reduce_to_r4(point); })
+      / static_cast<real>(size);
+
+  return {{average_point.t, stat::error::propagate_average(t_errors), 0, 0},
+          {average_point.x, stat::error::propagate_average(x_errors), 0, 0},
+          {average_point.y, stat::error::propagate_average(y_errors), 0, 0},
+          {average_point.z, stat::error::propagate_average(z_errors), 0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -109,19 +134,19 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
 void _fit_tracks_minuit(const track_vector& tracks,
-                        _vertex_parameters& parameters,
-                        real_vector& covariance_matrix) {
-  _nll_fit_tracks = tracks;
+                        vertex::fit_parameters& parameters,
+                        vertex::covariance_matrix_type& covariance_matrix) {
   auto& t = parameters.t;
   auto& x = parameters.x;
   auto& y = parameters.y;
   auto& z = parameters.z;
+  _nll_fit_tracks = tracks;
 
   TMinuit minuit;
   helper::minuit::initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
   helper::minuit::execute(minuit, _gaussian_nll);
   helper::minuit::get_parameters(minuit, t, x, y, z);
-  helper::minuit::get_covariance<4UL>(minuit, covariance_matrix);
+  helper::minuit::get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -129,42 +154,39 @@ void _fit_tracks_minuit(const track_vector& tracks,
 
 //__Vertex Constructor__________________________________________________________________________
 vertex::vertex(const track_vector& tracks) : _tracks(tracks) {
-  auto fit_vertex = _guess_vertex(_tracks);
-  _fit_tracks_minuit(_tracks, fit_vertex, _covariance);
-
-  _t = std::move(fit_vertex.t);
-  _x = std::move(fit_vertex.x);
-  _y = std::move(fit_vertex.y);
-  _z = std::move(fit_vertex.z);
+  _guess = _guess_vertex(_tracks);
+  _final = _guess;
+  _fit_tracks_minuit(_tracks, _final, _covariance);
 
   const auto& tracks_begin = _tracks.cbegin();
   const auto& tracks_end = _tracks.cend();
 
   std::transform(tracks_begin, tracks_end, std::back_inserter(_delta_chi2),
     [&](const auto& track) {
-      return _vertex_squared_residual(_t.value, _x.value, _y.value, _z.value, track); });
+      return _vertex_squared_residual(
+        _final.t.value, _final.x.value, _final.y.value, _final.z.value, track); });
 }
 //----------------------------------------------------------------------------------------------
 
 //__Vertex Point________________________________________________________________________________
 const r4_point vertex::point() const {
-  return {_t.value, _x.value, _y.value, _z.value};
+  return {_final.t.value, _final.x.value, _final.y.value, _final.z.value};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Error in Calculation of Vertex Point________________________________________________________
 const r4_point vertex::point_error() const {
-  return {_t.error, _x.error, _y.error, _z.error};
+  return {_final.t.error, _final.x.error, _final.y.error, _final.z.error};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Get Fit Parameter from Vertex_______________________________________________________________
 const fit_parameter vertex::fit_of(const vertex::parameter p) const {
   switch (p) {
-    case vertex::parameter::T: return _t;
-    case vertex::parameter::X: return _x;
-    case vertex::parameter::Y: return _y;
-    case vertex::parameter::Z: return _z;
+    case vertex::parameter::T: return _final.t;
+    case vertex::parameter::X: return _final.x;
+    case vertex::parameter::Y: return _final.y;
+    case vertex::parameter::Z: return _final.z;
   }
 }
 //----------------------------------------------------------------------------------------------

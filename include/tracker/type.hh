@@ -804,6 +804,86 @@ constexpr r4_point_array<N> transpose(const real_array4<N>& arr) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Real-Array Pointwise Sum____________________________________________________________________
+template<std::size_t N>
+constexpr real_array<N>& operator+=(real_array<N>& left,
+                                    const real right) {
+  for (auto& l : left)
+    l += right;
+  return left;
+}
+template<std::size_t N>
+constexpr real_array<N> operator+(real_array<N> left,
+                                   const real right) {
+  return left += right;
+}
+template<std::size_t N>
+constexpr real_array<N> operator+(const real left,
+                                  real_array<N> right) {
+  return right += left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Pointwise Difference_____________________________________________________________
+template<std::size_t N>
+constexpr real_array<N>& operator-=(real_array<N>& left,
+                                    const real right) {
+  for (auto& l : left)
+    l -= right;
+  return left;
+}
+template<std::size_t N>
+constexpr real_array<N> operator-(real_array<N> left,
+                                   const real right) {
+  return left -= right;
+}
+template<std::size_t N>
+constexpr real_array<N> operator-(const real left,
+                                  real_array<N> right) {
+  return right -= left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Pointwise Product________________________________________________________________
+template<std::size_t N>
+constexpr real_array<N>& operator*=(real_array<N>& left,
+                                    const real right) {
+  for (auto& l : left)
+    l *= right;
+  return left;
+}
+template<std::size_t N>
+constexpr real_array<N> operator*(real_array<N> left,
+                                   const real right) {
+  return left *= right;
+}
+template<std::size_t N>
+constexpr real_array<N> operator*(const real left,
+                                  real_array<N> right) {
+  return right *= left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Array Pointwise Quotient_______________________________________________________________
+template<std::size_t N>
+constexpr real_array<N>& operator/=(real_array<N>& left,
+                                    const real right) {
+  for (auto& l : left)
+    l /= right;
+  return left;
+}
+template<std::size_t N>
+constexpr real_array<N> operator/(real_array<N> left,
+                                   const real right) {
+  return left /= right;
+}
+template<std::size_t N>
+constexpr real_array<N> operator/(const real left,
+                                  real_array<N> right) {
+  return right /= left;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Real-Array Dot Product______________________________________________________________________
 template<std::size_t N>
 constexpr real operator*(const real_array<N>& left,
@@ -1010,6 +1090,74 @@ inline r4_point_vector transpose(const real_vector4& vec) {
     out_i.z = vec.zs[i];
   }
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Vector Pointwise Sum___________________________________________________________________
+inline real_vector& operator+=(real_vector& left,
+                               const real right) {
+  for (auto& l : left)
+    l += right;
+  return left;
+}
+inline real_vector operator+(real_vector left,
+                             const real right) {
+  return left += right;
+}
+inline real_vector operator+(const real left,
+                             real_vector right) {
+  return right += left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Vector Pointwise Difference____________________________________________________________
+inline real_vector& operator-=(real_vector& left,
+                               const real right) {
+  for (auto& l : left)
+    l -= right;
+  return left;
+}
+inline real_vector operator-(real_vector left,
+                             const real right) {
+  return left -= right;
+}
+inline real_vector operator-(const real left,
+                             real_vector right) {
+  return right -= left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Vector Pointwise Product_______________________________________________________________
+inline real_vector& operator*=(real_vector& left,
+                               const real right) {
+  for (auto& l : left)
+    l *= right;
+  return left;
+}
+inline real_vector operator*(real_vector left,
+                             const real right) {
+  return left *= right;
+}
+inline real_vector operator*(const real left,
+                             real_vector right) {
+  return right *= left;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Real-Vector Pointwise Quotient______________________________________________________________
+inline real_vector& operator/=(real_vector& left,
+                               const real right) {
+  for (auto& l : left)
+    l /= right;
+  return left;
+}
+inline real_vector operator/(real_vector left,
+                             const real right) {
+  return left /= right;
+}
+inline real_vector operator/(const real left,
+                             real_vector right) {
+  return right /= left;
 }
 //----------------------------------------------------------------------------------------------
 

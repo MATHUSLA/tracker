@@ -62,8 +62,8 @@ void draw_track(plot::canvas& canvas,
   for (const auto& point : full_event) {
     const auto center = type::reduce_to_r3(point);
     const plot::color color{brightness, brightness, brightness};
-    canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     canvas.add_point(center, 0.3, color);
+    canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     brightness += step;
   }
   canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
@@ -72,12 +72,17 @@ void draw_track(plot::canvas& canvas,
 //----------------------------------------------------------------------------------------------
 
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________
-void draw_vertex(plot::canvas& canvas,
-                const analysis::vertex& vertex) {
+void draw_vertex_and_guess(plot::canvas& canvas,
+                           const analysis::vertex& vertex) {
   const auto point = vertex.point();
   const auto point_error = vertex.point_error();
+  canvas.add_point(point, 1.5, plot::color::GREEN);
   canvas.add_box(point, point_error.x, point_error.y, point_error.z, 2.5, plot::color::GREEN);
-  canvas.add_point(point, 2, plot::color::GREEN);
+
+  const auto guess = vertex.guess_fit();
+  const type::r3_point guess_center{guess.x.value, guess.y.value, guess.z.value};
+  canvas.add_point(guess_center, 1.5, plot::color::RED);
+
   for (const auto& track : vertex.tracks()) {
     canvas.add_line(track(point.z), track.back(), 1.5, plot::color::GREEN);
   }
@@ -112,7 +117,8 @@ int prototype_tracking(int argc,
       canvas.add_points(compressed_event, 0.8, plot::color::BLUE);
       draw_detector_centers(canvas);
 
-      const auto tracks = find_tracks(compressed_event, options);
+      auto tracks = find_tracks(compressed_event, options);
+
       for (const auto& track : tracks) {
         draw_track(canvas, track);
         histogram.insert(track.chi_squared_per_dof());
@@ -120,7 +126,7 @@ int prototype_tracking(int argc,
       }
 
       const analysis::vertex vertex(tracks);
-      draw_vertex(canvas, vertex);
+      draw_vertex_and_guess(canvas, vertex);
       std::cout << vertex << "\n";
 
       canvas.draw();

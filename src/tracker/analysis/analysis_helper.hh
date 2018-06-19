@@ -36,7 +36,7 @@ static const std::vector<double> parameters     = {};
 static const bool                graphics       = false;
 static const integer             print_level    = -1;
 static const double              error_def      = 0.5;
-static const integer             max_iterations = 400;
+static const integer             max_iterations = 500;
 static const std::string&        strategy       = "SET STR 2";
 //----------------------------------------------------------------------------------------------
 
@@ -61,26 +61,27 @@ inline TMinuit& initialize(TMinuit& minimizer) {
 inline TMinuit& set_parameters(TMinuit& minimizer,
                                const std::size_t starting_index,
                                const std::string& name,
-                               const fit_parameter& fit) {
-  minimizer.DefineParameter(starting_index, name.c_str(), fit.value, fit.error, fit.min, fit.max);
+                               const fit_parameter& parameter) {
+  minimizer.DefineParameter(starting_index, name.c_str(),
+    parameter.value, parameter.error, parameter.min, parameter.max);
   return minimizer;
 }
 template<class ...Args>
 TMinuit& set_parameters(TMinuit& minimizer,
                         const std::size_t starting_index,
                         const std::string& name,
-                        const fit_parameter& fit,
+                        const fit_parameter& parameter,
                         const Args& ...rest) {
-  set_parameters(minimizer, starting_index, name, fit);
+  set_parameters(minimizer, starting_index, name, parameter);
   set_parameters(minimizer, starting_index + 1, rest...);
   return minimizer;
 }
 template<class ...Args>
 TMinuit& set_parameters(TMinuit& minimizer,
                         const std::string& name,
-                        const fit_parameter& fit,
+                        const fit_parameter& parameter,
                         const Args& ...rest) {
-  return set_parameters(minimizer, 0UL, name, fit, rest...);
+  return set_parameters(minimizer, 0UL, name, parameter, rest...);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -88,9 +89,7 @@ TMinuit& set_parameters(TMinuit& minimizer,
 template<class ...Args>
 TMinuit& initialize(TMinuit& minimizer,
                     const Args& ...parameters) {
-  initialize(minimizer);
-  set_parameters(minimizer, parameters...);
-  return minimizer;
+  return set_parameters(initialize(minimizer), parameters...);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -122,39 +121,37 @@ inline TMinuit& execute(TMinuit& minimizer,
 //__Get Parameters from Minimization____________________________________________________________
 inline void get_parameters(const TMinuit& minimizer,
                            const std::size_t starting_index,
-                           fit_parameter& fit) {
+                           fit_parameter& parameter) {
   Double_t value, error;
   minimizer.GetParameter(starting_index, value, error);
-  fit.value = value;
-  fit.error = error;
+  parameter.value = value;
+  parameter.error = error;
 }
 template<class ...Args>
 void get_parameters(const TMinuit& minimizer,
                     const std::size_t starting_index,
-                    fit_parameter& fit,
+                    fit_parameter& parameter,
                     Args& ...rest) {
-  get_parameters(minimizer, starting_index, fit);
+  get_parameters(minimizer, starting_index, parameter);
   get_parameters(minimizer, starting_index + 1, rest...);
 }
 template<class ...Args>
 void get_parameters(const TMinuit& minimizer,
-                    fit_parameter& fit,
+                    fit_parameter& parameter,
                     Args& ...rest) {
-  get_parameters(minimizer, 0, fit, rest...);
+  get_parameters(minimizer, 0, parameter, rest...);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Get Covariance Matrix From Minimization_____________________________________________________
 template<std::size_t N>
 void get_covariance(TMinuit& minimizer,
-                    real_vector& covariance_matrix) {
+                    real_array<N * N>& covariance_matrix) {
   Double_t matrix[N][N];
   minimizer.mnemat(&matrix[0][0], N);
-  covariance_matrix.clear();
-  covariance_matrix.reserve(N * N);
   for (std::size_t i = 0; i < N; ++i)
     for (std::size_t j = 0; j < N; ++j)
-      covariance_matrix.push_back(matrix[i][j]);
+      covariance_matrix[N*i+j] = matrix[i][j];
 }
 //----------------------------------------------------------------------------------------------
 
