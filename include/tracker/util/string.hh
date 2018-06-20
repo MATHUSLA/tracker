@@ -79,6 +79,43 @@ inline std::string& strip(std::string& string) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Remove Leading and Trailing Spaces__________________________________________________________
+inline std::string strip(const std::string& string) {
+  auto copy = string;
+  return strip(copy);
+}
+//----------------------------------------------------------------------------------------------
+
+//__String to All Lowercase_____________________________________________________________________
+inline std::string& tolower(std::string& string) {
+  std::transform(string.cbegin(), string.cend(), string.begin(),
+    [](unsigned char c){ return std::tolower(c); });
+  return string;
+}
+//----------------------------------------------------------------------------------------------
+
+//__String to All Lowercase_____________________________________________________________________
+inline std::string tolower(const std::string& string) {
+  auto copy = string;
+  return util::string::tolower(copy);
+}
+//----------------------------------------------------------------------------------------------
+
+//__String to All Uppercase_____________________________________________________________________
+inline std::string& toupper(std::string& string) {
+  std::transform(string.cbegin(), string.cend(), string.begin(),
+    [](unsigned char c){ return std::toupper(c); });
+  return string;
+}
+//----------------------------------------------------------------------------------------------
+
+//__String to All Uppercase_____________________________________________________________________
+inline std::string toupper(const std::string& string) {
+  auto copy = string;
+  return util::string::toupper(copy);
+}
+//----------------------------------------------------------------------------------------------
+
 } } /* namespace util::string */ ///////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */

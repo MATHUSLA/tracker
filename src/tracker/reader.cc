@@ -327,6 +327,23 @@ void _parse_key_value_data_keys(const std::string& key,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Parse Boolean Key Value_____________________________________________________________________
+void _parse_key_value_boolean(const std::string& key,
+                              const std::string& value,
+                              bool& out) {
+  const auto value_lowercase = util::string::tolower(value);
+  if (value_lowercase == "true" || value_lowercase == "t" || value_lowercase == "1") {
+    out = true;
+  } else if (value_lowercase == "false" || value_lowercase == "f" || value_lowercase == "0") {
+    out = false;
+  } else {
+    util::error::exit(
+      "[FATAL ERROR] Invalid Boolean Argument for \"", key, "\" in Tracking Script.\n"
+      "              Expected argument convertible boolean value.\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
 //__Parse Real Key Value________________________________________________________________________
 void _parse_key_value_real(const std::string& key,
                            const std::string& value,
@@ -341,7 +358,7 @@ void _parse_key_value_real(const std::string& key,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Parse Positive Real Key Value________________________________________________________________________
+//__Parse Positive Real Key Value_______________________________________________________________
 void _parse_key_value_positive_real(const std::string& key,
                                     const std::string& value,
                                     real& out) {
@@ -501,6 +518,20 @@ const tracking_options read(const std::string& path) {
         _parse_key_value_size_type(key, value, out.seed_size);
       } else if (key == "event-density-limit") {
         _parse_key_value_positive_real(key, value, out.event_density_limit);
+      } else if (key == "event-overload-limit") {
+        _parse_key_value_positive_real(key, value, out.event_overload_limit);
+      } else if (key == "track-density-limit") {
+        _parse_key_value_positive_real(key, value, out.track_density_limit);
+      } else if (key == "statistics-directory") {
+        _parse_key_value_file_path(key, value, out.statistics_directory);
+      } else if (key == "statistics-file-prefix") {
+        // FIXME: add checking parser
+        out.statistics_file_prefix = value;
+      } else if (key == "statistics-file-extension") {
+        // FIXME: add checking parser
+        out.statistics_file_extension = value;
+      } else if (key == "verbose-output") {
+        _parse_key_value_boolean(key, value, out.verbose_output);
       } else {
         util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n");
       }
@@ -527,13 +558,14 @@ const tracking_options parse_input(int& argc,
                                    char* argv[]) {
   using util::cli::option;
   option help_opt    ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
-  option verbose_opt ('v', "",         "Verbosity",                   option::required_arguments);
+  option verbose_opt ('v', "",         "Verbose Output",              option::no_arguments);
+  option quiet_opt   ('q', "",         "Quiet Output",                option::no_arguments);
   option geo_opt     ('g', "geometry", "Geometry Import",             option::required_arguments);
   option map_opt     ('m', "map",      "Detector Map",                option::required_arguments);
   option data_opt    ('d', "data",     "ROOT Data Directory",         option::required_arguments);
   option script_opt  ('s', "script",   "Tracking Script",             option::required_arguments);
 
-  util::cli::parse(argv, {&help_opt, &verbose_opt, &geo_opt, &data_opt, &map_opt, &script_opt});
+  util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &geo_opt, &data_opt, &map_opt, &script_opt});
 
   util::error::exit_when((geo_opt.count && !data_opt.count)
                       || (data_opt.count && !geo_opt.count)
@@ -561,6 +593,12 @@ const tracking_options parse_input(int& argc,
   if (geo_opt.count) _exit_on_missing_path(out.geometry_file, "Geometry File");
   if (map_opt.count) _exit_on_missing_path(out.geometry_map_file, "Geometry Map");
   if (data_opt.count) _exit_on_missing_path(out.data_directory, "ROOT Directory");
+
+  if (!quiet_opt.count) {
+    out.verbose_output += verbose_opt.count;
+  } else {
+    out.verbose_output = false;
+  }
 
   return out;
 }

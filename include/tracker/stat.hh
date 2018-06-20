@@ -32,6 +32,8 @@ namespace stat { ///////////////////////////////////////////////////////////////
 
 using namespace type;
 
+namespace type { ///////////////////////////////////////////////////////////////////////////////
+
 //__Chi^2 Type Traits___________________________________________________________________________
 template<class C, typename = void>
 struct has_chi_squared_member : std::false_type {};
@@ -95,6 +97,8 @@ template<class C>
 constexpr bool is_chi2_dof_type_v = is_chi2_dof_type<C>::value;
 //----------------------------------------------------------------------------------------------
 
+} /* namespace type */ /////////////////////////////////////////////////////////////////////////
+
 //__Free Function Alternatives to Memeber Functions_____________________________________________
 template<class T>
 real chi_squared(const T& t);
@@ -109,17 +113,17 @@ real chi_squared_p_value(const real chi2,
 
 //__Calculate P-Value from Chi^2________________________________________________________________
 template<class T>
-std::enable_if_t<!is_chi2_dof_type_v<T>, real>
+std::enable_if_t<!type::is_chi2_dof_type_v<T>, real>
 chi_squared_p_value(const T& t) {
   return chi_squared_p_value(chi_squared(t), degrees_of_freedom(t));
 }
 template<class T>
-std::enable_if_t<has_chi2_and_dof_methods_v<T>, real>
+std::enable_if_t<type::has_chi2_and_dof_methods_v<T>, real>
 chi_squared_p_value(const T& t) {
   return chi_squared_p_value(t.chi_squared(), t.degrees_of_freedom());
 }
 template<class T>
-std::enable_if_t<has_chi2_and_dof_members_v<T>, real>
+std::enable_if_t<type::has_chi2_and_dof_members_v<T>, real>
 chi_squared_p_value(const T& t) {
   return chi_squared_p_value(t.chi_squared, t.degrees_of_freedom);
 }
@@ -127,7 +131,7 @@ chi_squared_p_value(const T& t) {
 
 //__Perform Chi^2/DOF Cut on Range______________________________________________________________
 template<class Range>
-std::enable_if_t<!is_chi2_dof_type_v<typename Range::value_type>, Range>&
+std::enable_if_t<!type::is_chi2_dof_type_v<typename Range::value_type>, Range>&
 chi2_per_dof_cut(const Range& range,
                  const real min,
                  const real max,
@@ -137,7 +141,7 @@ chi2_per_dof_cut(const Range& range,
   return out;
 }
 template<class Range>
-std::enable_if_t<has_chi2_and_dof_methods_v<typename Range::value_type>, Range>&
+std::enable_if_t<type::has_chi2_and_dof_methods_v<typename Range::value_type>, Range>&
 chi2_per_dof_cut(const Range& range,
                  const real min,
                  const real max,
@@ -147,7 +151,7 @@ chi2_per_dof_cut(const Range& range,
   return out;
 }
 template<class Range>
-std::enable_if_t<has_chi2_and_dof_members_v<typename Range::value_type>, Range>&
+std::enable_if_t<type::has_chi2_and_dof_members_v<typename Range::value_type>, Range>&
 chi2_per_dof_cut(const Range& range,
                  const real min,
                  const real max,
@@ -164,7 +168,7 @@ namespace error { //////////////////////////////////////////////////////////////
 template<std::size_t N>
 real propagate(const real_array<N>& gradient,
                const real_array<N*N>& covariance) {
-  return type::weighted_norm(gradient, covariance);
+  return weighted_norm(gradient, covariance);
 }
 template<std::size_t N>
 real propagate(const real_vector& gradient,

@@ -88,9 +88,6 @@ public:
 
   histogram& operator=(histogram&& other) = default;
 
-  static histogram load(const std::string& path,
-                        const std::string& name="histogram");
-
   const std::string name() const;
   const std::string title() const;
   const std::string x_title() const;
@@ -116,6 +113,36 @@ public:
 
   bool save(const std::string& path) const;
 
+  static histogram load(const std::string& path,
+                        const std::string& name="histogram");
+
+  template<class ...Histograms>
+  static void draw_all(histogram& h,
+                       Histograms& ...hs) {
+    draw_all(h);
+    draw_all(hs...);
+  }
+  static void draw_all(histogram& h) { h.draw(); }
+
+  template<class ...Histograms>
+  static void clear_all(histogram& h,
+                        Histograms& ...hs) {
+    clear_all(h);
+    clear_all(hs...);
+  }
+  static void clear_all(histogram& h) { h.clear(); }
+
+  template<class ...Histograms>
+  static bool save_all(const std::string& path,
+                       const histogram& h,
+                       const Histograms& ...hs) {
+    return save_all(path, h) && save_all(path, hs...);
+  }
+  static bool save_all(const std::string& path,
+                       const histogram& h) {
+    return h.save(path);
+  }
+
 private:
   histogram();
   struct histogram_impl;
@@ -134,18 +161,10 @@ public:
 
   canvas& operator=(canvas&& other) = default;
 
-  static canvas load(const std::string& path,
-                     const std::string& name="canvas");
-
   const std::string name() const;
   size_t width() const;
   size_t height() const;
   bool empty() const;
-
-  void draw();
-  void clear();
-
-  bool save(const std::string& path) const;
 
   void add_point(const real x,
                  const real y,
@@ -221,10 +240,85 @@ public:
                const real width=1,
                const color& color=color::BLACK);
 
+  void draw();
+  void clear();
+
+  bool save(const std::string& path) const;
+
+  static canvas load(const std::string& path,
+                     const std::string& name="canvas");
+
+  template<class ...Canvases>
+  static void draw_all(canvas& c,
+                       Canvases& ...cs) {
+    draw_all(c);
+    draw_all(cs...);
+  }
+  static void draw_all(canvas& c) { c.draw(); }
+
+  template<class ...Canvases>
+  static void clear_all(canvas& c,
+                        Canvases& ...cs) {
+    clear_all(c);
+    clear_all(cs...);
+  }
+  static void clear_all(canvas& c) { c.clear(); }
+
+  template<class ...Canvases>
+  static bool save_all(const std::string& path,
+                       const canvas& c,
+                       const Canvases& ...cs) {
+    return save_all(path, c) && save_all(path, cs...);
+  }
+  static bool save_all(const std::string& path,
+                       const canvas& c) {
+    return c.save(path);
+  }
+
 private:
   struct canvas_impl;
   std::unique_ptr<canvas_impl> _impl;
 };
+//----------------------------------------------------------------------------------------------
+
+//__Draw All Drawable Objects___________________________________________________________________
+template<class T>
+void draw_all(T& t) {
+  t.draw();
+}
+template<class T, class ...Ts>
+void draw_all(T& t,
+              Ts& ...ts) {
+  draw_all(t);
+  draw_all(ts...);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear All Drawable Objects__________________________________________________________________
+template<class T>
+void clear_all(T& t) {
+  t.clear();
+}
+template<class T, class ...Ts>
+void clear_all(T& t,
+               Ts& ...ts) {
+  clear_all(t);
+  clear_all(ts...);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Save All Saveable Objects___________________________________________________________________
+template<class T>
+bool save_all(const std::string& path,
+              const T& t) {
+  return t.save(path);
+}
+template<class T, class ...Ts>
+bool save_all(const std::string& path,
+              const T& t,
+              const Ts& ...ts) {
+  return save_all(path, t) && save_all(path, ts...);
+}
 //----------------------------------------------------------------------------------------------
 
 } /* namespace plot */ /////////////////////////////////////////////////////////////////////////

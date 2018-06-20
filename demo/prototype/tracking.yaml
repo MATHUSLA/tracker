@@ -1,24 +1,33 @@
 ### MATHUSLA Prototype TRACKING SCRIPT ###
 
+verbose-output: true
+
 # Thresholds and Settings
-compression-size:    10, 10, 10, 10
-layer-axis:          Z
-layer-depth:         500
-line-width:          80
-seed-size:           3
-event-density-limit: 0.2
+compression-size:     10, 10, 10, 10
+layer-axis:           Z
+layer-depth:          500
+line-width:           80
+seed-size:            3
+event-overload-limit: 2   # unused
+event-density-limit:  0.2
+track-density-limit:  0.5 # unused
 
 # maybe? -> allow-seed-overlaps: false
 
 # Data
-root-data: .temp/delta_ray_studies/other  # demo/prototype/mc_study/stat
-root-position-keys: Time # , X, Y, Z
+root-data:                .temp/delta_ray_studies/other  # demo/prototype/mc_study/stat
+root-position-keys:       Time # , X, Y, Z
 root-position-error-keys: dT #, dX, dY, dZ
-root-detector-key: Detector
+root-detector-key:        Detector
+
+# Statistics Setup
+statistics-directory:      .temp/delta_ray_studies/stat
+statistics-file-prefix:    statistics
+statistics-file-extension: root
 
 # Geometry Setup
-geometry-file: demo/prototype/resources/world.prototype.gdml
-geometry-map-file: demo/prototype/resources/detector_map.txt
+geometry-file:               demo/prototype/resources/world.prototype.gdml
+geometry-map-file:           demo/prototype/resources/detector_map.txt
 geometry-default-time-error: 2
 # geometry-time-error-map: ...
 # geometry-map:

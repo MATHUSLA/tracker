@@ -139,24 +139,6 @@ histogram::histogram(const std::string& name,
 histogram::~histogram() = default;
 //----------------------------------------------------------------------------------------------
 
-//__Load Histogram From File____________________________________________________________________
-histogram histogram::load(const std::string& path,
-                          const std::string& name) {
-  histogram out;
-  TFile file(path.c_str(), "READ");
-  if (!file.IsZombie()) {
-    TH1D* test = nullptr;
-    file.GetObject(name.c_str(), test);
-    if (test) {
-      out._impl->_hist = test;
-      out._impl->_canvas = _build_TCanvas(test->GetName(), test->GetTitle());
-    }
-    file.Close();
-  }
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Get Histogram Name__________________________________________________________________________
 const std::string histogram::name() const {
   return _impl->_hist->GetName();
@@ -278,6 +260,24 @@ bool histogram::save(const std::string& path) const {
     return true;
   }
   return false;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Load Histogram From File____________________________________________________________________
+histogram histogram::load(const std::string& path,
+                          const std::string& name) {
+  histogram out;
+  TFile file(path.c_str(), "READ");
+  if (!file.IsZombie()) {
+    TH1D* test = nullptr;
+    file.GetObject(name.c_str(), test);
+    if (test) {
+      out._impl->_hist = test;
+      out._impl->_canvas = _build_TCanvas(test->GetName(), test->GetTitle());
+    }
+    file.Close();
+  }
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 

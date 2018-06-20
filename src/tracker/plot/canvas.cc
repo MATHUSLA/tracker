@@ -139,23 +139,6 @@ canvas::canvas(const std::string& name,
 canvas::~canvas() = default;
 //----------------------------------------------------------------------------------------------
 
-//__Construct Canvas from File__________________________________________________________________
-canvas canvas::load(const std::string& path,
-                    const std::string& name) {
-  canvas out;
-  TFile file(path.c_str(), "READ");
-  if (!file.IsZombie()) {
-    TCanvas* test = nullptr;
-    file.GetObject(name.c_str(), test);
-    if (test) {
-      out._impl->_canvas = test;
-    }
-    file.Close();
-  }
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Canvas Name_________________________________________________________________________________
 const std::string canvas::name() const {
   return _impl->_canvas->GetName();
@@ -177,78 +160,6 @@ size_t canvas::height() const {
 //__Check if Canvas Has Objects_________________________________________________________________
 bool canvas::empty() const {
   return _impl->_poly_lines.empty() && _impl->_polymarker_map.empty();
-}
-//----------------------------------------------------------------------------------------------
-
-//__Draw Canvas_________________________________________________________________________________
-void canvas::draw() {
-  _impl->_canvas->cd();
-
-  const auto& marker_map = _impl->_polymarker_map;
-  const auto marker_map_size = marker_map.bucket_count();
-  for (size_t i = 0; i < marker_map_size; ++i) {
-    auto polymarker = new TPolyMarker3D(marker_map.bucket_size(i), 20);
-    const auto& begin = marker_map.cbegin(i);
-    const auto& end = marker_map.cend(i);
-    std::for_each(begin, end, [&](const auto& entry) {
-      const auto& point = entry.second;
-      polymarker->SetNextPoint(point.x, point.y, point.z);
-    });
-    if (begin != end) {
-      const auto& style = (*begin).first;
-      polymarker->SetMarkerSize(style.size);
-      polymarker->SetMarkerColor(_to_TColor_id(style.rgb));
-      polymarker->Draw();
-    }
-  }
-
-  for (const auto& poly_line : _impl->_poly_lines)
-    poly_line->Draw();
-
-  if (!_impl->_has_updated) {
-    _impl->_view->ShowAxis();
-    auto axis = TAxis3D::GetPadAxis();
-    if (axis) {
-      axis->SetLabelColor(kBlack);
-      axis->SetAxisColor(kBlack);
-      axis->SetTitleOffset(2);
-      axis->SetXTitle("X (mm)");
-      axis->SetYTitle("Y (mm)");
-      axis->SetZTitle("Z (mm)");
-    }
-  }
-
-  _impl->_canvas->Modified();
-  _impl->_canvas->Update();
-  _impl->_has_updated = true;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Clear A Canvas______________________________________________________________________________
-void canvas::clear() {
-  if (_impl->_has_updated) {
-    _impl->_canvas->cd();
-    _impl->_canvas->Clear();
-    _impl->_canvas->Modified();
-    _impl->_canvas->Update();
-    _impl->reset_view();
-    _impl->_polymarker_map.clear();
-    _impl->_poly_lines.clear();
-    _impl->_has_updated = false;
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Save Canvas to ROOT File____________________________________________________________________
-bool canvas::save(const std::string& path) const {
-  TFile file(path.c_str(), "UPDATE");
-  if (!file.IsZombie()) {
-    file.cd();
-    file.WriteTObject(_impl->_canvas->Clone());
-    file.Close();
-    return true;
-  }
-  return false;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -396,6 +307,95 @@ void canvas::add_box(const r4_point& center,
                      const real width,
                      const color& color) {
   add_box(reduce_to_r3(center), width_x, width_y, width_z, width, color);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw Canvas_________________________________________________________________________________
+void canvas::draw() {
+  _impl->_canvas->cd();
+
+  const auto& marker_map = _impl->_polymarker_map;
+  const auto marker_map_size = marker_map.bucket_count();
+  for (size_t i = 0; i < marker_map_size; ++i) {
+    auto polymarker = new TPolyMarker3D(marker_map.bucket_size(i), 20);
+    const auto& begin = marker_map.cbegin(i);
+    const auto& end = marker_map.cend(i);
+    std::for_each(begin, end, [&](const auto& entry) {
+      const auto& point = entry.second;
+      polymarker->SetNextPoint(point.x, point.y, point.z);
+    });
+    if (begin != end) {
+      const auto& style = (*begin).first;
+      polymarker->SetMarkerSize(style.size);
+      polymarker->SetMarkerColor(_to_TColor_id(style.rgb));
+      polymarker->Draw();
+    }
+  }
+
+  for (const auto& poly_line : _impl->_poly_lines)
+    poly_line->Draw();
+
+  if (!_impl->_has_updated) {
+    _impl->_view->ShowAxis();
+    auto axis = TAxis3D::GetPadAxis();
+    if (axis) {
+      axis->SetLabelColor(kBlack);
+      axis->SetAxisColor(kBlack);
+      axis->SetTitleOffset(2);
+      axis->SetXTitle("X (mm)");
+      axis->SetYTitle("Y (mm)");
+      axis->SetZTitle("Z (mm)");
+    }
+  }
+
+  _impl->_canvas->Modified();
+  _impl->_canvas->Update();
+  _impl->_has_updated = true;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear A Canvas______________________________________________________________________________
+void canvas::clear() {
+  if (_impl->_has_updated) {
+    _impl->_canvas->cd();
+    _impl->_canvas->Clear();
+    _impl->_canvas->Modified();
+    _impl->_canvas->Update();
+    _impl->reset_view();
+    _impl->_polymarker_map.clear();
+    _impl->_poly_lines.clear();
+    _impl->_has_updated = false;
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Save Canvas to ROOT File____________________________________________________________________
+bool canvas::save(const std::string& path) const {
+  TFile file(path.c_str(), "UPDATE");
+  if (!file.IsZombie()) {
+    file.cd();
+    file.WriteTObject(_impl->_canvas->Clone());
+    file.Close();
+    return true;
+  }
+  return false;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Construct Canvas from File__________________________________________________________________
+canvas canvas::load(const std::string& path,
+                    const std::string& name) {
+  canvas out;
+  TFile file(path.c_str(), "READ");
+  if (!file.IsZombie()) {
+    TCanvas* test = nullptr;
+    file.GetObject(name.c_str(), test);
+    if (test) {
+      out._impl->_canvas = test;
+    }
+    file.Close();
+  }
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
