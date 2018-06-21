@@ -107,8 +107,9 @@ void _collect_paths(TSystemDirectory* dir,
 template<class BinaryFunction>
 BinaryFunction _traverse_file(const std::string& path,
                               BinaryFunction f) {
-  auto file = TFile::Open(path.c_str());
+  auto file = TFile::Open(path.c_str(), "READ");
   if (file && !file->IsZombie()) {
+    file->cd();
     TIter next(file->GetListOfKeys());
     TKey* key = nullptr;
     while ((key = static_cast<TKey*>(next())))
@@ -311,7 +312,9 @@ void _parse_key_value_data_keys(const std::string& key,
     "              Expected 1 argument \"T\" or 4 arguments \"T, X, Y, Z\".\n");
   if (size == 1) {
     t_key = data_keys[0];
-    mode = CollectionMode::Detector;
+    mode = (mode == CollectionMode::Position)
+         ? CollectionMode::Position
+         : CollectionMode::Detector;
   } else if (size == 4) {
     t_key = data_keys[0];
     x_key = data_keys[1];
@@ -575,7 +578,8 @@ const tracking_options parse_input(int& argc,
     "              Must include arguments for geometry ",
                   "and ROOT directory (-gd) or arguments for a tracking script (-s).\n");
 
-  if (script_opt.count) _exit_on_missing_path(script_opt.argument, "Tracking Script");
+  if (script_opt.count)
+    _exit_on_missing_path(script_opt.argument, "Tracking Script");
 
   reader::tracking_options out;
 

@@ -45,9 +45,9 @@ constexpr const T fused_product(const T& left,
 template<class T, class Input>
 constexpr const T range_fused_product(Input begin,
                                       Input end) {
-  T value = *(begin++) * *(begin++);
+  T value = *begin * *(++begin);
   while (begin != end)
-    value = std::fma(*(begin++), *(begin++), std::move(value));
+    value = std::fma(*++begin, *++begin, std::move(value));
   return value;
 }
 template<class Range,
@@ -70,9 +70,9 @@ constexpr const T sum_squares(const T& value,
 template<class T, class Input>
 constexpr const T range_sum_squares(Input begin,
                                     Input end) {
-  T value = *begin * *(begin++);
+  T value = *begin * *begin;
   while (begin != end)
-    value = std::fma(*begin, *(begin++), std::move(value));
+    value = std::fma(*++begin, *begin, std::move(value));
   return value;
 }
 template<class Range,

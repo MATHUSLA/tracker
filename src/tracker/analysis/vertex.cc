@@ -22,6 +22,7 @@
 
 #include <tracker/stat.hh>
 
+#include <tracker/util/algorithm.hh>
 #include <tracker/util/error.hh>
 #include <tracker/util/io.hh>
 #include <tracker/util/math.hh>
@@ -154,17 +155,16 @@ void _fit_tracks_minuit(const track_vector& tracks,
 
 //__Vertex Constructor__________________________________________________________________________
 vertex::vertex(const track_vector& tracks) : _tracks(tracks) {
-  _guess = _guess_vertex(_tracks);
-  _final = _guess;
-  _fit_tracks_minuit(_tracks, _final, _covariance);
+  if (_tracks.size() > 1) {
+    _guess = _guess_vertex(_tracks);
+    _final = _guess;
+    _fit_tracks_minuit(_tracks, _final, _covariance);
 
-  const auto& tracks_begin = _tracks.cbegin();
-  const auto& tracks_end = _tracks.cend();
-
-  std::transform(tracks_begin, tracks_end, std::back_inserter(_delta_chi2),
-    [&](const auto& track) {
-      return _vertex_squared_residual(
-        _final.t.value, _final.x.value, _final.y.value, _final.z.value, track); });
+    util::algorithm::back_insert_transform(_tracks, _delta_chi2,
+      [&](const auto& track) {
+        return _vertex_squared_residual(
+          _final.t.value, _final.x.value, _final.y.value, _final.z.value, track); });
+  }
 }
 //----------------------------------------------------------------------------------------------
 

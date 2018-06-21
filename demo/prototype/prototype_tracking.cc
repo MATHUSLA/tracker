@@ -24,6 +24,9 @@
 #include <tracker/vertex.hh>
 #include <tracker/units.hh>
 
+// TODO: to remove
+#include <tracker/util/io.hh>
+
 #include "geometry.hh"
 
 //__Namespace Alias_____________________________________________________________________________
@@ -47,6 +50,13 @@ const analysis::track_vector find_tracks(const analysis::event& event,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Print Bar___________________________________________________________________________________
+void print_bar(const size_t count=99,
+               const char b='=') {
+  std::cout << "\n" << std::string(count, b) << "\n\n";
+}
+//----------------------------------------------------------------------------------------------
+
 //__Add Detector Centers to Canvas______________________________________________________________
 void draw_detector_centers(plot::canvas& canvas) {
   for (const auto& name : prototype_geometry())
@@ -56,18 +66,26 @@ void draw_detector_centers(plot::canvas& canvas) {
 
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________
 void draw_track(plot::canvas& canvas,
-                const analysis::track& track) {
+                const analysis::track& track, type::real shift) {
   const auto& full_event = track.full_event();
   uint_fast8_t brightness = 0, step = 230 / full_event.size();
   for (const auto& point : full_event) {
     const auto center = type::reduce_to_r3(point);
     const plot::color color{brightness, brightness, brightness};
     canvas.add_point(center, 0.3, color);
-    canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
+    //canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     brightness += step;
   }
-  canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
-  canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+  //canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
+  //canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+
+  brightness = 0;
+  for (size_t i = 0; i < full_event.size()-1; ++i) {
+    const plot::color color{brightness, brightness, brightness};
+    const type::r3_point shifter{shift, shift, shift};
+    canvas.add_line(type::reduce_to_r3(full_event[i]) + shifter, type::reduce_to_r3(full_event[i+1]) + shifter, 1, color);
+    brightness += step;
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -94,12 +112,14 @@ void save_tracks(const analysis::track_vector& tracks,
                  plot::histogram& chi_squared,
                  plot::histogram& beta,
                  bool verbose) {
+  type::real shift = 0;
   for (const auto& track : tracks) {
     chi_squared.insert(track.chi_squared_per_dof());
     beta.insert(track.beta());
-    draw_track(canvas, track);
+    draw_track(canvas, track, shift);
     if (verbose)
       std::cout << track << "\n";
+    shift+= 10;
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -122,6 +142,7 @@ int prototype_tracking(int argc,
   for (uint_fast64_t path_counter{}; path_counter < data_directory_size; ++path_counter) {
     const auto& path = data_directory[path_counter];
 
+    print_bar();
     std::cout << "Read Path: " << path << "\n";
 
     const auto imported_events = reader::root::import_events(path, options, detector_map);
@@ -140,15 +161,18 @@ int prototype_tracking(int argc,
       100, 0, 100);
 
     const auto import_size = imported_events.size();
-    for (uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
+    for (uint_fast64_t event_counter{}; event_counter < std::min(10UL, import_size); ++event_counter) {
       const auto& event = imported_events[event_counter];
-      if (event.empty())
-        continue;
-
-      std::cout << "Event " << event_counter << " with " << event.size() << " hits.\n";
+      const auto event_size = event.size();
 
       const auto compressed_event = analysis::compress(event, options.compression_size);
-      const auto compression_gain = event.size() / static_cast<type::real>(compressed_event.size());
+      const auto compression_gain = event_size / static_cast<type::real>(compressed_event.size());
+
+      if (event.empty() || compression_gain == event_size)
+        continue;
+
+      std::cout << "Event " << event_counter << " with " << event_size << " hits.\n";
+
       const auto event_density = modified_geometry_event_density(compressed_event);
 
       if (options.verbose_output)
@@ -160,7 +184,7 @@ int prototype_tracking(int argc,
 
       plot::canvas canvas(path);
       canvas.add_points(compressed_event, 0.8, plot::color::BLUE);
-      draw_detector_centers(canvas);
+      // TODO: add back in -> draw_detector_centers(canvas);
 
       const auto tracks = find_tracks(compressed_event, options);
 
@@ -181,6 +205,10 @@ int prototype_tracking(int argc,
           individual_canvas, individual_chi_squared_histogram, individual_beta_histogram);
       } else {
         save_tracks(tracks, canvas, chi_squared_histogram, beta_histogram, options.verbose_output);
+        // TODO: to remove
+        for (const auto& track : tracks) {
+          util::io::print_range(track.event()) << "\n";
+        }
       }
 
       event_density_histogram.insert(tracks.size());
@@ -188,20 +216,21 @@ int prototype_tracking(int argc,
       if (options.verbose_output)
         std::cout << "  Track Count: "   << tracks.size() << "\n"
                   << "  Track Density: " << tracks.size() / static_cast<type::real>(event.size()) * 100.0L << " %\n";
-
+      /*
       const analysis::vertex vertex(tracks);
       if (options.verbose_output) {
         draw_vertex_and_guess(canvas, vertex);
         std::cout << vertex << "\n";
       }
+      */
 
-      std::cout << "\n" << std::string(99, '=') << "\n\n";
       canvas.draw();
     }
     plot::draw_all(chi_squared_histogram, beta_histogram, event_density_histogram);
     plot::save_all(statistics_path, chi_squared_histogram, beta_histogram, event_density_histogram);
   }
 
+  print_bar();
   geometry::close();
   plot::end();
   return 0;
