@@ -1,5 +1,5 @@
 /*
- * src/tracker/vertex.cc
+ * src/tracker/analysis/vertex.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,18 +16,18 @@
  * limitations under the License.
  */
 
-#include <tracker/vertex.hh>
+#include <tracker/analysis/vertex.hh>
 
 #include <ROOT/TMinuit.h>
 
-#include <tracker/stat.hh>
+#include <tracker/core/stat.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/error.hh>
 #include <tracker/util/io.hh>
 #include <tracker/util/math.hh>
 
-#include "analysis_helper.hh"
+#include "../helper/analysis.hh"
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -159,11 +159,15 @@ vertex::vertex(const track_vector& tracks) : _tracks(tracks) {
     _guess = _guess_vertex(_tracks);
     _final = _guess;
     _fit_tracks_minuit(_tracks, _final, _covariance);
-
     util::algorithm::back_insert_transform(_tracks, _delta_chi2,
       [&](const auto& track) {
         return _vertex_squared_residual(
           _final.t.value, _final.x.value, _final.y.value, _final.z.value, track); });
+  } else {
+    _delta_chi2.resize(1, 0);
+    _guess = {};
+    _final = {};
+    _covariance = {};
   }
 }
 //----------------------------------------------------------------------------------------------

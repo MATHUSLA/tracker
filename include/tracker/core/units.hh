@@ -1,5 +1,5 @@
 /*
- * include/tracker/units.hh
+ * include/tracker/core/units.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__UNITS_HH
-#define TRACKER__UNITS_HH
+#ifndef TRACKER__CORE__UNITS_HH
+#define TRACKER__CORE__UNITS_HH
 #pragma once
 
 #include <Geant4/G4UnitsTable.hh>
@@ -60,4 +60,4 @@ constexpr auto speed_of_light = c_light;
 
 } /* namespace MATHUSLA */
 
-#endif /* TRACKER__UNITS_HH */
+#endif /* TRACKER__CORE__UNITS_HH */

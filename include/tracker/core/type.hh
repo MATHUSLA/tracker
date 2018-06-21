@@ -1,5 +1,5 @@
 /*
- * include/tracker/type.hh
+ * include/tracker/core/type.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__TYPE_HH
-#define TRACKER__TYPE_HH
+#ifndef TRACKER__CORE__TYPE_HH
+#define TRACKER__CORE__TYPE_HH
 #pragma once
 
 #define FP_FAST_FMA
@@ -1539,4 +1539,4 @@ Range coordinate_stable_copy_sort(const Coordinate coordinate,
 
 } /* namespace MATHUSLA */
 
-#endif /* TRACKER__TYPE_HH */
+#endif /* TRACKER__CORE__TYPE_HH */

@@ -1,5 +1,5 @@
 /*
- * include/tracker/vertex.hh
+ * include/tracker/analysis/vertex.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,17 +16,15 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__VERTEX_HH
-#define TRACKER__VERTEX_HH
+#ifndef TRACKER__ANALYSIS__VERTEX_HH
+#define TRACKER__ANALYSIS__VERTEX_HH
 #pragma once
 
-#include <tracker/track.hh>
+#include <tracker/analysis/track.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
-
-using namespace type;
 
 //__Vertex Object_______________________________________________________________________________
 class vertex {
@@ -80,6 +78,7 @@ public:
 
   const track_vector tracks() const { return _tracks; };
   size_t count() const { return _tracks.size(); }
+  bool empty() const { return _tracks.size() <= 1; }
 
 private:
   fit_parameters _guess, _final;
@@ -102,4 +101,4 @@ using vertex_vector = std::vector<vertex>;
 
 } } /* namespace MATHUSLA::TRACKER */
 
-#endif /* TRACKER__VERTEX_HH */
+#endif /* TRACKER__ANALYSIS__VERTEX_HH */

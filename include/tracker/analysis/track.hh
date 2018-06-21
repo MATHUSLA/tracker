@@ -1,5 +1,5 @@
 /*
- * include/tracker/track.hh
+ * include/tracker/analysis/track.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,18 +16,16 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__TRACK_HH
-#define TRACKER__TRACK_HH
+#ifndef TRACKER__ANALYSIS__TRACK_HH
+#define TRACKER__ANALYSIS__TRACK_HH
 #pragma once
 
-#include <tracker/analysis.hh>
+#include <tracker/analysis/analysis.hh>
 #include <tracker/geometry.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
-
-using namespace type;
 
 //__Track Object________________________________________________________________________________
 class track {
@@ -115,11 +113,14 @@ public:
 
   const hit front() const;
   const hit back() const;
-  const std::vector<hit> event() const;
+  const analysis::event event() const;
 
   const full_hit full_front() const { return _full_event.front(); }
   const full_hit full_back() const { return _full_event.back(); }
-  const std::vector<full_hit>& full_event() const { return _full_event; }
+  const analysis::full_event& full_event() const { return _full_event; }
+
+  size_t count() const { return _full_event.size(); }
+  bool empty() const { return _full_event.empty(); }
 
   const geometry::structure_vector& detectors() const { return _detectors; }
 
@@ -155,4 +156,4 @@ const track_vector fit_seeds(const full_event_vector& seeds,
 
 } } /* namespace MATHUSLA::TRACKER */
 
-#endif /* TRACKER__TRACK_HH */
+#endif /* TRACKER__ANALYSIS__TRACK_HH */

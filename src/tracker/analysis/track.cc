@@ -1,5 +1,5 @@
 /*
- * src/tracker/track.cc
+ * src/tracker/analysis/track.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,19 +16,17 @@
  * limitations under the License.
  */
 
-#include <tracker/track.hh>
+#include <tracker/analysis/track.hh>
 
-#include <ROOT/TMinuit.h>
-
-#include <tracker/stat.hh>
-#include <tracker/units.hh>
+#include <tracker/core/stat.hh>
+#include <tracker/core/units.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/error.hh>
 #include <tracker/util/io.hh>
 #include <tracker/util/math.hh>
 
-#include "analysis_helper.hh"
+#include "../helper/analysis.hh"
 
 namespace MATHUSLA { namespace TRACKER {
 

@@ -1,5 +1,5 @@
 /*
- * src/tracker/stat.cc
+ * src/tracker/core/stat.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include <tracker/stat.hh>
+#include <tracker/core/stat.hh>
 
 #include <ROOT/Math/ProbFunc.h>
 

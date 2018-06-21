@@ -20,9 +20,10 @@
 #define TRACKER__READER_HH
 #pragma once
 
-#include <tracker/analysis.hh>
+#include <tracker/core/type.hh>
+#include <tracker/core/units.hh>
+#include <tracker/analysis/analysis.hh>
 #include <tracker/geometry.hh>
-#include <tracker/units.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 

@@ -22,7 +22,7 @@
 
 #include <unordered_map>
 
-#include <tracker/type.hh>
+#include <tracker/core/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 

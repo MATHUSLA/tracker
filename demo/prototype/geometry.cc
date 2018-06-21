@@ -18,8 +18,8 @@
 
 #include "geometry.hh"
 
-#include <tracker/stat.hh>
-#include <tracker/units.hh>
+#include <tracker/core/stat.hh>
+#include <tracker/core/units.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>

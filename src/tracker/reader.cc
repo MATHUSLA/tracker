@@ -21,18 +21,15 @@
 #include <array>
 #include <fstream>
 
-#include <ROOT/TFile.h>
-#include <ROOT/TKey.h>
-#include <ROOT/TSystemDirectory.h>
-#include <ROOT/TTree.h>
-
 #include <tracker/geometry.hh>
-#include <tracker/units.hh>
+#include <tracker/core/units.hh>
 
 #include <tracker/util/command_line_parser.hh>
 #include <tracker/util/error.hh>
 #include <tracker/util/io.hh>
 #include <tracker/util/string.hh>
+
+#include "helper/root.hh"
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -84,82 +81,14 @@ const geometry::time_resolution_map import_time_resolution_map(const std::string
 namespace root { ///////////////////////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
-
-//__Recursive TSystemFile Traversal_____________________________________________________________
-void _collect_paths(TSystemDirectory* dir,
-                    std::vector<std::string>& paths,
-                    const std::string& ext) {
-  if (!dir || !dir->GetListOfFiles()) return;
-  for (const auto&& obj : *dir->GetListOfFiles()) {
-    const auto file = static_cast<TSystemFile*>(obj);
-    const auto name = std::string(file->GetName());
-    if (!file->IsDirectory()) {
-      if (ext == "" || name.substr(1 + name.find_last_of(".")) == ext)
-        paths.push_back(std::string(file->GetTitle()) + "/" + name);
-    } else if (!(name == "." || name == "..")) {
-      _collect_paths(static_cast<TSystemDirectory*>(file), paths, ext);
-    }
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__ROOT File Key Traversal_____________________________________________________________________
-template<class BinaryFunction>
-BinaryFunction _traverse_file(const std::string& path,
-                              BinaryFunction f) {
-  auto file = TFile::Open(path.c_str(), "READ");
-  if (file && !file->IsZombie()) {
-    file->cd();
-    TIter next(file->GetListOfKeys());
-    TKey* key = nullptr;
-    while ((key = static_cast<TKey*>(next())))
-      f(file, key);
-    file->Close();
-  }
-  return std::move(f);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Get TKey Classname__________________________________________________________________________
-const std::string _get_TKey_classname(const TKey* key) {
-  return key->GetClassName();
-}
-//----------------------------------------------------------------------------------------------
-
-//__Get TTree Object From File Without Checking Type____________________________________________
-TTree* _unchecked_get_TTree(TFile* file,
-                            const TKey* key) {
-  return static_cast<TTree*>(file->Get(key->GetName()));
-}
-//----------------------------------------------------------------------------------------------
-
-//__Set TTree Branch Base Function______________________________________________________________
-void _set_TTree_branches(TTree* tree,
-                         const std::string& name,
-                         Double_t* value) {
-  tree->SetBranchAddress(name.c_str(), value);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Recursively Set TTree Branches______________________________________________________________
-template<class... Args>
-void _set_TTree_branches(TTree* tree,
-                         const std::string& name,
-                         Double_t* value,
-                         Args ...args) {
-  _set_TTree_branches(tree, name, value);
-  _set_TTree_branches(tree, args...);
-}
-//----------------------------------------------------------------------------------------------
-
+using namespace ::MATHUSLA::TRACKER::root;
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Search and Collect ROOT File Paths__________________________________________________________
 const std::vector<std::string> search_directory(const std::string& path,
                                                 const std::string& ext) {
-  std::vector<std::string> paths{};
-  _collect_paths(new TSystemDirectory("search", path.c_str()), paths, ext);
-  return paths;
+  root::helper::init();
+  return helper::search_directory(path, ext);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -170,12 +99,11 @@ const analysis::event_vector import_events(const std::string& path,
                                            const std::string& y_key,
                                            const std::string& z_key) {
   analysis::event_vector out{};
-  TTree* tree = nullptr;
-  _traverse_file(path, [&](const auto& file, const auto& key) {
-    if (_get_TKey_classname(key) == "TTree") {
+  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
+    if (helper::get_key_classname(key) == "TTree") {
       Double_t t, x, y, z;
-      tree = _unchecked_get_TTree(file, key);
-      _set_TTree_branches(tree, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
+      auto tree = helper::tree::get_tree(file, key);
+      helper::tree::set_branches(tree, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
       const auto size = tree->GetEntries();
       analysis::event points;
       points.reserve(size);
@@ -196,12 +124,11 @@ const analysis::event_vector import_events(const std::string& path,
                                            const std::string& detector_key,
                                            const geometry::detector_map& map) {
   analysis::event_vector out{};
-  TTree* tree = nullptr;
-  _traverse_file(path, [&](const auto& file, const auto& key) {
-    if (_get_TKey_classname(key) == "TTree") {
+  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
+    if (helper::get_key_classname(key) == "TTree") {
       Double_t t, detector;
-      tree = _unchecked_get_TTree(file, key);
-      _set_TTree_branches(tree, t_key, &t, detector_key, &detector);
+      auto tree = helper::tree::get_tree(file, key);
+      helper::tree::set_branches(tree, t_key, &t, detector_key, &detector);
       const auto size = tree->GetEntries();
       analysis::event points;
       points.reserve(size);

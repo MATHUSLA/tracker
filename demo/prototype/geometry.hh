@@ -20,7 +20,7 @@
 #define TRACKER__PROTOTYPE__GEOMETRY_HH
 #pragma once
 
-#include <tracker/analysis.hh>
+#include <tracker/analysis/analysis.hh>
 #include <tracker/geometry.hh>
 
 //__Namespace Alias_____________________________________________________________________________

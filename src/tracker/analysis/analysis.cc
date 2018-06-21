@@ -1,5 +1,5 @@
 /*
- * src/tracker/analysis.cc
+ * src/tracker/analysis/analysis.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include <tracker/analysis.hh>
+#include <tracker/analysis/analysis.hh>
 
 #include <numeric>
 #include <queue>

@@ -1,5 +1,5 @@
 /*
- * include/tracker/analysis.hh
+ * include/tracker/analysis/analysis.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__ANALYSIS_HH
-#define TRACKER__ANALYSIS_HH
+#ifndef TRACKER__ANALYSIS__ANALYSIS_HH
+#define TRACKER__ANALYSIS__ANALYSIS_HH
 #pragma once
 
-#include <tracker/type.hh>
+#include <tracker/core/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -182,4 +182,4 @@ const full_event_vector join_all(const full_event_vector& seeds);
 
 } } /* namespace MATHUSLA::TRACKER */
 
-#endif /* TRACKER__ANALYSIS_HH */
+#endif /* TRACKER__ANALYSIS__ANALYSIS_HH */

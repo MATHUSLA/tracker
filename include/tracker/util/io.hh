@@ -27,7 +27,7 @@ namespace MATHUSLA {
 
 namespace util { namespace io { ////////////////////////////////////////////////////////////////
 
-//__Hidden Includes To Keep Global Namespace Clean______________________________________________
+//__Enclosed Includes To Keep Global Namespace Clean____________________________________________
 #include <sys/stat.h>
 #if defined(_WIN32)
 #include <windows.h>
@@ -91,6 +91,29 @@ inline std::ostream& underline(std::ostream& os=std::cout) {
 }
 inline std::ostream& reset_font(std::ostream& os=std::cout) {
   return escape(os) << "[0m";
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Failbit of Stream_______________________________________________________________________
+inline std::ostream& set_failbit(std::ostream& os=std::cout) {
+  os.setstate(std::ios_base::failbit);
+  return os;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear Stream________________________________________________________________________________
+inline std::ostream& clear(std::ostream& os=std::cout) {
+  os.clear();
+  return os;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Swap Buffer of Stream_______________________________________________________________________
+inline std::ostream& swap_buffer(std::ostream& os,
+                                 std::streambuf* buffer,
+                                 std::streambuf* previous) {
+  previous = os.rdbuf(buffer);
+  return os;
 }
 //----------------------------------------------------------------------------------------------
 

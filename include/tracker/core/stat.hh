@@ -1,5 +1,5 @@
 /*
- * include/tracker/stat.hh
+ * include/tracker/core/stat.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__STAT_HH
-#define TRACKER__STAT_HH
+#ifndef TRACKER__CORE__STAT_HH
+#define TRACKER__CORE__STAT_HH
 #pragma once
 
-#include <tracker/type.hh>
+#include <tracker/core/type.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/math.hh>
@@ -418,4 +418,4 @@ uncertain<T> uncertain<T>::from_uniform(T value,
 
 } } /* namespace MATHUSLA::TRACKER */
 
-#endif /* TRACKER__STAT_HH */
+#endif /* TRACKER__CORE__STAT_HH */

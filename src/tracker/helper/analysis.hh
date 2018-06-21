@@ -1,5 +1,5 @@
 /*
- * src/tracker/analysis/analysis_helper.hh
+ * src/tracker/helper/analysis.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__ANALYSIS_ANALYSIS_HELPER_HH
-#define TRACKER__ANALYSIS_ANALYSIS_HELPER_HH
+#ifndef TRACKER__HELPER__ANALYSIS_HH
+#define TRACKER__HELPER__ANALYSIS_HH
 #pragma once
 
-#include <tracker/analysis.hh>
+#include <ROOT/TMinuit.h>
+
+#include <tracker/analysis/analysis.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -161,4 +163,4 @@ void get_covariance(TMinuit& minimizer,
 
 } } /* namespace MATHUSLA::TRACKER */
 
-#endif /* TRACKER__ANALYSIS_ANALYSIS_HELPER_HH */
+#endif /* TRACKER__HELPER__ANALYSIS_HH */

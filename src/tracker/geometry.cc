@@ -29,7 +29,7 @@
 #include <Geant4/G4IntersectionSolid.hh>
 #include <Geant4/G4UnionSolid.hh>
 
-#include <tracker/units.hh>  // TODO: remove this dependency
+#include <tracker/core/units.hh>  // TODO: remove this dependency
 
 #include <tracker/util/algorithm.hh>
 

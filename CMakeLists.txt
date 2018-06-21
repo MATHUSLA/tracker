@@ -39,7 +39,7 @@ add_library(tracker SHARED
 
     src/tracker/reader.cc
 
-    src/tracker/stat.cc
+    src/tracker/core/stat.cc
 
     src/tracker/util/command_line_parser.cc
 )

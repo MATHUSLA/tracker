@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-#include <tracker/analysis.hh>
+#include <tracker/core/units.hh>
+#include <tracker/analysis/analysis.hh>
+#include <tracker/analysis/track.hh>
+#include <tracker/analysis/vertex.hh>
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
-#include <tracker/track.hh>
-#include <tracker/vertex.hh>
-#include <tracker/units.hh>
 
 // TODO: to remove
 #include <tracker/util/io.hh>
@@ -240,11 +240,10 @@ int prototype_tracking(int argc,
 //__Silent Prototype Tracking Algorithm_________________________________________________________
 int silent_prototype_tracking(int argc,
                               char* argv[]) {
-  const auto options = reader::parse_input(argc, argv);
-  const auto detector_map = reader::import_detector_map(options.geometry_map_file);
-  const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
-
-  return 0;
+  MATHUSLA::util::io::swap_buffer(std::cout, nullptr, nullptr);
+  MATHUSLA::util::io::swap_buffer(std::cerr, nullptr, nullptr);
+  MATHUSLA::util::io::swap_buffer(std::clog, nullptr, nullptr);
+  return prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------
 
