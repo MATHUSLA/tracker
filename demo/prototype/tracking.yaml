@@ -6,7 +6,7 @@ verbose-output: true
 compression-size:     10, 10, 10, 10
 layer-axis:           Z
 layer-depth:          500
-line-width:           100
+line-width:           300
 seed-size:            3
 event-overload-limit: 2   # unused
 event-density-limit:  0.2
@@ -21,7 +21,7 @@ root-position-error-keys: dT #, dX, dY, dZ
 root-detector-key:        Detector
 
 # Statistics Setup
-statistics-directory:      .temp/root_data/stat
+statistics-directory:      .temp/root_data_stat
 statistics-file-prefix:    statistics
 statistics-file-extension: root
 

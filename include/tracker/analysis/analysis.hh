@@ -20,42 +20,11 @@
 #define TRACKER__ANALYSIS__ANALYSIS_HH
 #pragma once
 
-#include <tracker/core/type.hh>
+#include <tracker/analysis/type.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
-
-using namespace type;
-
-//__Fitting Parameter Type______________________________________________________________________
-struct fit_parameter { real value, error, min, max; };
-//----------------------------------------------------------------------------------------------
-
-//__Event Types_________________________________________________________________________________
-using hit = r4_point;
-using event = std::vector<hit>;
-using event_vector = std::vector<event>;
-//----------------------------------------------------------------------------------------------
-
-//__Extended Event Types________________________________________________________________________
-struct full_hit { real t, x, y, z; r4_point width; };
-using full_event = std::vector<full_hit>;
-using full_event_vector = std::vector<full_event>;
-//----------------------------------------------------------------------------------------------
-
-//__Full Hit Stream Operator Overload___________________________________________________________
-std::ostream& operator<<(std::ostream& os,
-                         const full_hit& point);
-//----------------------------------------------------------------------------------------------
-
-//__Full Hit Equality___________________________________________________________________________
-constexpr bool operator==(const full_hit& left,
-                          const full_hit& right) {
-  return left.t == right.t && left.x == right.x && left.y == right.y && left.z == right.z
-      && left.width == right.width;
-}
-//----------------------------------------------------------------------------------------------
 
 //__Calculate Number of Hits per unit Length____________________________________________________
 const r4_point event_density(const event& points);
@@ -163,6 +132,13 @@ const full_event subset_join(const full_event& first,
                              const full_event& second);
 //----------------------------------------------------------------------------------------------
 
+//__Join Two Seeds Which form a Loop____________________________________________________________
+const event loop_join(const event& first,
+                      const event& second);
+const full_event loop_join(const full_event& first,
+                           const full_event& second);
+//----------------------------------------------------------------------------------------------
+
 //__Optimally Join All Seeds by Sequence________________________________________________________
 const event_vector sequential_join_all(const event_vector& seeds);
 const full_event_vector sequential_join_all(const full_event_vector& seeds);
@@ -171,6 +147,11 @@ const full_event_vector sequential_join_all(const full_event_vector& seeds);
 //__Optimally Join All Seeds by Subset__________________________________________________________
 const event_vector subset_join_all(const event_vector& seeds);
 const full_event_vector subset_join_all(const full_event_vector& seeds);
+//----------------------------------------------------------------------------------------------
+
+//__Optimally Join All Seeds by Loop____________________________________________________________
+const event_vector loop_join_all(const event_vector& seeds);
+const full_event_vector loop_join_all(const full_event_vector& seeds);
 //----------------------------------------------------------------------------------------------
 
 //__Seed Join___________________________________________________________________________________

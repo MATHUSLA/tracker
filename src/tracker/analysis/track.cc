@@ -549,7 +549,7 @@ std::ostream& operator<<(std::ostream& os,
   os << "* Event: \n";
   os << "    front: " << track.front() << "\n\n";
   const auto points = track.event();
-  const auto detectors = track.detectors();
+  const auto& detectors = track.detectors();
   const auto size = points.size();
   for (size_t i = 0; i < size; ++i)
     os << "      " << detectors[i] << " " << points[i] << "\n";

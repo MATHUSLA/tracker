@@ -108,7 +108,7 @@ real degrees_of_freedom(const T& t);
 
 //__Calculate P-Value from Chi^2________________________________________________________________
 real chi_squared_p_value(const real chi2,
-                         const size_t dof);
+                         const std::size_t dof);
 //----------------------------------------------------------------------------------------------
 
 //__Calculate P-Value from Chi^2________________________________________________________________
@@ -197,7 +197,7 @@ template<class ...Args>
 constexpr real propagate_average(const real error,
                                  const Args... rest) {
   return propagate_sum(error, rest...)
-    / std::sqrt(1.0L + static_cast<real>(util::type::size(rest...)));
+    / std::sqrt(1.0L + static_cast<real>(util::type::count(rest...)));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -205,7 +205,7 @@ constexpr real propagate_average(const real error,
 template<class Range>
 constexpr real propagate_average(const Range& range) {
   return propagate_sum(range)
-    / std::sqrt(static_cast<real>(std::cend(range) - std::cbegin(range)));
+    / std::sqrt(static_cast<real>(util::type::size(range)));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -258,7 +258,7 @@ constexpr real propagate_product(const Range& range) {
   for (auto it = begin; it != end; it += 2) {
     product *= *it;
     const auto ratio = *(it+1) / *it;
-    ratio_sum_squares = std::fma(ratio, ratio, std::move(ratio_sum_squares));
+    ratio_sum_squares = std::fma(ratio, ratio, ratio_sum_squares);
   }
   return util::math::abs(product) * std::sqrt(ratio_sum_squares);
 }
@@ -288,10 +288,26 @@ struct uncertain {
 
   uncertain(T v, T e) : value(v), error(e) {}
 
-  static uncertain from_sum(T v1, T e1, T v2, T e2);
-  static uncertain from_difference(T v1, T e1, T v2, T e2);
-  static uncertain from_product(T v1, T e1, T v2, T e2);
-  static uncertain from_quotient(T v1, T e1, T v2, T e2);
+  static uncertain from_sum(T value1,
+                            T error1,
+                            T value2,
+                            T error2);
+
+  static uncertain from_difference(T value1,
+                                   T error1,
+                                   T value2,
+                                   T error2);
+
+  static uncertain from_product(T value1,
+                                T error1,
+                                T value2,
+                                T error2);
+
+  static uncertain from_quotient(T value1,
+                                 T error1,
+                                 T value2,
+                                 T error2);
+
   static uncertain from_uniform(T v, T width);
   static uncertain from_uniform(T v, T a, T b);
 

@@ -103,7 +103,7 @@ constexpr const Value range_hypot(const Range& range) {
 //__Constant Expression Absolute Value__________________________________________________________
 template<class T>
 constexpr const T abs(const T& value) {
-  return std::max(value, -value);
+  return value >= 0 ? value : -value;
 }
 //----------------------------------------------------------------------------------------------
 

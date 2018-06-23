@@ -61,6 +61,16 @@ constexpr UnaryFunction back_insert_copy_if(const InputRange& in,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Dependent Copy Range into another Range Through Back Inserter_______________________________
+template<class InputRange, class OutputRange, class UnaryFunction>
+constexpr UnaryFunction back_insert_reverse_copy_if(const InputRange& in,
+                                                    OutputRange& out,
+                                                    UnaryFunction f) {
+  std::copy_if(std::crbegin(in), std::crend(in), std::back_inserter(out), f);
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Transform Range into another Range Through Back Inserter____________________________________
 template<class InputRange, class OutputRange, class UnaryFunction>
 constexpr UnaryFunction back_insert_transform(const InputRange& in,
@@ -71,33 +81,96 @@ constexpr UnaryFunction back_insert_transform(const InputRange& in,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Transform Range into another Range Through Back Inserter____________________________________
+template<class InputRange, class OutputRange, class UnaryFunction>
+constexpr UnaryFunction back_insert_reverse_transform(const InputRange& in,
+                                                      OutputRange& out,
+                                                      UnaryFunction f) {
+  std::transform(std::crbegin(in), std::crend(in), std::back_inserter(out), f);
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Copy Elements to Destination Until Predicate is True________________________________________
+template<class InputIt, class OutputIt, class UnaryFunction>
+constexpr std::pair<InputIt, OutputIt> copy_until(InputIt first,
+                                                  InputIt last,
+                                                  OutputIt d_first,
+                                                  UnaryFunction f) {
+  while (first != last) {
+    if (f(*first))
+      break;
+    *d_first++ = *first++;
+  }
+  return std::make_pair(first, d_first);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Copy Elements to Destination Until Predicate is True________________________________________
+template<class InputRange, class OutputRange, class UnaryFunction>
+constexpr UnaryFunction back_insert_copy_until(const InputRange& in,
+                                               OutputRange& out,
+                                               UnaryFunction f) {
+  copy_until(std::cbegin(in), std::cend(out), std::back_inserter(out), f);
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Copy Elements to Destination Until Predicate is True________________________________________
+template<class InputRange, class OutputRange, class UnaryFunction>
+constexpr UnaryFunction back_insert_reverse_copy_until(const InputRange& in,
+                                                       OutputRange& out,
+                                                       UnaryFunction f) {
+  copy_until(std::crbegin(in), std::crend(out), std::back_inserter(out), f);
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Range Subset Inclusion______________________________________________________________________
-template<class Range1, class Range2>
-constexpr bool includes(const Range1& range1,
-                        const Range2& range2) {
-  auto first1 = std::cbegin(range1);
-  auto last1 = std::cend(range1);
-  auto first2 = std::cbegin(range2);
-  auto last2 = std::cend(range2);
+// [Implementation from cppreference]
+template<class InputIt1, class InputIt2>
+constexpr bool includes(InputIt1 first1,
+                        InputIt1 last1,
+                        InputIt2 first2,
+                        InputIt2 last2) {
   for (; first2 != last2; ++first1) {
-    if (first1 == last1 || *first2 < *first1) return false;
-    if (!(*first1 < *first2)) ++first2;
+    if (first1 == last1 || *first2 < *first1)
+      return false;
+    if (!(*first1 < *first2))
+      ++first2;
   }
   return true;
 }
-template<class Range1, class Range2, class Compare>
-constexpr bool includes(const Range1& range1,
-                        const Range2& range2,
+// [Implementation from cppreference]
+template<class InputIt1, class InputIt2, class Compare>
+constexpr bool includes(InputIt1 first1,
+                        InputIt1 last1,
+                        InputIt2 first2,
+                        InputIt2 last2,
                         Compare comp) {
-  auto first1 = std::cbegin(range1);
-  auto last1 = std::cend(range1);
-  auto first2 = std::cbegin(range2);
-  auto last2 = std::cend(range2);
   for (; first2 != last2; ++first1) {
-    if (first1 == last1 || comp(*first2, *first1)) return false;
-    if (!comp(*first1, *first2)) ++first2;
+    if (first1 == last1 || comp(*first2, *first1))
+      return false;
+    if (!comp(*first1, *first2))
+      ++first2;
   }
   return true;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Range Subset Inclusion______________________________________________________________________
+template<class Range1, class Range2>
+constexpr bool range_includes(const Range1& range1,
+                              const Range2& range2) {
+  return util::algorithm::includes(std::cbegin(range1), std::cend(range1),
+                                   std::cbegin(range2), std::cend(range2));
+}
+template<class Range1, class Range2, class Compare>
+constexpr bool range_includes(const Range1& range1,
+                              const Range2& range2,
+                              const Compare comp) {
+  return util::algorithm::includes(std::cbegin(range1), std::cend(range1),
+                                   std::cbegin(range2), std::cend(range2), comp);
 }
 //----------------------------------------------------------------------------------------------
 

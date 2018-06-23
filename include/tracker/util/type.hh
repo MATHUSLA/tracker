@@ -28,13 +28,26 @@ namespace MATHUSLA {
 
 namespace util { namespace type { //////////////////////////////////////////////////////////////
 
+//__Size Method Typetrait_______________________________________________________________________
+template<class C, typename = void>
+struct has_size_method : std::false_type {};
+template<class C>
+struct has_size_method<C, decltype(&C::size, void())> : std::true_type {};
+template<class C>
+constexpr bool has_size_method_v = has_size_method<C>::value;
+//----------------------------------------------------------------------------------------------
+
 //__Get Constexpr Size__________________________________________________________________________
-template<class T>
-constexpr auto size(const T& t) -> decltype(t.size()) { return t.size(); }
 template<class T, std::size_t N>
 constexpr std::size_t size(const T (&)[N]) noexcept { return N; }
+template<class T>
+constexpr std::enable_if_t<has_size_method_v<T>, std::size_t> size(const T& t) { return t.size(); }
+template<class T>
+constexpr std::enable_if_t<!has_size_method_v<T>, std::size_t> size(const T& t) noexcept {
+  return static_cast<std::size_t>(std::cend(t) - std::cbegin(t));
+}
 template<class... Ts>
-constexpr std::size_t size(const Ts& ...) noexcept { return sizeof...(Ts); }
+constexpr std::size_t count(const Ts& ...) noexcept { return sizeof...(Ts); }
 //----------------------------------------------------------------------------------------------
 
 //__Size Ordering for Sorter____________________________________________________________________

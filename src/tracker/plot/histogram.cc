@@ -41,9 +41,8 @@ const std::string _make_unique_name(const std::string& name) {
   if (search != _names.end()) {
     return name + std::to_string(search->second++);
   } else {
-    const auto new_name = name;
-    _names.insert({new_name, 1});
-    return new_name;
+    _names.insert({name, 1});
+    return name;
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -78,7 +77,7 @@ struct histogram::histogram_impl {
   TAxis* y_axis() { return _hist->GetYaxis(); }
   const TAxis* y_axis() const { return _hist->GetYaxis(); }
 
-  histogram_impl() {}
+  histogram_impl() = default;
 
   histogram_impl(const std::string& name,
                  const std::string& title,
@@ -90,13 +89,13 @@ struct histogram::histogram_impl {
     const auto unique_name = _make_unique_name(name);
     _canvas = _build_TCanvas(unique_name, title);
     _hist = _build_TH1D(unique_name, title, bins, min, max);
-    _hist->SetDirectory(0);
+    _hist->SetDirectory(nullptr);
     x_axis()->SetTitle(x_title.c_str());
     y_axis()->SetTitle(y_title.c_str());
   }
 
-  explicit histogram_impl(const histogram_impl& other) = default;
-  explicit histogram_impl(histogram_impl&& other) = default;
+  histogram_impl(const histogram_impl& other) = default;
+  histogram_impl(histogram_impl&& other) = default;
   histogram_impl& operator=(const histogram_impl& other) = default;
   histogram_impl& operator=(histogram_impl&& other) = default;
   ~histogram_impl() = default;

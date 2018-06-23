@@ -57,7 +57,7 @@ struct option {
     argument = nullptr;
   }
 
-  void set_argument(char* arg,
+  void set_argument(const char* arg,
                     size_t flag) {
     argument = arg;
     flags |= flag;
@@ -85,7 +85,7 @@ struct option {
 using option_list = std::vector<option*>;
 //----------------------------------------------------------------------------------------------
 
-//__Commmand Line Option Parser_________________________________________________________________
+//__Command Line Option Parser__________________________________________________________________
 size_t parse(char* argv[],
              option_list options);
 //----------------------------------------------------------------------------------------------

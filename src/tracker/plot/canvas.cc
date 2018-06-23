@@ -109,7 +109,7 @@ struct canvas::canvas_impl {
   bool _has_updated = false;
 
   void reset_view() {
-    _view = static_cast<TView3D*>(TView::CreateView());
+    _view = dynamic_cast<TView3D*>(TView::CreateView());
     _view->SetAutoRange(true);
   }
 
@@ -120,8 +120,8 @@ struct canvas::canvas_impl {
     reset_view();
   }
 
-  explicit canvas_impl(const canvas_impl& other) = default;
-  explicit canvas_impl(canvas_impl&& other) = default;
+  canvas_impl(const canvas_impl& other) = default;
+  canvas_impl(canvas_impl&& other) = default;
   canvas_impl& operator=(const canvas_impl& other) = default;
   canvas_impl& operator=(canvas_impl&& other) = default;
   ~canvas_impl() = default;

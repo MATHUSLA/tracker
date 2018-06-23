@@ -41,7 +41,7 @@ namespace { ////////////////////////////////////////////////////////////////////
 void _parse_detector_map_entry(const uint_fast64_t line_count,
                                std::string& line,
                                geometry::detector_map& out) {
-  const auto colon = util::string::strip(line).find(":");
+  const auto colon = util::string::strip(line).find(':');
   if (colon == std::string::npos || line[0] == '#') {
     return;
   } else {
@@ -400,7 +400,7 @@ void _parse_key_value_r4_coordinate(const std::string& key,
 //__Tracking Script Options Parser______________________________________________________________
 const tracking_options read(const std::string& path) {
   std::ifstream file(path);
-  tracking_options out;
+  tracking_options out{};
 
   std::string line;
   // TODO: use for in-place map reader -> `uint_fast64_t line_counter{};`

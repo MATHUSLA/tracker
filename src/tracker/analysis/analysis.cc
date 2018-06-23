@@ -33,14 +33,6 @@ namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
-//__Full Hit Stream Operator Overload___________________________________________________________
-std::ostream& operator<<(std::ostream& os,
-                         const full_hit& point) {
-  return os << "[(" << point.t << ", " << point.x << ", " << point.y << ", " << point.z
-            << ") +/- " << point.width << "]";
-}
-//----------------------------------------------------------------------------------------------
-
 //__Calculate Number of Hits per unit Length____________________________________________________
 template<class Event,
   typename Point = typename Event::value_type,
@@ -117,13 +109,7 @@ template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const Event centralize(const Event& points,
                        const Coordinate coordinate) {
-  const auto size = points.size();
-  if (size == 0) return {};
-  auto out = coordinate_copy_sort(coordinate, points);
-  //const hit min{points.front().t, 0, 0, 0};
-  //std::transform(out.cbegin(), out.cend(), out.begin(),
-  //  [&](const auto& point) { return point - min; });
-  return out;
+  return coordinate_copy_sort(coordinate, points);
 }
 const event centralize(const event& points,
                        const Coordinate coordinate) {
@@ -396,7 +382,7 @@ const Event sequential_join(const Event& first,
   const auto overlap = first.size() - difference;
 
   if (overlap <= 0 || second_size < overlap)
-    return {};
+    return Event{};
 
   const auto size = difference + second_size;
   Event out;
@@ -407,7 +393,7 @@ const Event sequential_join(const Event& first,
   for (; index < difference + overlap; ++index) {
     const auto& point = first[index];
     if (point != second[index - difference])
-      return {};
+      return Event{};
     out.push_back(point);
   }
   for (; index < size; ++index) out.push_back(second[index - difference]);
@@ -433,9 +419,9 @@ template<class Event,
 const Event subset_join(const Event& first,
                         const Event& second) {
   if (first.size() >= second.size()) {
-    return util::algorithm::includes(first, second, type::t_ordered<Point>{}) ? first : Event{};
+    return util::algorithm::range_includes(first, second, t_ordered<Point>{}) ? first : Event{};
   } else {
-    return util::algorithm::includes(second, first, type::t_ordered<Point>{}) ? second : Event{};
+    return util::algorithm::range_includes(second, first, t_ordered<Point>{}) ? second : Event{};
   }
 }
 const event subset_join(const event& first,
@@ -445,6 +431,67 @@ const event subset_join(const event& first,
 const full_event subset_join(const full_event& first,
                              const full_event& second) {
   return subset_join<>(first, second);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Join Two Seeds Which form a Loop____________________________________________________________
+template<class Event,
+  typename Iter = typename Event::iterator,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const Event loop_join(const Event& first,
+                      const Event& second) {
+  const auto first_size = first.size();
+  const auto second_size = second.size();
+
+  Event out;
+  out.reserve(first_size + second_size);
+  auto out_inserter = std::back_inserter(out);
+
+  auto first_iter = first.cbegin();
+  const auto first_end = first.cend();
+  auto second_iter = second.cbegin();
+  const auto second_end = second.cend();
+
+  const auto second_front = second.front();
+  first_iter = util::algorithm::copy_until(first_iter, first_end, out_inserter,
+    [&](const auto& point) { return point == second_front; }).first;
+
+  if (first_iter == first_end)
+    return Event{};
+
+  first_iter = util::algorithm::copy_until(first_iter, first_end, out_inserter,
+    [&](const auto& point) { return point != second_front; }).first;
+
+  if (first_iter == first_end)
+    return Event{};
+
+  auto first_stop = first_end;
+  auto second_stop = second_end;
+
+  if (static_cast<std::size_t>(first_end - first_iter) >= second_size) {
+    const auto second_back = second.back();
+    auto result = util::algorithm::copy_until(first.crbegin(), first.crend(), out_inserter,
+      [&](const auto& point) { return point == second_back; }).first;
+    first_stop = (result + 1).base();
+
+
+  } else {
+    const auto first_back = first.back();
+    auto result = util::algorithm::copy_until(second.crbegin(), second.crend(), out_inserter,
+      [&](const auto& point) { return point == first_back; }).first;
+    second_stop = (result + 1).base();
+  }
+
+  out.shrink_to_fit();
+  return out;
+}
+const event loop_join(const event& first,
+                      const event& second) {
+  return loop_join<>(first, second);
+}
+const full_event loop_join(const full_event& first,
+                           const full_event& second) {
+  return loop_join<>(first, second);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -503,9 +550,12 @@ bool _partial_join(EventVector& seed_buffer,
     _join_secondaries(index, difference, seed_buffer, indicies, join_list, to_joined);
 
   if (!to_joined.empty()) {
+    join_list.unset_conditional_push_back(indicies, to_singular);
+    /*
     for (size_t i = 0; i < size; ++i)
       if (!join_list[i])
         to_singular.push_back(indicies[i]);
+    */
 
     joined.push(to_joined);
     singular.push(to_singular);
@@ -562,17 +612,14 @@ const EventVector sequential_join_all(const EventVector& seeds) {
   EventVector out;
   out.reserve(size); // FIXME: bad estimate?
 
-  EventVector seed_buffer;
-  std::copy(seeds.cbegin(), seeds.cend(), std::back_inserter(seed_buffer));
-
   seed_queue joined, singular;
-
   index_vector initial_seeds;
   initial_seeds.reserve(size);
   for (size_t i = 0; i < size; ++i)
     initial_seeds.push_back(i);
-
   joined.push(initial_seeds);
+
+  EventVector seed_buffer = seeds;
   _full_join(seed_buffer, 1, joined, singular, out);
   return out;
 }
@@ -591,17 +638,18 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<Point>>>
 const EventVector subset_join_all(const EventVector& seeds) {
   const auto size = seeds.size();
+  if (size == 1)
+    return seeds;
+
   EventVector out;
   out.reserve(size); // FIXME: bad estimate?
 
   const auto sorted = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
-
   util::bit_vector joined_list(size);
 
   size_t top_index = 0, bottom_index = 1;
   while (top_index < size) {
     bottom_index = joined_list.first_unset(bottom_index);
-
     const auto top_seed = sorted[top_index];
     if (bottom_index == size) {
       out.push_back(top_seed);
@@ -611,7 +659,7 @@ const EventVector subset_join_all(const EventVector& seeds) {
       continue;
     }
     const auto bottom_seed = sorted[bottom_index];
-    if (util::algorithm::includes(top_seed, bottom_seed, type::t_ordered<Point>{})) {
+    if (util::algorithm::range_includes(top_seed, bottom_seed, t_ordered<Point>{})) {
       joined_list.set(bottom_index);
       top_index = joined_list.first_unset(1 + top_index);
       bottom_index = 1 + top_index;
@@ -620,11 +668,8 @@ const EventVector subset_join_all(const EventVector& seeds) {
     }
   }
 
-  for (size_t i = 0; i < size; ++i) {
-    if (!joined_list[i])
-      out.push_back(sorted[i]);
-  }
-
+  joined_list.unset_conditional_push_back(sorted, out);
+  out.shrink_to_fit();
   return out;
 }
 const event_vector subset_join_all(const event_vector& seeds) {
@@ -632,6 +677,22 @@ const event_vector subset_join_all(const event_vector& seeds) {
 }
 const full_event_vector subset_join_all(const full_event_vector& seeds) {
   return subset_join_all<>(seeds);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Optimally Join All Seeds by Loop____________________________________________________________
+template<class EventVector,
+  typename Event = typename EventVector::value_type,
+  typename Point = typename Event::value_type,
+  typename = std::enable_if_t<is_r4_type_v<Point>>>
+const EventVector loop_join_all(const EventVector& seeds) {
+  return seeds;
+}
+const event_vector loop_join_all(const event_vector& seeds) {
+  return loop_join_all<>(seeds);
+}
+const full_event_vector loop_join_all(const full_event_vector& seeds) {
+  return loop_join_all<>(seeds);
 }
 //----------------------------------------------------------------------------------------------
 

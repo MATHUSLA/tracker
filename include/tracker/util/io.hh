@@ -50,9 +50,24 @@ std::ostream& print_range(const Range& range,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Repeat String_______________________________________________________________________________
+inline std::ostream& repeat(const std::size_t count,
+                            const std::string& string,
+                            std::ostream& os=std::cout) {
+  for (std::size_t i = 0; i < count; ++i)
+    os << string;
+  return os;
+}
+inline std::ostream& repeat(const std::size_t count,
+                            const char character,
+                            std::ostream& os=std::cout) {
+  return os << std::string(count, character);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Print Newline Characters____________________________________________________________________
-inline std::ostream& newline(const size_t count=1, std::ostream& os=std::cout) {
-  return os << std::string(count, '\n');
+inline std::ostream& newline(const std::size_t count=1, std::ostream& os=std::cout) {
+  return repeat(count, '\n', os);
 }
 //----------------------------------------------------------------------------------------------
 

@@ -33,7 +33,8 @@ void std_cerr_forward(T&& arg) {
   std::cerr << std::forward<T>(arg);
 }
 template<class T, class... Args>
-void std_cerr_forward(T&& arg, Args&&... args) {
+void std_cerr_forward(T&& arg,
+                      Args&&... args) {
   std_cerr_forward(arg);
   std_cerr_forward(args...);
 }
@@ -42,23 +43,31 @@ void std_cerr_forward(T&& arg, Args&&... args) {
 
 //__Boolean Exit Convenience Functions__________________________________________________________
 template<class... Args>
-void exit_when(bool value, int code, Args&&... msgs) {
+void exit_when(bool value,
+               int code,
+               Args&&... msgs) {
   if (value) {
     detail::std_cerr_forward(msgs...);
     exit(code);
   }
 }
 template<class... Args>
-void exit_when(bool value, Args&&... msgs) {
+void exit_when(bool value,
+               Args&&... msgs) {
   exit_when(value, EXIT_FAILURE, msgs...);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Exit Convenience Functions__________________________________________________________________
 template<class... Args>
-void exit(int code, Args&&... msgs) { exit_when(true, code, msgs...); }
+void exit(int code,
+          Args&&... msgs) {
+  exit_when(true, code, msgs...);
+}
 template<class... Args>
-void exit(Args&&... msgs) { exit_when(true, EXIT_FAILURE, msgs...); }
+void exit(Args&&... msgs) {
+  exit_when(true, EXIT_FAILURE, msgs...);
+}
 //----------------------------------------------------------------------------------------------
 
 } } /* namespace util::error */ ////////////////////////////////////////////////////////////////

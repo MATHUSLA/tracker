@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-#include <tracker/core/units.hh>
 #include <tracker/analysis/analysis.hh>
 #include <tracker/analysis/track.hh>
 #include <tracker/analysis/vertex.hh>
@@ -73,7 +72,7 @@ void draw_track(plot::canvas& canvas,
     const auto center = type::reduce_to_r3(point);
     const plot::color color{brightness, brightness, brightness};
     canvas.add_point(center, 0.3, color);
-    //canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
+    canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     brightness += step;
   }
   //canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
@@ -117,9 +116,9 @@ void save_tracks(const analysis::track_vector& tracks,
     chi_squared.insert(track.chi_squared_per_dof());
     beta.insert(track.beta());
     draw_track(canvas, track, shift);
-    if (verbose)
-      std::cout << track << "\n";
-    shift+= 10;
+    //if (verbose)
+    //  std::cout << track << "\n";
+    shift+= 5;
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -141,15 +140,17 @@ int prototype_tracking(int argc,
   const auto data_directory_size = data_directory.size();
   for (uint_fast64_t path_counter{}; path_counter < data_directory_size; ++path_counter) {
     const auto& path = data_directory[path_counter];
+    const auto path_counter_string = std::to_string(path_counter);
 
     print_bar();
     std::cout << "Read Path: " << path << "\n";
 
     const auto imported_events = reader::root::import_events(path, options, detector_map);
-    if (imported_events.size() == 0)
+    const auto import_size = imported_events.size();
+    if (import_size == 0)
       continue;
 
-    const auto statistics_path = statistics_path_prefix + std::to_string(path_counter) + "." + options.statistics_file_extension;
+    const auto statistics_path = statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension;
     plot::histogram chi_squared_histogram("chi_squared",
       "Chi-Squared Distribution", "chi^2/dof", "Track Count",
       200, 0, 10);
@@ -160,10 +161,12 @@ int prototype_tracking(int argc,
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
 
-    const auto import_size = imported_events.size();
+
+    // TODO: remove min here ---------------------------vvvvvvvv
     for (uint_fast64_t event_counter{}; event_counter < std::min(10UL, import_size); ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
+      const auto event_counter_string = std::to_string(event_counter);
 
       const auto compressed_event = analysis::compress(event, options.compression_size);
       const auto compression_gain = event_size / static_cast<type::real>(compressed_event.size());
@@ -182,7 +185,7 @@ int prototype_tracking(int argc,
       if (event_density >= options.event_density_limit)
         continue;
 
-      plot::canvas canvas(path);
+      plot::canvas canvas(path + event_counter_string);
       canvas.add_points(compressed_event, 0.8, plot::color::BLUE);
       // TODO: add back in -> draw_detector_centers(canvas);
 

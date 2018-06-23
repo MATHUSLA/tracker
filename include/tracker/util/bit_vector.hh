@@ -32,7 +32,7 @@ namespace detail { /////////////////////////////////////////////////////////////
 //__Boolean-Like Object_________________________________________________________________________
 struct hidden_bool {
   bool data;
-  hidden_bool() : data(0) {}
+  hidden_bool() : data(false) {}
   hidden_bool(const bool data) : data(data) {}
   hidden_bool(const hidden_bool& rhs)            = default;
   hidden_bool(hidden_bool&& rhs)                 = default;
@@ -52,7 +52,7 @@ class bit_vector : public std::vector<bit> {
 public:
   bit_vector(const std::size_t count,
              const std::size_t size) {
-    resize(size, 0);
+    resize(size, false);
     for (std::size_t i = count > size ? 0 : size - count; i < size; ++i)
       (*this)[i] = true;
   }
@@ -78,7 +78,9 @@ public:
   }
 
   bit_vector& set() noexcept {
-    for (std::size_t i = 0; i < size(); ++i) (*this)[i] = true;
+    const auto s = size();
+    for (std::size_t i = 0; i < s; ++i)
+      (*this)[i] = true;
     return *this;
   }
 
@@ -88,7 +90,9 @@ public:
   }
 
   bit_vector& reset() noexcept {
-    for (std::size_t i = 0; i < size(); ++i) (*this)[i] = false;
+    const auto s = size();
+    for (std::size_t i = 0; i < s; ++i)
+      (*this)[i] = false;
     return *this;
   }
 
@@ -99,6 +103,37 @@ public:
 
   bool next_permutation() noexcept {
     return std::next_permutation(begin(), end());
+  }
+
+  template<class Range, class BinaryFunction>
+  BinaryFunction traverse(const Range& range,
+                          BinaryFunction f) const noexcept {
+    auto begin = std::cbegin(range);
+    const auto s = std::min(size(), static_cast<std::size_t>(std::cend(range) - begin));
+    for (std::size_t i = 0; i < s; ++i)
+      f((*this)[i], *begin++);
+    return std::move(f);
+  }
+
+  template<class InputRange, class OutputRange, class BinaryFunction>
+  BinaryFunction conditional_push_back(const InputRange& in,
+                                       OutputRange& out,
+                                       BinaryFunction f) const noexcept {
+    auto back_inserter = std::back_inserter(out);
+    traverse(in, [&](const auto bit, const auto& item) { if (f(bit, item)) *back_inserter++ = item; });
+    return std::move(f);
+  }
+
+  template<class InputRange, class OutputRange>
+  void set_conditional_push_back(const InputRange& in,
+                                 OutputRange& out) const noexcept {
+    conditional_push_back(in, out, [](const auto bit, const auto&) { return bit; });
+  }
+
+  template<class InputRange, class OutputRange>
+  void unset_conditional_push_back(const InputRange& in,
+                                   OutputRange& out) const noexcept {
+    conditional_push_back(in, out, [](const auto bit, const auto&) { return !bit; });
   }
 };
 //----------------------------------------------------------------------------------------------

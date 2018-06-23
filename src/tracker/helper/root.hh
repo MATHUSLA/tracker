@@ -55,13 +55,13 @@ inline void collect_paths(TSystemDirectory* dir,
                           const std::string& ext) {
   if (!dir || !dir->GetListOfFiles()) return;
   for (const auto&& obj : *dir->GetListOfFiles()) {
-    const auto file = static_cast<TSystemFile*>(obj);
+    const auto file = dynamic_cast<TSystemFile*>(obj);
     const auto name = std::string(file->GetName());
-    if (file && !file->IsDirectory()) {
-      if (ext == "" || name.substr(1 + name.find_last_of(".")) == ext)
+    if (!file->IsDirectory()) {
+      if (ext.empty() || name.substr(1 + name.find_last_of('.')) == ext)
         paths.push_back(std::string(file->GetTitle()) + "/" + name);
     } else if (!(name == "." || name == "..")) {
-      collect_paths(static_cast<TSystemDirectory*>(file), paths, ext);
+      collect_paths(dynamic_cast<TSystemDirectory*>(file), paths, ext);
     }
   }
 }
@@ -99,7 +99,7 @@ BinaryFunction traverse_keys(const std::string& path,
   while_open(path, mode, [&](const auto file) {
     TIter next(file->GetListOfKeys());
     TKey* key = nullptr;
-    while ((key = static_cast<TKey*>(next())))
+    while ((key = dynamic_cast<TKey*>(next())))
       f(file, key);
   });
   return std::move(f);
@@ -118,7 +118,7 @@ namespace tree { ///////////////////////////////////////////////////////////////
 inline TTree* get_tree(TFile* file,
                        const TKey* key) {
   return (file && key && get_key_classname(key) == "TTree")
-    ? static_cast<TTree*>(file->Get(key->GetName()))
+    ? dynamic_cast<TTree*>(file->Get(key->GetName()))
     : nullptr;
 }
 //----------------------------------------------------------------------------------------------
@@ -126,7 +126,7 @@ inline TTree* get_tree(TFile* file,
 //__Get TTree Object From File Without Checking Type____________________________________________
 inline TTree* unchecked_get_tree(TFile* file,
                                  const TKey* key) {
-  return static_cast<TTree*>(file->Get(key->GetName()));
+  return dynamic_cast<TTree*>(file->Get(key->GetName()));
 }
 //----------------------------------------------------------------------------------------------
 
