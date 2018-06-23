@@ -75,9 +75,9 @@ void draw_track(plot::canvas& canvas,
     canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     brightness += step;
   }
-  //canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
-  //canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
-
+  canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
+  canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+  /*
   brightness = 0;
   for (size_t i = 0; i < full_event.size()-1; ++i) {
     const plot::color color{brightness, brightness, brightness};
@@ -85,6 +85,7 @@ void draw_track(plot::canvas& canvas,
     canvas.add_line(type::reduce_to_r3(full_event[i]) + shifter, type::reduce_to_r3(full_event[i+1]) + shifter, 1, color);
     brightness += step;
   }
+   */
 }
 //----------------------------------------------------------------------------------------------
 
@@ -160,7 +161,6 @@ int prototype_tracking(int argc,
     plot::histogram event_density_histogram("event_density",
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
-
 
     // TODO: remove min here ---------------------------vvvvvvvv
     for (uint_fast64_t event_counter{}; event_counter < std::min(10UL, import_size); ++event_counter) {
