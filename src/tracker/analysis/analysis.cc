@@ -40,7 +40,7 @@ template<class Event,
 const r4_point event_density(const Event& points) {
   const auto size = points.size();
   if (size == 0)
-    return {};
+    return r4_point{};
   const auto begin = points.cbegin();
   const auto end = points.cend();
   const auto t_range = std::minmax_element(begin, end, t_ordered<Point>{});
@@ -324,7 +324,7 @@ const EventVector seed(const size_t n,
                        const EventPartition& partition,
                        const real line_threshold) {
   if (n <= 2)
-    return {};
+    return EventVector{};
 
   const auto& layers = partition.parts;
   const auto layer_count = layers.size();
@@ -334,7 +334,7 @@ const EventVector seed(const size_t n,
 
   // FIXME: unsure what to do here
   if (layer_count < n)
-    return {};
+    return EventVector{};
 
   util::bit_vector_sequence layer_sequence;
   for (const auto& layer : layers)
@@ -551,12 +551,6 @@ bool _partial_join(EventVector& seed_buffer,
 
   if (!to_joined.empty()) {
     join_list.unset_conditional_push_back(indicies, to_singular);
-    /*
-    for (size_t i = 0; i < size; ++i)
-      if (!join_list[i])
-        to_singular.push_back(indicies[i]);
-    */
-
     joined.push(to_joined);
     singular.push(to_singular);
     return true;
@@ -610,7 +604,7 @@ template<class EventVector,
 const EventVector sequential_join_all(const EventVector& seeds) {
   const auto size = seeds.size();
   EventVector out;
-  out.reserve(size); // FIXME: bad estimate?
+  out.reserve(size);
 
   seed_queue joined, singular;
   index_vector initial_seeds;
@@ -621,6 +615,7 @@ const EventVector sequential_join_all(const EventVector& seeds) {
 
   EventVector seed_buffer = seeds;
   _full_join(seed_buffer, 1, joined, singular, out);
+  out.shrink_to_fit();
   return out;
 }
 const event_vector sequential_join_all(const event_vector& seeds) {
@@ -642,7 +637,7 @@ const EventVector subset_join_all(const EventVector& seeds) {
     return seeds;
 
   EventVector out;
-  out.reserve(size); // FIXME: bad estimate?
+  out.reserve(size);
 
   const auto sorted = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
   util::bit_vector joined_list(size);
@@ -686,7 +681,17 @@ template<class EventVector,
   typename Point = typename Event::value_type,
   typename = std::enable_if_t<is_r4_type_v<Point>>>
 const EventVector loop_join_all(const EventVector& seeds) {
-  return seeds;
+  const auto size = seeds.size();
+  if (size == 1)
+    return seeds;
+
+  EventVector out;
+  out.reserve(size);
+
+  out = seeds;
+
+  out.shrink_to_fit();
+  return out;
 }
 const event_vector loop_join_all(const event_vector& seeds) {
   return loop_join_all<>(seeds);

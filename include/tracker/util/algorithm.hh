@@ -196,7 +196,7 @@ Range& stable_sort_range(Range& range,
 template<class Range, class Compare>
 Range copy_sort_range(const Range& range,
                       const Compare comp) {
-  auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
+  auto copy = range;
   std::partial_sort_copy(range.cbegin(), range.cend(), copy.begin(), copy.end(), comp);
   return copy;
 }
@@ -206,7 +206,7 @@ Range copy_sort_range(const Range& range,
 template<class Range, class Compare>
 Range stable_copy_sort_range(const Range& range,
                              const Compare comp) {
-  auto copy = range;  //FIXME: unsure how to improve this (maybe: uninitialized_copy)
+  auto copy = range;
   std::stable_sort(copy.begin(), copy.end(), comp);
   return copy;
 }
