@@ -65,7 +65,7 @@ void draw_detector_centers(plot::canvas& canvas) {
 
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________
 void draw_track(plot::canvas& canvas,
-                const analysis::track& track, type::real shift) {
+                const analysis::track& track) {
   const auto& full_event = track.full_event();
   uint_fast8_t brightness = 0, step = 230 / full_event.size();
   for (const auto& point : full_event) {
@@ -77,15 +77,6 @@ void draw_track(plot::canvas& canvas,
   }
   canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
   canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
-  /*
-  brightness = 0;
-  for (size_t i = 0; i < full_event.size()-1; ++i) {
-    const plot::color color{brightness, brightness, brightness};
-    const type::r3_point shifter{shift, shift, shift};
-    canvas.add_line(type::reduce_to_r3(full_event[i]) + shifter, type::reduce_to_r3(full_event[i+1]) + shifter, 1, color);
-    brightness += step;
-  }
-   */
 }
 //----------------------------------------------------------------------------------------------
 
@@ -112,14 +103,12 @@ void save_tracks(const analysis::track_vector& tracks,
                  plot::histogram& chi_squared,
                  plot::histogram& beta,
                  bool verbose) {
-  type::real shift = 0;
   for (const auto& track : tracks) {
     chi_squared.insert(track.chi_squared_per_dof());
     beta.insert(track.beta());
-    draw_track(canvas, track, shift);
+    draw_track(canvas, track);
     //if (verbose)
-    //  std::cout << track << "\n";
-    shift+= 5;
+      //std::cout << track << "\n";
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -162,8 +151,7 @@ int prototype_tracking(int argc,
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
 
-    // TODO: remove min here ---------------------------vvvvvvvv
-    for (uint_fast64_t event_counter{}; event_counter < std::min(10UL, import_size); ++event_counter) {
+    for (uint_fast64_t event_counter{}; event_counter < std::min(100UL, import_size); ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -187,7 +175,7 @@ int prototype_tracking(int argc,
 
       plot::canvas canvas(path + event_counter_string);
       canvas.add_points(compressed_event, 0.8, plot::color::BLUE);
-      // TODO: add back in -> draw_detector_centers(canvas);
+      draw_detector_centers(canvas);
 
       const auto tracks = find_tracks(compressed_event, options);
 

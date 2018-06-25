@@ -50,14 +50,14 @@ using bit = detail::hidden_bool;
 //__Dynamic Bit Vector__________________________________________________________________________
 class bit_vector : public std::vector<bit> {
 public:
-  bit_vector(const std::size_t count,
-             const std::size_t size) {
+  explicit bit_vector(const std::size_t count,
+                      const std::size_t size) {
     resize(size, false);
     for (std::size_t i = count > size ? 0 : size - count; i < size; ++i)
       (*this)[i] = true;
   }
 
-  bit_vector(const std::size_t size) : bit_vector(0, size) {}
+  explicit bit_vector(const std::size_t size) : bit_vector(0, size) {}
 
   std::size_t count() const noexcept {
     return std::count(cbegin(), cend(), true);
@@ -70,9 +70,27 @@ public:
     return s;
   }
 
+  std::size_t last_set(const std::size_t start=0) const noexcept {
+    const auto s = size();
+    if (start >= s)
+      return s;
+    for (std::size_t i = s - start - 1UL; i != static_cast<std::size_t>(-1); --i)
+      if ((*this)[i]) return i;
+    return s;
+  }
+
   std::size_t first_unset(const std::size_t start=0) const noexcept {
     const auto s = size();
     for (std::size_t i = start; i < s; ++i)
+      if (!(*this)[i]) return i;
+    return s;
+  }
+
+  std::size_t last_unset(const std::size_t start=0) const noexcept {
+    const auto s = size();
+    if (start >= s)
+      return s;
+    for (std::size_t i = s - start - 1UL; i != static_cast<std::size_t>(-1); --i)
       if (!(*this)[i]) return i;
     return s;
   }
@@ -99,6 +117,12 @@ public:
   bit_vector& reset(const std::size_t index) {
     (*this)[index] = false;
     return *this;
+  }
+
+  std::size_t extend(const std::size_t count=1) {
+    for (std::size_t i = 0; i < count; ++i)
+      push_back(false);
+    return size();
   }
 
   bool next_permutation() noexcept {

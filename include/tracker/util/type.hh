@@ -28,6 +28,14 @@ namespace MATHUSLA {
 
 namespace util { namespace type { //////////////////////////////////////////////////////////////
 
+//__Alternative to std::distance________________________________________________________________
+template<class Iter>
+constexpr std::size_t distance(const Iter& begin,
+                               const Iter& end) {
+  return static_cast<std::size_t>(end - begin);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Size Method Typetrait_______________________________________________________________________
 template<class C, typename = void>
 struct has_size_method : std::false_type {};
@@ -44,7 +52,7 @@ template<class T>
 constexpr std::enable_if_t<has_size_method_v<T>, std::size_t> size(const T& t) { return t.size(); }
 template<class T>
 constexpr std::enable_if_t<!has_size_method_v<T>, std::size_t> size(const T& t) noexcept {
-  return static_cast<std::size_t>(std::cend(t) - std::cbegin(t));
+  return distance(std::cbegin(t), std::cend(t));
 }
 template<class... Ts>
 constexpr std::size_t count(const Ts& ...) noexcept { return sizeof...(Ts); }
