@@ -20,6 +20,7 @@
 
 #include <tracker/core/stat.hh>
 #include <tracker/core/units.hh>
+#include <tracker/analysis/analysis.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
@@ -55,26 +56,17 @@ const geometry::box_volume combine_rpc_volume_pair(const geometry::box_volume& f
 //----------------------------------------------------------------------------------------------
 
 //__Construct True Hit from RPC Hit Volumes_____________________________________________________
-const analysis::full_hit construct_hit(const type::real top_time,
-                                       const type::real bottom_time,
-                                       const geometry::structure_value& top_volume,
-                                       const geometry::structure_value& bottom_volume,
-                                       const geometry::box_volume& combined) {
-  const type::r4_point errors{
-    stat::error::propagate_average(
-      geometry::time_resolution_of(top_volume),
-      geometry::time_resolution_of(bottom_volume)),
-    combined.max.x - combined.min.x,
-    combined.max.y - combined.min.y,
-    combined.max.z - combined.min.z};
-  return {0.5L * (top_time + bottom_time), combined.center.x, combined.center.y, combined.center.z, errors};
+const analysis::hit construct_hit(const type::real top_time,
+                                  const type::real bottom_time,
+                                  const geometry::box_volume& combined) {
+  return {0.5L * (top_time + bottom_time), combined.center.x, combined.center.y, combined.center.z};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Combine All Hits that Occur in Overlapping RPCs_____________________________________________
-const analysis::full_event combine_rpc_hits(const analysis::event& points,
-                                            analysis::full_event& combined_rpc_hits,
-                                            analysis::full_event& original_rpc_hits) {
+const analysis::event combine_rpc_hits(const analysis::event& points,
+                                       analysis::event& combined_rpc_hits,
+                                       analysis::full_event& original_rpc_hits) {
 
   static const type::real z_lower = 24.0L * units::length;
   static const type::real z_upper = 45.0L * units::length;
@@ -86,7 +78,7 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
   if (size == 0)
     return {};
 
-  analysis::full_event event;
+  analysis::event event;
   event.reserve(size);
 
   const auto parts = analysis::partition(points, type::Coordinate::Z, z_lower).parts;
@@ -108,21 +100,19 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
 
         const auto top_point = top[top_index];
         if (bottom_index == bottom_size) {
-          event.push_back(analysis::add_width(top_point));
+          event.push_back(top_point);
           ++top_index;
           bottom_index = 0;
           continue;
         }
         const auto bottom_point = bottom[bottom_index];
 
-        const auto top_volume = geometry::volume(top_point);
-        const auto bottom_volume = geometry::volume(bottom_point);
         const auto combined = combine_rpc_volume_pair(
-          geometry::limits_of(top_volume),
-          geometry::limits_of(bottom_volume));
+          geometry::limits_of_volume(top_point),
+          geometry::limits_of_volume(bottom_point));
 
         if (was_combine_successful(combined) && within(top_point.t, bottom_point.t, time_threshold)) {
-          const auto new_hit = construct_hit(top_point.t, bottom_point.t, top_volume, bottom_volume, combined);
+          const auto new_hit = construct_hit(top_point.t, bottom_point.t, combined);
           event.push_back(new_hit);
           combined_rpc_hits.push_back(new_hit);
           original_rpc_hits.push_back(analysis::add_width(top_point));
@@ -136,22 +126,22 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
       }
 
       for (; top_index < top_size; ++top_index) {
-        event.push_back(analysis::add_width(top[top_index]));
+        event.push_back(top[top_index]);
       }
       for (bottom_index = 0; bottom_index < bottom_size; ++bottom_index) {
         if (!discard_list[bottom_index])
-          event.push_back(analysis::add_width(bottom[bottom_index]));
+          event.push_back(bottom[bottom_index]);
       }
       ++layer_index;
     } else {
       util::algorithm::back_insert_transform(top, event,
-        [](const auto& part){ return analysis::add_width(part); });
+        [](const auto& part){ return part; });
     }
   }
 
   if (layer_index == partition_size - 1) {
     util::algorithm::back_insert_transform(parts.back(), event,
-      [](const auto& part){ return analysis::add_width(part); });
+      [](const auto& part){ return part; });
   }
 
   util::algorithm::reverse(event);
@@ -160,12 +150,24 @@ const analysis::full_event combine_rpc_hits(const analysis::event& points,
 //----------------------------------------------------------------------------------------------
 
 //__Reset Seed Vector Using RPC Combination Hits________________________________________________
-const analysis::full_event_vector reset_seeds(const analysis::full_event_vector& joined_seeds,
-                                              const analysis::full_event& combined_rpc_hits,
+const analysis::full_event_vector reset_seeds(const analysis::event_vector& joined_seeds,
+                                              const analysis::event& combined_rpc_hits,
                                               const analysis::full_event& original_rpc_hits) {
   const auto combined_size = combined_rpc_hits.size();
-  if (combined_size == 0)
-    return joined_seeds;
+  if (combined_size == 0) {
+    analysis::full_event_vector out;
+    for (const auto& seed : joined_seeds) {
+      analysis::full_event next;
+      next.reserve(seed.size());
+      for (const auto& hit : seed) {
+        next.push_back(analysis::add_width(hit));
+      }
+      next.shrink_to_fit();
+      out.push_back(type::t_sort(next));
+    }
+    out.shrink_to_fit();
+    return out;
+  }
 
   analysis::full_event_vector out;
   out.reserve(joined_seeds.size());
@@ -181,11 +183,12 @@ const analysis::full_event_vector reset_seeds(const analysis::full_event_vector&
         }
       }
       if (rpc_index == combined_size)
-        next.push_back(hit);
+        next.push_back(analysis::add_width(hit));
     }
     next.shrink_to_fit();
     out.push_back(type::t_sort(next));
   }
+  out.shrink_to_fit();
   return out;
 }
 //----------------------------------------------------------------------------------------------

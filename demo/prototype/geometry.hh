@@ -20,7 +20,7 @@
 #define TRACKER__PROTOTYPE__GEOMETRY_HH
 #pragma once
 
-#include <tracker/analysis/analysis.hh>
+#include <tracker/analysis/type.hh>
 #include <tracker/geometry.hh>
 
 //__Namespace Alias_____________________________________________________________________________
@@ -50,22 +50,20 @@ constexpr bool was_combine_successful(const geometry::box_volume& combined) {
 //----------------------------------------------------------------------------------------------
 
 //__Construct True Hit from RPC Hit Volumes_____________________________________________________
-const analysis::full_hit construct_hit(const type::real top_time,
-                                       const type::real bottom_time,
-                                       const geometry::structure_value& top_volume,
-                                       const geometry::structure_value& bottom_volume,
-                                       const geometry::box_volume& combined);
+const analysis::hit construct_hit(const type::real top_time,
+                                  const type::real bottom_time,
+                                  const geometry::box_volume& combined);
 //----------------------------------------------------------------------------------------------
 
 //__Combine All Hits that Occur in Overlapping RPCs_____________________________________________
-const analysis::full_event combine_rpc_hits(const analysis::event& points,
-                                            analysis::full_event& combined_rpc_hits,
-                                            analysis::full_event& original_rpc_hits);
+const analysis::event combine_rpc_hits(const analysis::event& points,
+                                       analysis::event& combined_rpc_hits,
+                                       analysis::full_event& original_rpc_hits);
 //----------------------------------------------------------------------------------------------
 
 //__Reset Seed Vector Using RPC Combination Hits________________________________________________
-const analysis::full_event_vector reset_seeds(const analysis::full_event_vector& joined_seeds,
-                                              const analysis::full_event& combined_rpc_hits,
+const analysis::full_event_vector reset_seeds(const analysis::event_vector& joined_seeds,
+                                              const analysis::event& combined_rpc_hits,
                                               const analysis::full_event& original_rpc_hits);
 //----------------------------------------------------------------------------------------------
 

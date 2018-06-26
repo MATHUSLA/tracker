@@ -40,7 +40,8 @@ namespace MATHUSLA {
 //__Find Tracks for Prototype___________________________________________________________________
 const analysis::track_vector find_tracks(const analysis::event& event,
                                          const reader::tracking_options& options) {
-  analysis::full_event combined_rpc_hits, original_rpc_hits;
+  analysis::full_event original_rpc_hits;
+  analysis::event combined_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
@@ -138,7 +139,7 @@ int prototype_tracking(int argc,
     print_bar();
     std::cout << "Read Path: " << path << "\n";
 
-    const auto imported_events = reader::root::import_events(path, options, detector_map);
+    const auto imported_events = reader::root::import_event_mc_bundle(path, options, detector_map).events;
     const auto import_size = imported_events.size();
     if (import_size == 0)
       continue;
