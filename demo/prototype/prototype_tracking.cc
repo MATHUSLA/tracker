@@ -40,8 +40,8 @@ namespace MATHUSLA {
 //__Find Tracks for Prototype___________________________________________________________________
 const analysis::track_vector find_tracks(const analysis::event& event,
                                          const reader::tracking_options& options) {
-  analysis::full_event original_rpc_hits;
   analysis::event combined_rpc_hits;
+  analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
@@ -76,7 +76,6 @@ void draw_track(plot::canvas& canvas,
     canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     brightness += step;
   }
-  //canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
   canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
   for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
     canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLUE);
@@ -139,7 +138,8 @@ int prototype_tracking(int argc,
     print_bar();
     std::cout << "Read Path: " << path << "\n";
 
-    const auto imported_events = reader::root::import_event_mc_bundle(path, options, detector_map).events;
+    const auto event_bundle = reader::root::import_event_mc_bundle(path, options, detector_map);
+    const auto imported_events = event_bundle.events;
     const auto import_size = imported_events.size();
     if (import_size == 0)
       continue;
@@ -155,7 +155,7 @@ int prototype_tracking(int argc,
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
 
-    for (uint_fast64_t event_counter{}; event_counter < std::min(15UL, import_size); ++event_counter) {
+    for (uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -235,9 +235,7 @@ int prototype_tracking(int argc,
 //__Silent Prototype Tracking Algorithm_________________________________________________________
 int silent_prototype_tracking(int argc,
                               char* argv[]) {
-  MATHUSLA::util::io::swap_buffer(std::cout, nullptr, nullptr);
-  MATHUSLA::util::io::swap_buffer(std::cerr, nullptr, nullptr);
-  MATHUSLA::util::io::swap_buffer(std::clog, nullptr, nullptr);
+  util::io::remove_buffer(std::cout, std::cerr, std::clog);
   return prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

@@ -46,16 +46,19 @@ struct full_event_vector_bundle { event_vector true_events; analysis::full_event
 //----------------------------------------------------------------------------------------------
 
 //__Type Conversion Helper Functions____________________________________________________________
-const track convert(const event& points);
-const event convert(const track& points);
-const track_vector convert(const event_vector& points);
-const event_vector convert(const track_vector& points);
+const track_vector convert(const event& points);
+// TODO: const event convert(const track& points);
+// TODO: const track_vector convert(const event_vector& points);
+// TODO: const event_vector convert(const track_vector& points);
 //----------------------------------------------------------------------------------------------
 
 //__Monte-Carlo Truth Evaluation________________________________________________________________
 class truth_evaluation {
 public:
   truth_evaluation(const track_vector& true_tracks,
+                   const analysis::track_vector& tracks);
+
+  truth_evaluation(const event& points,
                    const analysis::track_vector& tracks);
 
   const track_vector truth_tracks() const { return _true_tracks; }

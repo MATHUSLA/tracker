@@ -132,6 +132,18 @@ inline std::ostream& swap_buffer(std::ostream& os,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Remove Buffers from Stream__________________________________________________________________
+inline void remove_buffer(std::ostream& os) {
+  swap_buffer(os, nullptr, nullptr);
+}
+template<class ...Stream>
+void remove_buffer(std::ostream& os,
+                   Stream& ...oss) {
+  remove_buffer(os);
+  remove_buffer(oss...);
+}
+//----------------------------------------------------------------------------------------------
+
 } } /* namespace util::io */ ///////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
