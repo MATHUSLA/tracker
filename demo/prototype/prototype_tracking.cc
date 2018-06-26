@@ -17,13 +17,13 @@
  */
 
 #include <tracker/analysis/analysis.hh>
+#include <tracker/analysis/monte_carlo.hh>
 #include <tracker/analysis/track.hh>
 #include <tracker/analysis/vertex.hh>
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
 
-// TODO: to remove
 #include <tracker/util/io.hh>
 
 #include "geometry.hh"
@@ -71,14 +71,30 @@ void draw_track(plot::canvas& canvas,
   uint_fast8_t brightness = 0, step = 230 / full_event.size();
   for (const auto& point : full_event) {
     const auto center = type::reduce_to_r3(point);
-    const plot::color color{brightness, brightness, brightness};
-    canvas.add_point(center, 0.3, color);
-    canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
+    canvas.add_box(center,
+                   point.width.x, point.width.y, point.width.z,
+                   2.5,
+                   {brightness, brightness, brightness});
     brightness += step;
   }
   canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
-  for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
-    canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLUE);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw MC Tracks to Canvas____________________________________________________________________
+void draw_mc_tracks(plot::canvas& canvas,
+                    const analysis::mc::track_vector& tracks) {
+  for (const auto& track : tracks) {
+    const auto hits = track.hits;
+    const auto size = hits.size();
+    for (std::size_t i = 0; i < size - 1; ++i) {
+      canvas.add_point(type::reduce_to_r3(hits[i]), 0.8, plot::color::BLUE);
+      canvas.add_line(type::reduce_to_r3(hits[i]),
+                      type::reduce_to_r3(hits[i+1]),
+                      1,
+                      plot::color::BLUE);
+    }
+    canvas.add_point(type::reduce_to_r3(hits.back()), 0.8, plot::color::BLUE);
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -144,6 +160,8 @@ int prototype_tracking(int argc,
     if (import_size == 0)
       continue;
 
+    const auto mc_imported_events = event_bundle.true_events;
+
     const auto statistics_path = statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension;
     plot::histogram chi_squared_histogram("chi_squared",
       "Chi-Squared Distribution", "chi^2/dof", "Track Count",
@@ -155,7 +173,7 @@ int prototype_tracking(int argc,
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
 
-    for (uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
+    for (uint_fast64_t event_counter{}; event_counter < std::min(15UL, import_size); ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -169,7 +187,6 @@ int prototype_tracking(int argc,
       std::cout << "Event " << event_counter << " with " << event_size << " hits.\n";
 
       const auto event_density = modified_geometry_event_density(compressed_event);
-
       if (options.verbose_output)
         std::cout << "  Compression Gain: " << compression_gain << "\n"
                   << "  Event Density: "    << event_density * 100.0L << " %\n";
@@ -178,8 +195,8 @@ int prototype_tracking(int argc,
         continue;
 
       plot::canvas canvas(path + event_counter_string);
-      canvas.add_points(compressed_event, 0.8, plot::color::BLUE);
       draw_detector_centers(canvas);
+      draw_mc_tracks(canvas, analysis::mc::convert(mc_imported_events[event_counter]));
 
       const auto tracks = find_tracks(compressed_event, options);
 
@@ -199,6 +216,7 @@ int prototype_tracking(int argc,
         plot::save_all(statistics_path,
           individual_canvas, individual_chi_squared_histogram, individual_beta_histogram);
       } else {
+        canvas.add_points(compressed_event, 0.8, plot::color::BLACK);
         save_tracks(tracks, canvas, chi_squared_histogram, beta_histogram, options.verbose_output);
         // TODO: to remove
         for (const auto& track : tracks) {
@@ -211,13 +229,12 @@ int prototype_tracking(int argc,
       if (options.verbose_output)
         std::cout << "  Track Count: "   << tracks.size() << "\n"
                   << "  Track Density: " << tracks.size() / static_cast<type::real>(event.size()) * 100.0L << " %\n";
-      /*
+
       const analysis::vertex vertex(tracks);
       if (options.verbose_output) {
         draw_vertex_and_guess(canvas, vertex);
-        std::cout << vertex << "\n";
+        // std::cout << vertex << "\n";
       }
-      */
 
       canvas.draw();
     }
