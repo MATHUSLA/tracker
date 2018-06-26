@@ -817,9 +817,7 @@ const full_event_vector loop_join_all(const full_event_vector& seeds) {
 template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 const EventVector join_all(const EventVector& seeds) {
-  return loop_join_all(subset_join_all(sequential_join_all(seeds)));
-  // FIXME: temporary fix before improving loop_join_all
-  // return subset_join_all(loop_join_all(subset_join_all(sequential_join_all(seeds))));
+  return loop_join_all(/*subset_join_all*/(sequential_join_all(seeds)));
 }
 const event_vector join_all(const event_vector& seeds) {
   return join_all<>(seeds);
