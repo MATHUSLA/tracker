@@ -28,9 +28,6 @@
 #include <tracker/util/index_vector.hh>
 #include <tracker/util/type.hh>
 
-#include <iostream> // TODO: remove
-#include <tracker/util/io.hh> // TODO: remove
-
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
@@ -454,16 +451,6 @@ const Event loop_join(const Event& first,
   const auto first_size = first.size();
   const auto second_size = second.size();
 
-  /*
-  std::cout << "first: ";
-  for (const auto& p : first)
-    std::cout << reduce_to_r4(p) << " ";
-  std::cout << "\nsecond: ";
-  for (const auto& p : second)
-    std::cout << reduce_to_r4(p) << " ";
-  std::cout << "\n";
-  */
-
   Event out;
   out.reserve(first_size + second_size);
   auto out_inserter = std::back_inserter(out);
@@ -521,14 +508,6 @@ const Event loop_join(const Event& first,
   const auto out_end = out.end();
   out.erase(std::unique(out.begin(), out_end), out_end);
   out.shrink_to_fit();
-
-  /*
-  std::cout << "join: ";
-  for (const auto& p : out)
-    std::cout << reduce_to_r4(p) << " ";
-  std::cout << "\n\n";
-  */
-
   return out;
 }
 const event loop_join(const event& first,
@@ -746,27 +725,10 @@ const EventVector loop_join_all(const EventVector& seeds) {
 
   size_t top_rindex = 0, bottom_rindex = 1;
   while (top_rindex < seed_buffer.size()) {
-
-    /*
-    std::cout << "SEED_BUFFER: \n";
-    for (const auto& e : seed_buffer) {
-      for (const auto& p : e)
-        std::cout << reduce_to_r4(p) << " ";
-      std::cout << "\n";
-    }
-    std::cout << "\n";
-
-    std::cout << bottom_rindex << " " << top_rindex << "\n";
-     */
-
     const auto last_index = seed_buffer.size() - 1;
     const auto top_index = last_index - top_rindex;
     const auto bottom_index = join_list.last_unset(bottom_rindex);
     bottom_rindex = last_index - bottom_index;
-
-    /*
-    std::cout << "** " << bottom_rindex << " " << top_rindex << "\n";
-    */
 
     const auto& top_seed = seed_buffer[top_index];
     if (bottom_index == last_index + 1) {
@@ -792,17 +754,6 @@ const EventVector loop_join_all(const EventVector& seeds) {
 
   join_list.unset_conditional_push_back(seed_buffer, out);
   out.shrink_to_fit();
-
-  /*
-  std::cout << "LOOP_JOIN: \n";
-  for (const auto& e : out) {
-    for (const auto& p : e)
-      std::cout << reduce_to_r4(p) << " ";
-    std::cout << "\n";
-  }
-  std::cout << "\n";
-   */
-
   return out;
 }
 const event_vector loop_join_all(const event_vector& seeds) {
