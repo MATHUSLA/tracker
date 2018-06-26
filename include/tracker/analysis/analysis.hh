@@ -159,6 +159,10 @@ const event_vector join_all(const event_vector& seeds);
 const full_event_vector join_all(const full_event_vector& seeds);
 //----------------------------------------------------------------------------------------------
 
+// struct event_collection { event hits; track_vector tracks; vertex_vector vertices; };
+// struct full_event_collection { full_event hits; track_vector tracks; vertex_vector vertices; };
+// const full_event_collection generate_truth_events(...);
+
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */

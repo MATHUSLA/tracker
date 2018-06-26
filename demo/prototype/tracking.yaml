@@ -6,7 +6,7 @@ verbose-output: true
 compression-size:     15, 15, 15, 15
 layer-axis:           Z
 layer-depth:          500
-line-width:           400
+line-width:           300
 seed-size:            3
 event-overload-limit: 2   # unused
 event-density-limit:  0.2
@@ -14,12 +14,13 @@ track-density-limit:  0.5 # unused
 
 # maybe? -> allow-seed-overlaps: true/false
 
-# Data
-root-data:                .temp/root_data
-root-position-keys:       Time # , X, Y, Z
-root-position-error-keys: dT #, dX, dY, dZ
-root-detector-key:        Detector
-# root-track-id-key:        Track
+# Data Setup
+data-directory:           .temp/root_data
+data-file-extension:      root
+data-position-keys:       Time, X, Y, Z
+data-position-error-keys: dT, dX, dY, dZ
+data-detector-key:        Detector
+data-track-id-key:        Track
 
 # Statistics Setup
 statistics-directory:      .temp/root_data_stat

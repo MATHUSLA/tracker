@@ -58,6 +58,27 @@ void _parse_detector_map_entry(const uint_fast64_t line_count,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Parse Line for Time Resolution Map__________________________________________________________
+void _parse_time_resolution_map_entry(const uint_fast64_t line_count,
+                                      std::string& line,
+                                      geometry::time_resolution_map& out) {
+  const auto colon = util::string::strip(line).find(':');
+  if (colon == std::string::npos || line[0] == '#') {
+    return;
+  } else {
+    try {
+      auto i = std::stold(line.substr(1 + colon));
+      auto s = line.substr(0, colon);
+      // std::cout << i << " " << s << "\n";
+      out.insert({s, i});
+    } catch (...) {
+      util::error::exit("[FATAL ERROR] Time Resolution Map has an invalid Time.\n",
+                        "              See Line ", line_count, ".\n");
+    }
+  }
+}
+//----------------------------------------------------------------------------------------------
+
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Import Detector Map from File_______________________________________________________________
@@ -74,20 +95,36 @@ const geometry::detector_map import_detector_map(const std::string& path) {
 
 //__Detector Time Resolution Map Import_________________________________________________________
 const geometry::time_resolution_map import_time_resolution_map(const std::string& path) {
-  return {};
+  std::ifstream file(path);
+  geometry::time_resolution_map out{};
+  std::string line;
+  uint_fast64_t line_counter{};
+  while (std::getline(file, line))
+    _parse_time_resolution_map_entry(++line_counter, line, out);
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
 namespace root { ///////////////////////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
+
 using namespace ::MATHUSLA::TRACKER::root;
+
+//__Search for Name in Detector Map or Use ID as Name___________________________________________
+const std::string _detector_name(const Double_t detector,
+                                 const geometry::detector_map& map) {
+  const auto& search = map.find(detector);
+  return search != map.end() ? search->second : std::to_string(std::llround(std::trunc(detector)));
+}
+//----------------------------------------------------------------------------------------------
+
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Search and Collect ROOT File Paths__________________________________________________________
 const std::vector<std::string> search_directory(const std::string& path,
                                                 const std::string& ext) {
-  root::helper::init();
+  helper::init();
   return helper::search_directory(path, ext);
 }
 //----------------------------------------------------------------------------------------------
@@ -107,10 +144,9 @@ const analysis::event_vector import_events(const std::string& path,
       const auto size = tree->GetEntries();
       analysis::event points;
       points.reserve(size);
-      for (auto i = 0; i < size; ++i) {
-        tree->GetEntry(i);
+      helper::tree::traverse_entries(tree, [&]() {
         points.push_back({t * units::time, x * units::length, y * units::length, z * units::length});
-      }
+      });
       out.push_back(points);
     }
   });
@@ -132,13 +168,10 @@ const analysis::event_vector import_events(const std::string& path,
       const auto size = tree->GetEntries();
       analysis::event points;
       points.reserve(size);
-      for (auto i = 0; i < size; ++i) {
-        tree->GetEntry(i);
-        const auto& search = map.find(detector);
-        const auto& name = search != map.end() ? search->second : std::to_string(std::llround(std::trunc(detector)));
-        const auto center = geometry::limits_of(name).center;
+      helper::tree::traverse_entries(tree, [&]() {
+        const auto center = geometry::limits_of(_detector_name(detector, map)).center;
         points.push_back({t * units::time, center.x, center.y, center.z});
-      }
+      });
       out.push_back(points);
     }
   });
@@ -150,19 +183,323 @@ const analysis::event_vector import_events(const std::string& path,
 const analysis::event_vector import_events(const std::string& path,
                                            const tracking_options& options,
                                            const geometry::detector_map& map) {
-  return options.collection_mode == reader::CollectionMode::Detector
-    ? import_events(path, options.data_t_key, options.data_detector_key, map)
-    : import_events(path, options.data_t_key, options.data_x_key, options.data_y_key, options.data_z_key);
+  return import_events(path, options.data_t_key, options.data_detector_key, map);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
 const analysis::event_vector import_events(const std::string& path,
-                                           const tracking_options& options) {
-  return options.collection_mode == reader::CollectionMode::Detector
-    ? import_events(path, options.data_t_key, options.data_detector_key,
-        import_detector_map(options.geometry_map_file))
+                                           const tracking_options& options,
+                                           const ImportMode mode) {
+  return mode == ImportMode::Detector
+    ? import_events(path, options, import_detector_map(options.geometry_map_file))
     : import_events(path, options.data_t_key, options.data_x_key, options.data_y_key, options.data_z_key);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Import Full Events from ROOT File___________________________________________________________
+const analysis::full_event_vector import_full_events(const std::string& path,
+                                                     const std::string& t_key,
+                                                     const std::string& x_key,
+                                                     const std::string& y_key,
+                                                     const std::string& z_key,
+                                                     const std::string& dt_key,
+                                                     const std::string& dx_key,
+                                                     const std::string& dy_key,
+                                                     const std::string& dz_key) {
+  analysis::full_event_vector out{};
+  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
+    if (helper::get_key_classname(key) == "TTree") {
+      Double_t t, x, y, z, dt, dx, dy, dz;
+      auto tree = helper::tree::get_tree(file, key);
+      helper::tree::set_branches(tree, t_key, &t, x_key, &x, y_key, &y, z_key, &z,
+                                       dt_key, &dt, dx_key, &dx, dy_key, &dy, dz_key, &dz);
+      const auto size = tree->GetEntries();
+      analysis::full_event points;
+      points.reserve(size);
+      helper::tree::traverse_entries(tree, [&]() {
+        points.push_back({
+          t * units::time, x * units::length, y * units::length, z * units::length,
+          {dt * units::time, dx * units::length, dy * units::length, dz * units::length}});
+      });
+      out.push_back(points);
+    }
+  });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Import Full Events from ROOT File___________________________________________________________
+const analysis::full_event_vector import_full_events(const std::string& path,
+                                                     const std::string& t_key,
+                                                     const std::string& dt_key,
+                                                     const std::string& detector_key,
+                                                     const geometry::detector_map& map) {
+  analysis::full_event_vector out{};
+  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
+    if (helper::get_key_classname(key) == "TTree") {
+      Double_t t, dt, detector;
+      auto tree = helper::tree::get_tree(file, key);
+      helper::tree::set_branches(tree, t_key, &t, dt_key, &dt, detector_key, &detector);
+      const auto size = tree->GetEntries();
+      analysis::full_event points;
+      points.reserve(size);
+      helper::tree::traverse_entries(tree, [&]() {
+        const auto limits = geometry::limits_of(_detector_name(detector, map));
+        const auto& center = limits.center;
+        const auto& min = limits.min;
+        const auto& max = limits.max;
+        points.push_back({
+          t * units::time, center.x, center.y, center.z,
+          {dt * units::time, max.x - min.x, max.y - min.y, max.z - min.z}});
+      });
+      out.push_back(points);
+    }
+  });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Import Full Events from ROOT File___________________________________________________________
+const analysis::full_event_vector import_full_events(const std::string& path,
+                                                     const tracking_options& options,
+                                                     const geometry::detector_map& map) {
+  return import_full_events(path, options.data_t_key, options.data_dt_key, options.data_detector_key, map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Import Full Events from ROOT File___________________________________________________________
+const analysis::full_event_vector import_full_events(const std::string& path,
+                                                     const tracking_options& options,
+                                                     const ImportMode mode) {
+  return mode == ImportMode::Detector
+    ? import_full_events(path, options, import_detector_map(options.geometry_map_file))
+    : import_full_events(path,
+        options.data_t_key,
+        options.data_x_key,
+        options.data_y_key,
+        options.data_z_key,
+        options.data_dt_key,
+        options.data_dx_key,
+        options.data_dy_key,
+        options.data_dz_key);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+                                                               const std::string& track_key,
+                                                               const std::string& t_key,
+                                                               const std::string& x_key,
+                                                               const std::string& y_key,
+                                                               const std::string& z_key) {
+  analysis::mc::event_vector_bundle out{{}, {}};
+  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
+    if (helper::get_key_classname(key) == "TTree") {
+      Double_t track, t, x, y, z;
+      auto tree = helper::tree::get_tree(file, key);
+      helper::tree::set_branches(tree, track_key, &track,
+        t_key, &t, x_key, &x, y_key, &y, z_key, &z);
+      const auto size = tree->GetEntries();
+      analysis::event points;
+      analysis::mc::event true_points;
+      points.reserve(size);
+      true_points.reserve(size);
+      helper::tree::traverse_entries(tree, [&]() {
+        points.push_back({
+          t * units::time, x * units::length, y * units::length, z * units::length});
+        true_points.push_back({
+          static_cast<std::size_t>(std::llround(track)),
+          t * units::time, x * units::length, y * units::length, z * units::length});
+      });
+      out.events.push_back(points);
+      out.true_events.push_back(true_points);
+    }
+  });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+                                                               const std::string& track_key,
+                                                               const std::string& t_key,
+                                                               const std::string& x_key,
+                                                               const std::string& y_key,
+                                                               const std::string& z_key,
+                                                               const std::string& detector_key,
+                                                               const geometry::detector_map& map) {
+  analysis::mc::event_vector_bundle out{{}, {}};
+  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
+    if (helper::get_key_classname(key) == "TTree") {
+      Double_t track, detector, t, x, y, z;
+      auto tree = helper::tree::get_tree(file, key);
+      helper::tree::set_branches(tree, track_key, &track, detector_key, &detector,
+        t_key, &t, x_key, &x, y_key, &y, z_key, &z);
+      const auto size = tree->GetEntries();
+      analysis::event points;
+      analysis::mc::event true_points;
+      points.reserve(size);
+      true_points.reserve(size);
+      helper::tree::traverse_entries(tree, [&]() {
+        const auto center = geometry::limits_of(_detector_name(detector, map)).center;
+        points.push_back({t * units::time, center.x, center.y, center.z});
+        true_points.push_back({
+          static_cast<std::size_t>(std::llround(track)),
+          t * units::time, x * units::length, y * units::length, z * units::length});
+      });
+      out.events.push_back(points);
+      out.true_events.push_back(true_points);
+    }
+  });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+                                                               const tracking_options& options,
+                                                               const geometry::detector_map& map) {
+  return import_event_mc_bundle(path,
+    options.data_track_id_key,
+    options.data_t_key,
+    options.data_x_key,
+    options.data_y_key,
+    options.data_z_key,
+    options.data_detector_key,
+    map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+                                                               const tracking_options& options,
+                                                               const ImportMode mode) {
+  return mode == ImportMode::Detector
+    ? import_event_mc_bundle(path, options, import_detector_map(options.geometry_map_file))
+    : import_event_mc_bundle(path,
+        options.data_track_id_key,
+        options.data_t_key,
+        options.data_x_key,
+        options.data_y_key,
+        options.data_z_key);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+                                                                         const std::string& track_key,
+                                                                         const std::string& t_key,
+                                                                         const std::string& x_key,
+                                                                         const std::string& y_key,
+                                                                         const std::string& z_key,
+                                                                         const std::string& dt_key,
+                                                                         const std::string& dx_key,
+                                                                         const std::string& dy_key,
+                                                                         const std::string& dz_key) {
+  analysis::mc::full_event_vector_bundle out{{}, {}};
+  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
+    if (helper::get_key_classname(key) == "TTree") {
+      Double_t track, t, x, y, z, dt, dx, dy, dz;
+      auto tree = helper::tree::get_tree(file, key);
+      helper::tree::set_branches(tree, track_key, &track,
+        t_key, &t, x_key, &x, y_key, &y, z_key, &z,
+        dt_key, &dt, dx_key, &dx, dy_key, &dy, dz_key, &dz);
+      const auto size = tree->GetEntries();
+      analysis::full_event points;
+      analysis::mc::event true_points;
+      points.reserve(size);
+      true_points.reserve(size);
+      helper::tree::traverse_entries(tree, [&]() {
+        points.push_back({
+          t * units::time, x * units::length, y * units::length, z * units::length,
+          {dt * units::time, dx * units::length, dy * units::length, dz * units::length}});
+        true_points.push_back({
+          static_cast<std::size_t>(std::llround(track)),
+          t * units::time, x * units::length, y * units::length, z * units::length});
+      });
+      out.events.push_back(points);
+      out.true_events.push_back(true_points);
+    }
+  });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+                                                                         const std::string& track_key,
+                                                                         const std::string& t_key,
+                                                                         const std::string& x_key,
+                                                                         const std::string& y_key,
+                                                                         const std::string& z_key,
+                                                                         const std::string& dt_key,
+                                                                         const std::string& detector_key,
+                                                                         const geometry::detector_map& map) {
+  analysis::mc::full_event_vector_bundle out{{}, {}};
+  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
+    if (helper::get_key_classname(key) == "TTree") {
+      Double_t track, detector, dt, t, x, y, z;
+      auto tree = helper::tree::get_tree(file, key);
+      helper::tree::set_branches(tree, track_key, &track, detector_key, &detector,
+        dt_key, &dt, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
+      const auto size = tree->GetEntries();
+      analysis::full_event points;
+      analysis::mc::event true_points;
+      points.reserve(size);
+      true_points.reserve(size);
+      helper::tree::traverse_entries(tree, [&]() {
+        const auto limits = geometry::limits_of(_detector_name(detector, map));
+        const auto& center = limits.center;
+        const auto& min = limits.min;
+        const auto& max = limits.max;
+        points.push_back({
+          t * units::time, center.x, center.y, center.z,
+          {dt * units::time, max.x - min.x, max.y - min.y, max.z - min.z}});
+        true_points.push_back({
+          static_cast<std::size_t>(std::llround(track)),
+          t * units::time, x * units::length, y * units::length, z * units::length});
+      });
+      out.events.push_back(points);
+      out.true_events.push_back(true_points);
+    }
+  });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+                                                                         const tracking_options& options,
+                                                                         const geometry::detector_map& map) {
+  return import_full_event_mc_bundle(path,
+    options.data_track_id_key,
+    options.data_t_key,
+    options.data_x_key,
+    options.data_y_key,
+    options.data_z_key,
+    options.data_dt_key,
+    options.data_detector_key,
+    map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+                                                             const tracking_options& options,
+                                                             const ImportMode mode) {
+  return mode == ImportMode::Detector
+    ? import_full_event_mc_bundle(path, options, import_detector_map(options.geometry_map_file))
+    : import_full_event_mc_bundle(path,
+        options.data_track_id_key,
+        options.data_t_key,
+        options.data_x_key,
+        options.data_y_key,
+        options.data_z_key,
+        options.data_dt_key,
+        options.data_dx_key,
+        options.data_dy_key,
+        options.data_dz_key);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -225,7 +562,6 @@ void _parse_key_value_file_path(const std::string& key,
 //__Parse Data Key Value Pair___________________________________________________________________
 void _parse_key_value_data_keys(const std::string& key,
                                 const std::string& value,
-                                CollectionMode& mode,
                                 std::string& t_key,
                                 std::string& x_key,
                                 std::string& y_key,
@@ -239,15 +575,11 @@ void _parse_key_value_data_keys(const std::string& key,
     "              Expected 1 argument \"T\" or 4 arguments \"T, X, Y, Z\".\n");
   if (size == 1) {
     t_key = data_keys[0];
-    mode = (mode == CollectionMode::Position)
-         ? CollectionMode::Position
-         : CollectionMode::Detector;
   } else if (size == 4) {
     t_key = data_keys[0];
     x_key = data_keys[1];
     y_key = data_keys[2];
     z_key = data_keys[3];
-    mode = CollectionMode::Position;
   } else {
     util::error::exit(
       "[FATAL ERROR] Invalid Data Argument for \"", key, "\" in Tracking Script.\n"
@@ -424,16 +756,20 @@ const tracking_options read(const std::string& path) {
           "[FATAL ERROR] \"Geometry Map\" Key Requires Continuation String \"",
           _continuation_string, "\" Before Map Entries.\n");
 
-      } else if (key == "root-data") {
+      } else if (key == "data-directory") {
         _parse_key_value_file_path(key, value, out.data_directory);
-      } else if (key == "root-position-keys") {
+      } else if (key == "data-file-extension") {
+        out.data_file_extension = value;
+      } else if (key == "data-position-keys") {
         _parse_key_value_data_keys(key, value,
-          out.collection_mode, out.data_t_key, out.data_x_key, out.data_y_key, out.data_z_key);
-      } else if (key == "root-position-error-keys") {
+          out.data_t_key, out.data_x_key, out.data_y_key, out.data_z_key);
+      } else if (key == "data-position-error-keys") {
         _parse_key_value_data_keys(key, value,
-          out.collection_mode, out.data_dt_key, out.data_dx_key, out.data_dy_key, out.data_dz_key);
-      } else if (key == "root-detector-key") {
+          out.data_dt_key, out.data_dx_key, out.data_dy_key, out.data_dz_key);
+      } else if (key == "data-detector-key") {
         out.data_detector_key = value;
+      } else if (key == "data-track-id-key") {
+        out.data_track_id_key = value;
       } else if (key == "geometry-default-time-error") {
         _parse_key_value_positive_real(key, value, out.default_time_error);
       } else if (key == "compression-size") {

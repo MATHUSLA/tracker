@@ -149,6 +149,23 @@ inline void set_branches(TTree* tree,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Linear Traverse Entries in TTree____________________________________________________________
+template<class NullaryFunction>
+NullaryFunction traverse_entries(TTree* tree,
+                                 NullaryFunction f) {
+  const auto entries = tree->GetEntries();
+  if (entries < 0)
+    return std::move(f);
+
+  const auto size = static_cast<std::size_t>(entries);
+  for (std::size_t i = 0; i < size; ++i) {
+    tree->GetEntry(i);
+    f();
+  }
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace tree */ /////////////////////////////////////////////////////////////////////////
 
 } } /* namespace root::helper */ ///////////////////////////////////////////////////////////////

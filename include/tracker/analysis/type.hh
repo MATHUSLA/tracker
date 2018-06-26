@@ -28,10 +28,6 @@ namespace analysis { ///////////////////////////////////////////////////////////
 
 using namespace type;
 
-//__Fitting Parameter Type______________________________________________________________________
-struct fit_parameter { real value, error, min, max; };
-//----------------------------------------------------------------------------------------------
-
 //__Event Types_________________________________________________________________________________
 using hit = r4_point;
 using event = std::vector<hit>;
@@ -42,6 +38,10 @@ using event_vector = std::vector<event>;
 struct full_hit { real t, x, y, z; r4_point width; };
 using full_event = std::vector<full_hit>;
 using full_event_vector = std::vector<full_event>;
+//----------------------------------------------------------------------------------------------
+
+//__Fitting Parameter Type______________________________________________________________________
+struct fit_parameter { real value, error, min, max; };
 //----------------------------------------------------------------------------------------------
 
 //__Full Hit Stream Operator Overload___________________________________________________________
@@ -57,6 +57,25 @@ constexpr bool operator==(const full_hit& left,
                           const full_hit& right) {
   return left.t == right.t && left.x == right.x && left.y == right.y && left.z == right.z
       && left.width == right.width;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fitting Parameter Stream Operator Overload__________________________________________________
+inline std::ostream& operator<<(std::ostream& os,
+                                const fit_parameter& parameter) {
+  return os << "[" << parameter.min
+                   << " <= "
+                   << parameter.value << " (+/- " << parameter.error
+                   << ") <= "
+                   << parameter.max << "]";
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fitting Parameter Equality__________________________________________________________________
+constexpr bool operator==(const fit_parameter& left,
+                          const fit_parameter& right) {
+  return left.value == right.value && left.error == right.error
+    && left.min == right.min && left.max == right.max;
 }
 //----------------------------------------------------------------------------------------------
 

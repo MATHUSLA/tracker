@@ -75,8 +75,11 @@ void draw_track(plot::canvas& canvas,
     canvas.add_box(center, point.width.x, point.width.y, point.width.z, 2.5, color);
     brightness += step;
   }
-  canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
+  //canvas.add_line(type::reduce_to_r3(full_event.front()), type::reduce_to_r3(full_event.back()));
   canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+  for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
+    canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLUE);
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -126,7 +129,7 @@ int prototype_tracking(int argc,
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
 
-  const auto data_directory = reader::root::search_directory(options.data_directory);
+  const auto data_directory = reader::root::search_directory(options.data_directory, options.data_file_extension);
   const auto data_directory_size = data_directory.size();
   for (uint_fast64_t path_counter{}; path_counter < data_directory_size; ++path_counter) {
     const auto& path = data_directory[path_counter];
@@ -151,7 +154,7 @@ int prototype_tracking(int argc,
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
 
-    for (uint_fast64_t event_counter{}; event_counter < std::min(100UL, import_size); ++event_counter) {
+    for (uint_fast64_t event_counter{}; event_counter < std::min(15UL, import_size); ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
