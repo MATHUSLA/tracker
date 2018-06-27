@@ -46,7 +46,7 @@ const analysis::track_vector find_tracks(const analysis::event& event,
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-  return analysis::fit_seeds(tracking_vector);
+  return analysis::independent_fit_seeds(tracking_vector);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -88,6 +88,7 @@ void draw_mc_tracks(plot::canvas& canvas,
     const auto hits = track.hits;
     const auto size = hits.size();
     for (std::size_t i = 0; i < size - 1; ++i) {
+      // std::cout << track.track_id << ": " << hits[i] << "\n";
       canvas.add_point(type::reduce_to_r3(hits[i]), 0.8, plot::color::BLUE);
       canvas.add_line(type::reduce_to_r3(hits[i]),
                       type::reduce_to_r3(hits[i+1]),
@@ -95,6 +96,7 @@ void draw_mc_tracks(plot::canvas& canvas,
                       plot::color::BLUE);
     }
     canvas.add_point(type::reduce_to_r3(hits.back()), 0.8, plot::color::BLUE);
+    // std::cout << track.track_id << ": " << hits.back() << "\n\n";
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -173,7 +175,7 @@ int prototype_tracking(int argc,
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
 
-    for (uint_fast64_t event_counter{}; event_counter < std::min(15UL, import_size); ++event_counter) {
+    for (uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -229,12 +231,13 @@ int prototype_tracking(int argc,
       if (options.verbose_output)
         std::cout << "  Track Count: "   << tracks.size() << "\n"
                   << "  Track Density: " << tracks.size() / static_cast<type::real>(event.size()) * 100.0L << " %\n";
-
+      /*
       const analysis::vertex vertex(tracks);
       if (options.verbose_output) {
         draw_vertex_and_guess(canvas, vertex);
         // std::cout << vertex << "\n";
       }
+      */
 
       canvas.draw();
     }

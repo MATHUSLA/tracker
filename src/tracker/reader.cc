@@ -109,13 +109,21 @@ namespace root { ///////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
+//__Helper Namespace Import_____________________________________________________________________
 using namespace ::MATHUSLA::TRACKER::root;
+//----------------------------------------------------------------------------------------------
 
 //__Search for Name in Detector Map or Use ID as Name___________________________________________
 const std::string _detector_name(const Double_t detector,
                                  const geometry::detector_map& map) {
   const auto& search = map.find(detector);
   return search != map.end() ? search->second : std::to_string(std::llround(std::trunc(detector)));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Convert Track Data to Unsigned ID___________________________________________________________
+std::size_t _track_id(const Double_t track) {
+  return static_cast<std::size_t>(std::llround(track));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -136,19 +144,34 @@ const analysis::event_vector import_events(const std::string& path,
                                            const std::string& y_key,
                                            const std::string& z_key) {
   analysis::event_vector out{};
-  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
-    if (helper::get_key_classname(key) == "TTree") {
-      Double_t t, x, y, z;
-      auto tree = helper::tree::get_tree(file, key);
-      helper::tree::set_branches(tree, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
-      const auto size = tree->GetEntries();
-      analysis::event points;
-      points.reserve(size);
-      helper::tree::traverse_entries(tree, [&]() {
-        points.push_back({t * units::time, x * units::length, y * units::length, z * units::length});
+  helper::traverse_keys(path, "READ", "TTree", [&](const auto& file, const auto& key) {
+    auto tree = helper::tree::get_tree(file, key);
+    if (!tree)
+      return;
+
+    helper::tree::vector_data_type* t = nullptr;
+    helper::tree::vector_data_type* x = nullptr;
+    helper::tree::vector_data_type* y = nullptr;
+    helper::tree::vector_data_type* z = nullptr;
+    helper::tree::set_branches(tree, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
+
+    helper::tree::traverse_entries(tree,
+      [&](const auto entries) {
+        out.reserve(entries);
+      }, [&](){
+        const auto size = t->size();
+        if (size == 0)
+          return;
+
+        analysis::event points;
+        points.reserve(size);
+        for (std::size_t i = 0; i < size; ++i) {
+          points.push_back({
+            (*t)[i] * units::time, (*x)[i] * units::length, (*y)[i] * units::length, (*z)[i] * units::length});
+        }
+        out.push_back(points);
       });
-      out.push_back(points);
-    }
+    return; // FIXME: find other way to get only one TTree
   });
   return out;
 }
@@ -160,20 +183,33 @@ const analysis::event_vector import_events(const std::string& path,
                                            const std::string& detector_key,
                                            const geometry::detector_map& map) {
   analysis::event_vector out{};
-  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
-    if (helper::get_key_classname(key) == "TTree") {
-      Double_t t, detector;
-      auto tree = helper::tree::get_tree(file, key);
-      helper::tree::set_branches(tree, t_key, &t, detector_key, &detector);
-      const auto size = tree->GetEntries();
-      analysis::event points;
-      points.reserve(size);
-      helper::tree::traverse_entries(tree, [&]() {
-        const auto center = geometry::limits_of(_detector_name(detector, map)).center;
-        points.push_back({t * units::time, center.x, center.y, center.z});
+  helper::traverse_keys(path, "READ", "TTree", [&](const auto& file, const auto& key) {
+    auto tree = helper::tree::get_tree(file, key);
+    if (!tree)
+      return;
+
+    helper::tree::vector_data_type* detector = nullptr;
+    helper::tree::vector_data_type* t        = nullptr;
+    helper::tree::set_branches(tree, t_key, &t, detector_key, &detector);
+
+    helper::tree::traverse_entries(tree,
+      [&](const auto entries) {
+        out.reserve(entries);
+      }, [&](){
+        const auto size = detector->size();
+        if (size == 0)
+          return;
+
+        analysis::event points;
+        points.reserve(size);
+
+        for (std::size_t i = 0; i < size; ++i) {
+          const auto center = geometry::limits_of(_detector_name((*detector)[i], map)).center;
+          points.push_back({(*t)[i] * units::time, center.x, center.y, center.z});
+        }
+        out.push_back(points);
       });
-      out.push_back(points);
-    }
+    return; // FIXME: find other way to get only one TTree
   });
   return out;
 }
@@ -208,22 +244,42 @@ const analysis::full_event_vector import_full_events(const std::string& path,
                                                      const std::string& dy_key,
                                                      const std::string& dz_key) {
   analysis::full_event_vector out{};
-  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
-    if (helper::get_key_classname(key) == "TTree") {
-      Double_t t, x, y, z, dt, dx, dy, dz;
-      auto tree = helper::tree::get_tree(file, key);
-      helper::tree::set_branches(tree, t_key, &t, x_key, &x, y_key, &y, z_key, &z,
-                                       dt_key, &dt, dx_key, &dx, dy_key, &dy, dz_key, &dz);
-      const auto size = tree->GetEntries();
-      analysis::full_event points;
-      points.reserve(size);
-      helper::tree::traverse_entries(tree, [&]() {
-        points.push_back({
-          t * units::time, x * units::length, y * units::length, z * units::length,
-          {dt * units::time, dx * units::length, dy * units::length, dz * units::length}});
+  helper::traverse_keys(path, "READ", "TTree", [&](const auto& file, const auto& key) {
+    auto tree = helper::tree::get_tree(file, key);
+    if (!tree)
+      return;
+
+    helper::tree::vector_data_type* t = nullptr;
+    helper::tree::vector_data_type* x = nullptr;
+    helper::tree::vector_data_type* y = nullptr;
+    helper::tree::vector_data_type* z = nullptr;
+    helper::tree::vector_data_type* dt = nullptr;
+    helper::tree::vector_data_type* dx = nullptr;
+    helper::tree::vector_data_type* dy = nullptr;
+    helper::tree::vector_data_type* dz = nullptr;
+    helper::tree::set_branches(tree,
+      t_key, &t, x_key, &x, y_key, &y, z_key, &z,
+      dt_key, &dt, dx_key, &dx, dy_key, &dy, dz_key, &dz);
+
+    helper::tree::traverse_entries(tree,
+      [&](const auto entries) {
+        out.reserve(entries);
+      }, [&](){
+        const auto size = t->size();
+        if (size == 0)
+          return;
+
+        analysis::full_event points;
+        points.reserve(size);
+
+        for (std::size_t i = 0; i < size; ++i) {
+          points.push_back({
+            (*t)[i] * units::time, (*x)[i] * units::length, (*y)[i] * units::length, (*z)[i] * units::length,
+            {(*dt)[i] * units::time, (*dx)[i] * units::length, (*dy)[i] * units::length, (*dz)[i] * units::length}});
+        }
+        out.push_back(points);
       });
-      out.push_back(points);
-    }
+    return; // FIXME: find other way to get only one TTree
   });
   return out;
 }
@@ -236,25 +292,39 @@ const analysis::full_event_vector import_full_events(const std::string& path,
                                                      const std::string& detector_key,
                                                      const geometry::detector_map& map) {
   analysis::full_event_vector out{};
-  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
-    if (helper::get_key_classname(key) == "TTree") {
-      Double_t t, dt, detector;
-      auto tree = helper::tree::get_tree(file, key);
-      helper::tree::set_branches(tree, t_key, &t, dt_key, &dt, detector_key, &detector);
-      const auto size = tree->GetEntries();
-      analysis::full_event points;
-      points.reserve(size);
-      helper::tree::traverse_entries(tree, [&]() {
-        const auto limits = geometry::limits_of(_detector_name(detector, map));
-        const auto& center = limits.center;
-        const auto& min = limits.min;
-        const auto& max = limits.max;
-        points.push_back({
-          t * units::time, center.x, center.y, center.z,
-          {dt * units::time, max.x - min.x, max.y - min.y, max.z - min.z}});
+  helper::traverse_keys(path, "READ", "TTree", [&](const auto& file, const auto& key) {
+    auto tree = helper::tree::get_tree(file, key);
+    if (!tree)
+      return;
+
+    helper::tree::vector_data_type* detector = nullptr;
+    helper::tree::vector_data_type* t        = nullptr;
+    helper::tree::vector_data_type* dt       = nullptr;
+    helper::tree::set_branches(tree, t_key, &t, dt_key, &dt, detector_key, &detector);
+
+    helper::tree::traverse_entries(tree,
+      [&](const auto entries) {
+        out.reserve(entries);
+      }, [&](){
+        const auto size = detector->size();
+        if (size == 0)
+          return;
+
+        analysis::full_event points;
+        points.reserve(size);
+
+        for (std::size_t i = 0; i < size; ++i) {
+          const auto limits = geometry::limits_of(_detector_name((*detector)[i], map));
+          const auto& center = limits.center;
+          const auto& min = limits.min;
+          const auto& max = limits.max;
+          points.push_back({
+            (*t)[i] * units::time, center.x, center.y, center.z,
+            {(*dt)[i] * units::time, max.x - min.x, max.y - min.y, max.z - min.z}});
+        }
+        out.push_back(points);
       });
-      out.push_back(points);
-    }
+    return; // FIXME: find other way to get only one TTree
   });
   return out;
 }
@@ -294,27 +364,43 @@ const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string
                                                                const std::string& y_key,
                                                                const std::string& z_key) {
   analysis::mc::event_vector_bundle out{{}, {}};
-  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
-    if (helper::get_key_classname(key) == "TTree") {
-      Double_t track, t, x, y, z;
-      auto tree = helper::tree::get_tree(file, key);
-      helper::tree::set_branches(tree, track_key, &track,
-        t_key, &t, x_key, &x, y_key, &y, z_key, &z);
-      const auto size = tree->GetEntries();
-      analysis::event points;
-      analysis::mc::event true_points;
-      points.reserve(size);
-      true_points.reserve(size);
-      helper::tree::traverse_entries(tree, [&]() {
-        points.push_back({
-          t * units::time, x * units::length, y * units::length, z * units::length});
-        true_points.push_back({
-          static_cast<std::size_t>(std::llround(track)),
-          t * units::time, x * units::length, y * units::length, z * units::length});
+  helper::traverse_keys(path, "READ", "TTree", [&](const auto& file, const auto& key) {
+    auto tree = helper::tree::get_tree(file, key);
+    if (!tree)
+      return;
+
+    helper::tree::vector_data_type* track = nullptr;
+    helper::tree::vector_data_type* t     = nullptr;
+    helper::tree::vector_data_type* x     = nullptr;
+    helper::tree::vector_data_type* y     = nullptr;
+    helper::tree::vector_data_type* z     = nullptr;
+    helper::tree::set_branches(tree,
+      track_key, &track, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
+
+    helper::tree::traverse_entries(tree,
+      [&](const auto entries) {
+        out.events.reserve(entries);
+        out.true_events.reserve(entries);
+      }, [&](){
+        const auto size = track->size();
+        if (size == 0)
+          return;
+
+        analysis::event points;
+        analysis::mc::event true_points;
+        points.reserve(size);
+        true_points.reserve(size);
+
+        for (std::size_t i = 0; i < size; ++i) {
+          true_points.push_back({
+            _track_id((*track)[i]),
+            (*t)[i] * units::time, (*x)[i] * units::length, (*y)[i] * units::length, (*z)[i] * units::length});
+          points.push_back(reduce_to_r4(true_points.back()));
+        }
+        out.events.push_back(points);
+        out.true_events.push_back(true_points);
       });
-      out.events.push_back(points);
-      out.true_events.push_back(true_points);
-    }
+    return; // FIXME: find other way to get only one TTree
   });
   return out;
 }
@@ -330,27 +416,45 @@ const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string
                                                                const std::string& detector_key,
                                                                const geometry::detector_map& map) {
   analysis::mc::event_vector_bundle out{{}, {}};
-  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
-    if (helper::get_key_classname(key) == "TTree") {
-      Double_t track, detector, t, x, y, z;
-      auto tree = helper::tree::get_tree(file, key);
-      helper::tree::set_branches(tree, track_key, &track, detector_key, &detector,
-        t_key, &t, x_key, &x, y_key, &y, z_key, &z);
-      const auto size = tree->GetEntries();
-      analysis::event points;
-      analysis::mc::event true_points;
-      points.reserve(size);
-      true_points.reserve(size);
-      helper::tree::traverse_entries(tree, [&]() {
-        const auto center = geometry::limits_of(_detector_name(detector, map)).center;
-        points.push_back({t * units::time, center.x, center.y, center.z});
-        true_points.push_back({
-          static_cast<std::size_t>(std::llround(track)),
-          t * units::time, x * units::length, y * units::length, z * units::length});
+  helper::traverse_keys(path, "READ", "TTree", [&](const auto& file, const auto& key) {
+    auto tree = helper::tree::get_tree(file, key);
+    if (!tree)
+      return;
+
+    helper::tree::vector_data_type* track     = nullptr;
+    helper::tree::vector_data_type* detector  = nullptr;
+    helper::tree::vector_data_type* t         = nullptr;
+    helper::tree::vector_data_type* x         = nullptr;
+    helper::tree::vector_data_type* y         = nullptr;
+    helper::tree::vector_data_type* z         = nullptr;
+    helper::tree::set_branches(tree,
+      track_key, &track, detector_key, &detector, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
+
+    helper::tree::traverse_entries(tree,
+      [&](const auto entries) {
+        out.events.reserve(entries);
+        out.true_events.reserve(entries);
+      }, [&](){
+        const auto size = track->size();
+        if (size == 0)
+          return;
+
+        analysis::event points;
+        analysis::mc::event true_points;
+        points.reserve(size);
+        true_points.reserve(size);
+
+        for (std::size_t i = 0; i < size; ++i) {
+          const auto center = geometry::limits_of(_detector_name((*detector)[i], map)).center;
+          points.push_back({(*t)[i] * units::time, center.x, center.y, center.z});
+          true_points.push_back({
+            _track_id((*track)[i]),
+            (*t)[i] * units::time, (*x)[i] * units::length, (*y)[i] * units::length, (*z)[i] * units::length});
+        }
+        out.events.push_back(points);
+        out.true_events.push_back(true_points);
       });
-      out.events.push_back(points);
-      out.true_events.push_back(true_points);
-    }
+    return; // FIXME: find other way to get only one TTree
   });
   return out;
 }
@@ -398,29 +502,50 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
                                                                          const std::string& dy_key,
                                                                          const std::string& dz_key) {
   analysis::mc::full_event_vector_bundle out{{}, {}};
-  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
-    if (helper::get_key_classname(key) == "TTree") {
-      Double_t track, t, x, y, z, dt, dx, dy, dz;
-      auto tree = helper::tree::get_tree(file, key);
-      helper::tree::set_branches(tree, track_key, &track,
-        t_key, &t, x_key, &x, y_key, &y, z_key, &z,
-        dt_key, &dt, dx_key, &dx, dy_key, &dy, dz_key, &dz);
-      const auto size = tree->GetEntries();
-      analysis::full_event points;
-      analysis::mc::event true_points;
-      points.reserve(size);
-      true_points.reserve(size);
-      helper::tree::traverse_entries(tree, [&]() {
-        points.push_back({
-          t * units::time, x * units::length, y * units::length, z * units::length,
-          {dt * units::time, dx * units::length, dy * units::length, dz * units::length}});
-        true_points.push_back({
-          static_cast<std::size_t>(std::llround(track)),
-          t * units::time, x * units::length, y * units::length, z * units::length});
+  helper::traverse_keys(path, "READ", "TTree", [&](const auto& file, const auto& key) {
+    auto tree = helper::tree::get_tree(file, key);
+    if (!tree)
+      return;
+
+    helper::tree::vector_data_type* track = nullptr;
+    helper::tree::vector_data_type* t = nullptr;
+    helper::tree::vector_data_type* x = nullptr;
+    helper::tree::vector_data_type* y = nullptr;
+    helper::tree::vector_data_type* z = nullptr;
+    helper::tree::vector_data_type* dt = nullptr;
+    helper::tree::vector_data_type* dx = nullptr;
+    helper::tree::vector_data_type* dy = nullptr;
+    helper::tree::vector_data_type* dz = nullptr;
+    helper::tree::set_branches(tree, track_key, &track,
+      t_key, &t, x_key, &x, y_key, &y, z_key, &z,
+      dt_key, &dt, dx_key, &dx, dy_key, &dy, dz_key, &dz);
+
+    helper::tree::traverse_entries(tree,
+      [&](const auto entries) {
+        out.events.reserve(entries);
+        out.true_events.reserve(entries);
+      }, [&](){
+        const auto size = track->size();
+        if (size == 0)
+          return;
+
+        analysis::full_event points;
+        analysis::mc::event true_points;
+        points.reserve(size);
+        true_points.reserve(size);
+
+        for (std::size_t i = 0; i < size; ++i) {
+          points.push_back({
+            (*t)[i] * units::time, (*x)[i] * units::length, (*y)[i] * units::length, (*z)[i] * units::length,
+            {(*dt)[i] * units::time, (*dx)[i] * units::length, (*dy)[i] * units::length, (*dz)[i] * units::length}});
+          true_points.push_back({
+            _track_id((*track)[i]),
+            (*t)[i] * units::time, (*x)[i] * units::length, (*y)[i] * units::length, (*z)[i] * units::length});
+        }
+        out.events.push_back(points);
+        out.true_events.push_back(true_points);
       });
-      out.events.push_back(points);
-      out.true_events.push_back(true_points);
-    }
+    return; // FIXME: find other way to get only one TTree
   });
   return out;
 }
@@ -437,32 +562,52 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
                                                                          const std::string& detector_key,
                                                                          const geometry::detector_map& map) {
   analysis::mc::full_event_vector_bundle out{{}, {}};
-  helper::traverse_keys(path, "READ", [&](const auto& file, const auto& key) {
-    if (helper::get_key_classname(key) == "TTree") {
-      Double_t track, detector, dt, t, x, y, z;
-      auto tree = helper::tree::get_tree(file, key);
-      helper::tree::set_branches(tree, track_key, &track, detector_key, &detector,
-        dt_key, &dt, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
-      const auto size = tree->GetEntries();
-      analysis::full_event points;
-      analysis::mc::event true_points;
-      points.reserve(size);
-      true_points.reserve(size);
-      helper::tree::traverse_entries(tree, [&]() {
-        const auto limits = geometry::limits_of(_detector_name(detector, map));
-        const auto& center = limits.center;
-        const auto& min = limits.min;
-        const auto& max = limits.max;
-        points.push_back({
-          t * units::time, center.x, center.y, center.z,
-          {dt * units::time, max.x - min.x, max.y - min.y, max.z - min.z}});
-        true_points.push_back({
-          static_cast<std::size_t>(std::llround(track)),
-          t * units::time, x * units::length, y * units::length, z * units::length});
+  helper::traverse_keys(path, "READ", "TTree", [&](const auto& file, const auto& key) {
+    auto tree = helper::tree::get_tree(file, key);
+    if (!tree)
+      return;
+
+    helper::tree::vector_data_type* track = nullptr;
+    helper::tree::vector_data_type* detector = nullptr;
+    helper::tree::vector_data_type* t = nullptr;
+    helper::tree::vector_data_type* x = nullptr;
+    helper::tree::vector_data_type* y = nullptr;
+    helper::tree::vector_data_type* z = nullptr;
+    helper::tree::vector_data_type* dt = nullptr;
+    helper::tree::set_branches(tree,
+      track_key, &track, detector_key, &detector,
+      dt_key, &dt, t_key, &t, x_key, &x, y_key, &y, z_key, &z);
+
+    helper::tree::traverse_entries(tree,
+      [&](const auto entries) {
+        out.events.reserve(entries);
+        out.true_events.reserve(entries);
+      }, [&](){
+        const auto size = track->size();
+        if (size == 0)
+          return;
+
+        analysis::full_event points;
+        analysis::mc::event true_points;
+        points.reserve(size);
+        true_points.reserve(size);
+
+        for (std::size_t i = 0; i < size; ++i) {
+          const auto limits = geometry::limits_of(_detector_name((*detector)[i], map));
+          const auto& center = limits.center;
+          const auto& min = limits.min;
+          const auto& max = limits.max;
+          points.push_back({
+            (*t)[i] * units::time, center.x, center.y, center.z,
+            {(*dt)[i] * units::time, max.x - min.x, max.y - min.y, max.z - min.z}});
+          true_points.push_back({
+            _track_id((*track)[i]),
+            (*t)[i] * units::time, (*x)[i] * units::length, (*y)[i] * units::length, (*z)[i] * units::length});
+        }
+        out.events.push_back(points);
+        out.true_events.push_back(true_points);
       });
-      out.events.push_back(points);
-      out.true_events.push_back(true_points);
-    }
+    return; // FIXME: find other way to get only one TTree
   });
   return out;
 }

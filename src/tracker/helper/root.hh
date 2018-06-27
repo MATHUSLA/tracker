@@ -112,7 +112,29 @@ inline const std::string get_key_classname(const TKey* key) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__ROOT File Traverse Keys_____________________________________________________________________
+template<class BinaryFunction>
+BinaryFunction traverse_keys(const std::string& path,
+                             const std::string& mode,
+                             const std::string& classname,
+                             BinaryFunction f) {
+  while_open(path, mode, [&](const auto file) {
+    TIter next(file->GetListOfKeys());
+    TKey* key = nullptr;
+    while ((key = dynamic_cast<TKey*>(next())))
+      if (get_key_classname(key) == classname)
+        f(file, key);
+  });
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
+
 namespace tree { ///////////////////////////////////////////////////////////////////////////////
+
+//__Types for ROOT Import_______________________________________________________________________
+using data_type = Double_t;
+using vector_data_type = std::vector<data_type>;
+//----------------------------------------------------------------------------------------------
 
 //__Safe Get TTree Object From File_____________________________________________________________
 inline TTree* get_tree(TFile* file,
@@ -133,7 +155,7 @@ inline TTree* unchecked_get_tree(TFile* file,
 //__Set TTree Branch Base Function______________________________________________________________
 inline void set_branches(TTree* tree,
                          const std::string& name,
-                         Double_t* value) {
+                         data_type* value) {
   tree->SetBranchAddress(name.c_str(), value);
 }
 //----------------------------------------------------------------------------------------------
@@ -142,7 +164,26 @@ inline void set_branches(TTree* tree,
 template<class... Args>
 inline void set_branches(TTree* tree,
                          const std::string& name,
-                         Double_t* value,
+                         data_type* value,
+                         Args ...args) {
+  set_branches(tree, name, value);
+  set_branches(tree, args...);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set TTree Branch Base Function______________________________________________________________
+inline void set_branches(TTree* tree,
+                         const std::string& name,
+                         vector_data_type** value) {
+  tree->SetBranchAddress(name.c_str(), value);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Recursively Set TTree Branches______________________________________________________________
+template<class... Args>
+inline void set_branches(TTree* tree,
+                         const std::string& name,
+                         vector_data_type** value,
                          Args ...args) {
   set_branches(tree, name, value);
   set_branches(tree, args...);
@@ -150,19 +191,29 @@ inline void set_branches(TTree* tree,
 //----------------------------------------------------------------------------------------------
 
 //__Linear Traverse Entries in TTree____________________________________________________________
-template<class NullaryFunction>
-NullaryFunction traverse_entries(TTree* tree,
-                                 NullaryFunction f) {
+template<class UnaryFunction, class NullaryFunction>
+std::pair<UnaryFunction, NullaryFunction> traverse_entries(TTree* tree,
+                                                           UnaryFunction pre_condition,
+                                                           NullaryFunction f) {
   const auto entries = tree->GetEntries();
-  if (entries < 0)
-    return std::move(f);
+  if (entries <= 0)
+    return std::make_pair(std::move(pre_condition), std::move(f));
 
   const auto size = static_cast<std::size_t>(entries);
+  pre_condition(size);
   for (std::size_t i = 0; i < size; ++i) {
     tree->GetEntry(i);
     f();
   }
-  return std::move(f);
+  return std::make_pair(std::move(pre_condition), std::move(f));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Linear Traverse Entries in TTree____________________________________________________________
+template<class NullaryFunction>
+NullaryFunction traverse_entries(TTree* tree,
+                                 NullaryFunction f) {
+  return traverse_entries(tree, [](const auto) {}, f).second;
 }
 //----------------------------------------------------------------------------------------------
 

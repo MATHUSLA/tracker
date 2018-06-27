@@ -590,21 +590,21 @@ std::ostream& operator<<(std::ostream& os,
 //__Fit all Seeds to Tracks_____________________________________________________________________
 template<class EventVector,
     typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
-const track_vector fit_seeds(const EventVector& seeds,
-                             const Coordinate direction) {
+const track_vector independent_fit_seeds(const EventVector& seeds,
+                                         const Coordinate direction) {
   track_vector out;
   out.reserve(seeds.size());
   for (const auto& seed : seeds)
     out.emplace_back(seed, direction);
   return out;
 }
-const track_vector fit_seeds(const event_vector& seeds,
-                             const Coordinate direction) {
-  return fit_seeds<>(seeds, direction);
+const track_vector independent_fit_seeds(const event_vector& seeds,
+                                         const Coordinate direction) {
+  return independent_fit_seeds<>(seeds, direction);
 }
-const track_vector fit_seeds(const full_event_vector& seeds,
-                             const Coordinate direction) {
-  return fit_seeds<>(seeds, direction);
+const track_vector independent_fit_seeds(const full_event_vector& seeds,
+                                         const Coordinate direction) {
+  return independent_fit_seeds<>(seeds, direction);
 }
 //----------------------------------------------------------------------------------------------
 

@@ -146,10 +146,17 @@ using track_vector = std::vector<track>;
 //----------------------------------------------------------------------------------------------
 
 //__Fit all Seeds to Tracks_____________________________________________________________________
-const track_vector fit_seeds(const event_vector& seeds,
-                             const Coordinate direction=Coordinate::Z);
-const track_vector fit_seeds(const full_event_vector& seeds,
-                             const Coordinate direction=Coordinate::Z);
+const track_vector independent_fit_seeds(const event_vector& seeds,
+                                         const Coordinate direction=Coordinate::Z);
+const track_vector independent_fit_seeds(const full_event_vector& seeds,
+                                         const Coordinate direction=Coordinate::Z);
+//----------------------------------------------------------------------------------------------
+
+//__Fit all Seeds to Tracks using Overlaps______________________________________________________
+const track_vector overlap_fit_seeds(const event_vector& seeds,
+                                     const Coordinate direction=Coordinate::Z);
+const track_vector overlap_fit_seeds(const full_event_vector& seeds,
+                                     const Coordinate direction=Coordinate::Z);
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
