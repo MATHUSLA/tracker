@@ -69,6 +69,7 @@ inline bool operator!=(const color& left,
 //__Plotting Histogram Type_____________________________________________________________________
 class histogram {
 public:
+  histogram();
   histogram(const std::string& name,
             const size_t bins,
             const real min,
@@ -85,40 +86,25 @@ public:
             const size_t bins,
             const real min,
             const real max);
-  histogram(histogram&& other) = default;
+  histogram(const histogram& other);
+  histogram(histogram&& other) noexcept;
+  histogram& operator=(const histogram& other);
+  histogram& operator=(histogram&& other) noexcept;
+
   ~histogram();
-
-  histogram& operator=(histogram&& other) = default;
-
-  using minimal_constructor_tuple = std::tuple<const std::string,
-                                               const std::size_t,
-                                               const real,
-                                               const real>;
-  using title_constructor_tuple = std::tuple<const std::string,
-                                             const std::string,
-                                             const std::size_t,
-                                             const real,
-                                             const real>;
-  using title_and_axis_constructor_tuple = std::tuple<const std::string,
-                                                      const std::string,
-                                                      const std::string,
-                                                      const std::string,
-                                                      const std::size_t,
-                                                      const real,
-                                                      const real>;
-
-  template<class T>
-  constexpr static bool is_valid_constructor =  std::is_same<T, minimal_constructor_tuple>::value
-                                             || std::is_same<T, title_constructor_tuple>::value
-                                             || std::is_same<T, title_and_axis_constructor_tuple>::value;
 
   const std::string name() const;
   const std::string title() const;
   const std::string x_title() const;
   const std::string y_title() const;
 
+  void name(const std::string& new_name);
+  void title(const std::string& new_title);
+  void x_title(const std::string& new_x_title);
+  void y_title(const std::string& new_y_title);
+
   bool empty() const;
-  size_t count() const;
+  size_t size() const;
   real min_x() const;
   real max_x() const;
   real mean() const;
@@ -168,17 +154,29 @@ public:
   }
 
 private:
-  histogram();
-  struct histogram_impl;
-  std::unique_ptr<histogram_impl> _impl;
+  struct impl;
+  std::unique_ptr<impl> _impl;
 };
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Collection Type___________________________________________________________________
 class histogram_collection {
 public:
+  histogram_collection() = default;
+  histogram_collection(const std::string& prefix);
+  histogram_collection(std::initializer_list<histogram>&& histograms);
+  histogram_collection(const std::string& prefix,
+                       std::initializer_list<histogram>&& histograms);
+  histogram_collection(const histogram_collection& other) = default;
+  histogram_collection(histogram_collection&& other) = default;
 
+  histogram_collection& operator=(const histogram_collection& other) = default;
+  histogram_collection& operator=(histogram_collection&& other) = default;
 
+  ~histogram_collection() = default;
+
+  histogram& emplace(const histogram& hist);
+  histogram& emplace(histogram&& hist);
   histogram& emplace(const std::string& name,
                      const size_t bins,
                      const real min,
@@ -196,10 +194,20 @@ public:
                      const real min,
                      const real max);
 
+  histogram& load(const std::string& path,
+                  const std::string& name="histogram");
+  histogram& load_with_prefix(const std::string& path,
+                              const std::string& name="histogram");
+
   histogram& operator[](const std::string& name);
 
-private:
+  void draw_all();
+  void clear_all();
+  bool save_all(const std::string& path) const;
 
+private:
+  std::string _prefix;
+  std::unordered_map<std::string, histogram> _histograms;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -329,15 +337,19 @@ public:
   }
 
 private:
-  struct canvas_impl;
-  std::unique_ptr<canvas_impl> _impl;
+  struct impl;
+  std::unique_ptr<impl> _impl;
 };
 //----------------------------------------------------------------------------------------------
 
 //__Draw All Drawable Objects___________________________________________________________________
 template<class T>
-void draw_all(T& t) {
+auto draw_all(T& t) -> decltype(t.draw()) {
   t.draw();
+}
+template<class T>
+auto draw_all(T& t) -> decltype (t.draw_all()){
+  t.draw_all();
 }
 template<class T, class ...Ts>
 void draw_all(T& t,
@@ -349,8 +361,12 @@ void draw_all(T& t,
 
 //__Clear All Drawable Objects__________________________________________________________________
 template<class T>
-void clear_all(T& t) {
+auto clear_all(T& t) -> decltype(t.clear()) {
   t.clear();
+}
+template<class T>
+auto clear_all(T& t) -> decltype(t.clear_all()) {
+  t.clear_all();
 }
 template<class T, class ...Ts>
 void clear_all(T& t,
@@ -362,9 +378,14 @@ void clear_all(T& t,
 
 //__Save All Saveable Objects___________________________________________________________________
 template<class T>
-bool save_all(const std::string& path,
-              const T& t) {
+auto save_all(const std::string& path,
+              const T& t) -> decltype(t.save(path)) {
   return t.save(path);
+}
+template<class T>
+auto save_all(const std::string& path,
+              const T& t) -> decltype(t.save_all(path)) {
+  return t.save_all(path);
 }
 template<class T, class ...Ts>
 bool save_all(const std::string& path,

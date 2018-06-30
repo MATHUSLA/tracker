@@ -88,7 +88,6 @@ void draw_mc_tracks(plot::canvas& canvas,
     const auto hits = track.hits;
     const auto size = hits.size();
     for (std::size_t i = 0; i < size - 1; ++i) {
-      // std::cout << track.track_id << ": " << hits[i] << "\n";
       canvas.add_point(type::reduce_to_r3(hits[i]), 0.8, plot::color::BLUE);
       canvas.add_line(type::reduce_to_r3(hits[i]),
                       type::reduce_to_r3(hits[i+1]),
@@ -96,7 +95,6 @@ void draw_mc_tracks(plot::canvas& canvas,
                       plot::color::BLUE);
     }
     canvas.add_point(type::reduce_to_r3(hits.back()), 0.8, plot::color::BLUE);
-    // std::cout << track.track_id << ": " << hits.back() << "\n\n";
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -121,12 +119,11 @@ void draw_vertex_and_guess(plot::canvas& canvas,
 //__Show and Add Tracks to Statistics___________________________________________________________
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
-                 plot::histogram& chi_squared,
-                 plot::histogram& beta,
+                 plot::histogram_collection& histograms,
                  bool verbose) {
   for (const auto& track : tracks) {
-    chi_squared.insert(track.chi_squared_per_dof());
-    beta.insert(track.beta());
+    histograms["chi_squared"].insert(track.chi_squared_per_dof());
+    histograms["beta"].insert(track.beta());
     draw_track(canvas, track);
     //if (verbose)
       //std::cout << track << "\n";
@@ -163,24 +160,12 @@ int prototype_tracking(int argc,
     const auto mc_imported_events = event_bundle.true_events;
 
     const auto statistics_path = statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension;
-    plot::histogram chi_squared_histogram("chi_squared",
-      "Chi-Squared Distribution", "chi^2/dof", "Track Count",
-      200, 0, 10);
-    plot::histogram beta_histogram("beta",
-      "Beta Distribution", "beta", "Track Count",
-      200, 0, 2);
-    plot::histogram event_density_histogram("event_density",
-      "Event Density Distribution", "Track Count", "Event Count",
-      100, 0, 100);
-
-    /* TODO: Implement. Example:
-    plot::histogram_collection histograms(
+    plot::histogram_collection histograms({
       {"chi_squared", "Track Chi-Squared Distribution", "chi^2/dof",   "Track Count", 200, 0, 10},
       {"beta",        "Track Beta Distribution",        "beta",        "Track Count", 200, 0,  2},
+      {"beta_error",  "Track Beta Error Distribution",  "beta error",  "Track Count", 200, 0,  2},
       {"track_count", "Track Count Distribution",       "Track Count", "Event Count", 100, 0, 50}
-    );
-    //histograms["chi-squared"].insert(track.chi_squared_per_dof());
-    */
+    });
 
     for (uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
@@ -208,32 +193,28 @@ int prototype_tracking(int argc,
       draw_mc_tracks(canvas, analysis::mc::convert(mc_imported_events[event_counter]));
 
       const auto tracks = find_tracks(compressed_event, options);
+      const auto tracks_size = tracks.size();
 
-      if (tracks.size() > 1000) {
+      if (tracks_size > 100) {
         const auto name = "event" + event_counter_string;
-        plot::histogram individual_chi_squared_histogram(name + "_chi_squared",
-          name + " Chi-Squared Distribution", "chi^2/dof", "Track Count",
-          200, 0, 10);
-        plot::histogram individual_beta_histogram(name + "_beta",
-          name + "Beta Distribution", "beta", "Track Count",
-          200, 0, 2);
         plot::canvas individual_canvas(name);
-        save_tracks(tracks,
-          individual_canvas, individual_chi_squared_histogram, individual_beta_histogram,
-          options.verbose_output);
+        plot::histogram_collection individual_histograms(name + "_", {
+          {"chi_squared", name + " Chi-Squared Distribution", "chi^2/dof", "Track Count", 200, 0, 10},
+          {"beta", name + "Beta Distribution", "beta", "Track Count", 200, 0, 2}
+        });
+        save_tracks(tracks, individual_canvas, individual_histograms, options.verbose_output);
         individual_canvas.draw();
-        plot::save_all(statistics_path,
-          individual_canvas, individual_chi_squared_histogram, individual_beta_histogram);
+        plot::save_all(statistics_path, individual_canvas, individual_histograms);
       } else {
         canvas.add_points(compressed_event, 0.8, plot::color::BLACK);
-        save_tracks(tracks, canvas, chi_squared_histogram, beta_histogram, options.verbose_output);
+        save_tracks(tracks, canvas, histograms, options.verbose_output);
         // TODO: to remove
         for (const auto& track : tracks) {
           util::io::print_range(track.event()) << "\n";
         }
       }
 
-      event_density_histogram.insert(tracks.size());
+      histograms["track_count"].insert(tracks_size);
 
       if (options.verbose_output)
         std::cout << "  Track Count: "   << tracks.size() << "\n"
@@ -252,8 +233,8 @@ int prototype_tracking(int argc,
         util::io::print_range(track.event(), " ", "", std::clog) << "\n";
       }
     }
-    plot::draw_all(chi_squared_histogram, beta_histogram, event_density_histogram);
-    plot::save_all(statistics_path, chi_squared_histogram, beta_histogram, event_density_histogram);
+    histograms.draw_all();
+    histograms.save_all(statistics_path);
   }
 
   print_bar();

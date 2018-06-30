@@ -85,7 +85,7 @@ using _style_point_map = std::unordered_multimap<_style, r3_point, _style_hash, 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Canvas Implementation Definition____________________________________________________________
-struct canvas::canvas_impl {
+struct canvas::impl {
   TCanvas* _canvas;
   TView3D* _view;
   std::vector<TPolyLine3D*> _poly_lines;
@@ -97,18 +97,18 @@ struct canvas::canvas_impl {
     _view->SetAutoRange(true);
   }
 
-  canvas_impl(const std::string& name,
-              const size_t width,
-              const size_t height)
+  impl(const std::string& name,
+       const size_t width,
+       const size_t height)
       : _canvas(new TCanvas(name.c_str(), name.c_str(), width, height)) {
     reset_view();
   }
 
-  canvas_impl(const canvas_impl& other) = default;
-  canvas_impl(canvas_impl&& other) = default;
-  canvas_impl& operator=(const canvas_impl& other) = default;
-  canvas_impl& operator=(canvas_impl&& other) = default;
-  ~canvas_impl() = default;
+  impl(const impl& other) = default;
+  impl(impl&& other) = default;
+  impl& operator=(const impl& other) = default;
+  impl& operator=(impl&& other) = default;
+  ~impl() = default;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -116,7 +116,7 @@ struct canvas::canvas_impl {
 canvas::canvas(const std::string& name,
                const size_t width,
                const size_t height)
-    : _impl(std::make_unique<canvas_impl>(name, width, height)) {}
+    : _impl(std::make_unique<impl>(name, width, height)) {}
 //----------------------------------------------------------------------------------------------
 
 //__Canvas Destructor___________________________________________________________________________

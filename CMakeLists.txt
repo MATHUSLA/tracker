@@ -36,6 +36,7 @@ add_library(tracker SHARED
 
     src/tracker/plot/canvas.cc
     src/tracker/plot/histogram.cc
+    src/tracker/plot/histogram_collection.cc
     src/tracker/plot/plot.cc
 
     src/tracker/reader.cc

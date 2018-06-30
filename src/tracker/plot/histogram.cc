@@ -51,37 +51,48 @@ TH1D* _build_TH1D(const std::string& name,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Histogram Implementation Definition_________________________________________________________
-struct histogram::histogram_impl {
+struct histogram::impl {
   TCanvas* _canvas;
   TH1D* _hist;
-  bool _has_updated;
+  bool _has_updated = false;
 
   TAxis* x_axis() { return _hist->GetXaxis(); }
   const TAxis* x_axis() const { return _hist->GetXaxis(); }
   TAxis* y_axis() { return _hist->GetYaxis(); }
   const TAxis* y_axis() const { return _hist->GetYaxis(); }
 
-  histogram_impl() = default;
+  impl() = default;
 
-  histogram_impl(const std::string& name,
-                 const std::string& title,
-                 const std::string& x_title,
-                 const std::string& y_title,
-                 const size_t bins,
-                 const real min,
-                 const real max)
-    : _canvas(_build_TCanvas(name, title)), _hist(_build_TH1D(name, title, bins, min, max)),
-      _has_updated(false) {
+  impl(const std::string& name,
+       const std::string& title,
+       const std::string& x_title,
+       const std::string& y_title,
+       const size_t bins,
+       const real min,
+       const real max)
+    : _canvas(_build_TCanvas(name, title)),
+      _hist(_build_TH1D(name, title, bins, min, max)) {
     _hist->SetDirectory(nullptr);
     x_axis()->SetTitle(x_title.c_str());
     y_axis()->SetTitle(y_title.c_str());
   }
 
-  histogram_impl(const histogram_impl& other) = default;
-  histogram_impl(histogram_impl&& other) = default;
-  histogram_impl& operator=(const histogram_impl& other) = default;
-  histogram_impl& operator=(histogram_impl&& other) = default;
-  ~histogram_impl() = default;
+  impl(const impl& other)
+      : _canvas(dynamic_cast<TCanvas*>(other._canvas->Clone())),
+        _hist(dynamic_cast<TH1D*>(other._hist->Clone())) {}
+
+  impl(impl&& other) = default;
+
+  impl& operator=(const impl& other) {
+    if (this != &other) {
+      _canvas = dynamic_cast<TCanvas*>(other._canvas->Clone());
+      _hist = dynamic_cast<TH1D*>(other._hist->Clone());
+    }
+    return *this;
+  }
+
+  impl& operator=(impl&& other) = default;
+  ~impl() = default;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -114,7 +125,27 @@ histogram::histogram(const std::string& name,
                      const size_t bins,
                      const real min,
                      const real max)
-    : _impl(std::make_unique<histogram_impl>(name, title, x_title, y_title, bins, min, max)) {}
+    : _impl(std::make_unique<impl>(name, title, x_title, y_title, bins, min, max)) {}
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Copy Constructor__________________________________________________________________
+histogram::histogram(const histogram& other) : _impl(new impl(*other._impl)) {}
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Move Constructor__________________________________________________________________
+histogram::histogram(histogram&& other) noexcept = default;
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Copy Assignment___________________________________________________________________
+histogram& histogram::operator=(const histogram& other) {
+  if (this != &other)
+    _impl.reset(new impl(*other._impl));
+  return *this;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Move Assignment___________________________________________________________________
+histogram& histogram::operator=(histogram&& other) noexcept = default;
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Destructor________________________________________________________________________
@@ -145,14 +176,38 @@ const std::string histogram::y_title() const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Set Histogram Name__________________________________________________________________________
+void histogram::name(const std::string& new_name) {
+  _impl->_hist->SetName(new_name.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Histogram Title_________________________________________________________________________
+void histogram::title(const std::string& new_title) {
+  _impl->_hist->SetTitle(new_title.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Histogram X-Axis Title__________________________________________________________________
+void histogram::x_title(const std::string& new_x_title) {
+  _impl->x_axis()->SetTitle(new_x_title.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Histogram Y-Axis Title__________________________________________________________________
+void histogram::y_title(const std::string& new_y_title) {
+  _impl->y_axis()->SetTitle(new_y_title.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
 //__Check If Histogram is Empty_________________________________________________________________
 bool histogram::empty() const {
-  return count() == 0;
+  return size() == 0;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Size of Histogram___________________________________________________________________________
-size_t histogram::count() const {
+size_t histogram::size() const {
   return _impl->_hist->GetEntries();
 }
 //----------------------------------------------------------------------------------------------
