@@ -43,12 +43,24 @@ constexpr auto momentum = MeVperC;
 constexpr auto velocity = length / time;
 //----------------------------------------------------------------------------------------------
 
+//__Standard Unit String________________________________________________________________________
+static const std::string& length_string   = "cm";
+static const std::string& time_string     = "ns";
+static const std::string& energy_string   = "MeV";
+static const std::string& momentum_string = "MeVperC";
+static const std::string& velocity_string = "cm/ns";
+//----------------------------------------------------------------------------------------------
+
 //__Install Momentum Units into Geant4__________________________________________________________
 inline void define() {
-  new G4UnitDefinition("GeV/c", "GeV/c", "Momentum", GeVperC);
-  new G4UnitDefinition("MeV/c", "MeV/c", "Momentum", MeVperC);
-  new G4UnitDefinition("keV/c", "keV/c", "Momentum", keVperC);
-  new G4UnitDefinition( "eV/c",  "eV/c", "Momentum",  eVperC);
+  static bool defined = false;
+  if (!defined) {
+    new G4UnitDefinition("GeV/c", "GeV/c", "Momentum", GeVperC);
+    new G4UnitDefinition("MeV/c", "MeV/c", "Momentum", MeVperC);
+    new G4UnitDefinition("keV/c", "keV/c", "Momentum", keVperC);
+    new G4UnitDefinition( "eV/c",  "eV/c", "Momentum",  eVperC);
+    defined = true;
+  }
 }
 //----------------------------------------------------------------------------------------------
 

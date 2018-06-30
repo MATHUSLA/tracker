@@ -34,6 +34,7 @@ statistics-file-prefix:    statistics
 statistics-file-extension: root
 # track-chi2-limit:          10
 # vertex-chi2-limit:         10
+# track-chi-squared-histogram: track_chi_squared, Track Chi-Squared Distribution, chi^2/dof, Track Count, 200, 0, 10
 
 # Geometry Setup
 geometry-file:               demo/prototype/resources/world.prototype.gdml

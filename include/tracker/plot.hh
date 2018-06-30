@@ -159,6 +159,7 @@ private:
 };
 //----------------------------------------------------------------------------------------------
 
+// TODO:? maybe upgrade to plotting_collection to include canvases
 //__Histogram Collection Type___________________________________________________________________
 class histogram_collection {
 public:
@@ -200,6 +201,9 @@ public:
                               const std::string& name="histogram");
 
   histogram& operator[](const std::string& name);
+
+  // TODO: implement prefix adding/swapping
+  // bool add_prefix(const std::string& prefix);
 
   void draw_all();
   void clear_all();

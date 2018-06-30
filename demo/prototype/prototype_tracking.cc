@@ -122,8 +122,10 @@ void save_tracks(const analysis::track_vector& tracks,
                  plot::histogram_collection& histograms,
                  bool verbose) {
   for (const auto& track : tracks) {
-    histograms["chi_squared"].insert(track.chi_squared_per_dof());
+    histograms["track_chi_squared"].insert(track.chi_squared_per_dof());
     histograms["beta"].insert(track.beta());
+    histograms["beta_error"].insert(track.beta_error());
+    histograms["track_size"].insert(track.size());
     draw_track(canvas, track);
     //if (verbose)
       //std::cout << track << "\n";
@@ -161,10 +163,19 @@ int prototype_tracking(int argc,
 
     const auto statistics_path = statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension;
     plot::histogram_collection histograms({
-      {"chi_squared", "Track Chi-Squared Distribution", "chi^2/dof",   "Track Count", 200, 0, 10},
-      {"beta",        "Track Beta Distribution",        "beta",        "Track Count", 200, 0,  2},
-      {"beta_error",  "Track Beta Error Distribution",  "beta error",  "Track Count", 200, 0,  2},
-      {"track_count", "Track Count Distribution",       "Track Count", "Event Count", 100, 0, 50}
+      {"track_chi_squared",   "Track Chi-Squared Distribution",    "chi^2/dof",    "Track Count",  200, 0, 10},
+      {"vertex_chi_squared",  "Track Chi-Squared Distribution",    "chi^2/dof",    "Vertex Count", 200, 0, 10},
+      {"beta",                "Track Beta Distribution",           "beta",         "Track Count",  200, 0,  2},
+      {"beta_error",          "Track Beta Error Distribution",     "beta error",   "Track Count",  200, 0,  2},
+      {"beta_with_cut",       "Track Beta Distribution With Cut",  "beta",         "Track Count",  200, 0,  2},
+      {"track_count",         "Track Count Distribution",          "Track Count",  "Event Count",   51, 0, 50},
+      {"vertex_count",        "Vertex Count Distribution",         "Vertex Count", "Event Count",  100, 0, 50},
+      {"track_size",          "Track Size Distribution",           "Hit Count",    "Track Count",   11, 0, 10},
+      {"non_track_hit_count", "Non-Track Hit Count Distribution",  "Hit Count",    "Event Count",  100, 0, 50},
+      {"vertex_t_error",      "Vertex T Error Distribution",       "t error (" + units::time_string   + ")", "Vertex Count", 100, 0, 20},
+      {"vertex_x_error",      "Vertex X Error Distribution",       "x error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
+      {"vertex_y_error",      "Vertex Y Error Distribution",       "y error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
+      {"vertex_z_error",      "Vertex Z Error Distribution",       "z error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
     });
 
     for (uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
@@ -195,16 +206,21 @@ int prototype_tracking(int argc,
       const auto tracks = find_tracks(compressed_event, options);
       const auto tracks_size = tracks.size();
 
+      histograms["track_count"].insert(tracks_size);
+
       if (tracks_size > 100) {
+        /*
         const auto name = "event" + event_counter_string;
         plot::canvas individual_canvas(name);
         plot::histogram_collection individual_histograms(name + "_", {
-          {"chi_squared", name + " Chi-Squared Distribution", "chi^2/dof", "Track Count", 200, 0, 10},
+          {"track_chi_squared", name + " Chi-Squared Distribution", "chi^2/dof", "Track Count", 200, 0, 10},
           {"beta", name + "Beta Distribution", "beta", "Track Count", 200, 0, 2}
         });
         save_tracks(tracks, individual_canvas, individual_histograms, options.verbose_output);
+        // FIXME: should not need a draw before a save
         individual_canvas.draw();
         plot::save_all(statistics_path, individual_canvas, individual_histograms);
+        */
       } else {
         canvas.add_points(compressed_event, 0.8, plot::color::BLACK);
         save_tracks(tracks, canvas, histograms, options.verbose_output);

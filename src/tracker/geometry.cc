@@ -219,6 +219,7 @@ void open(const std::string& path,
 
 //__Close Geant4 Geometry Manager_______________________________________________________________
 void close() {
+  units::define();
   _path.clear();
   _geometry_insertion_order.clear();
   _geometry.clear();
