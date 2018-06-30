@@ -32,7 +32,7 @@ namespace util { namespace type { //////////////////////////////////////////////
 template<class Iter>
 constexpr std::size_t distance(const Iter& begin,
                                const Iter& end) {
-  return static_cast<std::size_t>(end - begin);
+  return static_cast<std::size_t>(std::distance(begin, end));
 }
 //----------------------------------------------------------------------------------------------
 

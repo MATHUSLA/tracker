@@ -21,6 +21,8 @@
 #pragma once
 
 #include <memory>
+#include <tuple>
+#include <unordered_map>
 
 #include <tracker/core/type.hh>
 
@@ -88,6 +90,28 @@ public:
 
   histogram& operator=(histogram&& other) = default;
 
+  using minimal_constructor_tuple = std::tuple<const std::string,
+                                               const std::size_t,
+                                               const real,
+                                               const real>;
+  using title_constructor_tuple = std::tuple<const std::string,
+                                             const std::string,
+                                             const std::size_t,
+                                             const real,
+                                             const real>;
+  using title_and_axis_constructor_tuple = std::tuple<const std::string,
+                                                      const std::string,
+                                                      const std::string,
+                                                      const std::string,
+                                                      const std::size_t,
+                                                      const real,
+                                                      const real>;
+
+  template<class T>
+  constexpr static bool is_valid_constructor =  std::is_same<T, minimal_constructor_tuple>::value
+                                             || std::is_same<T, title_constructor_tuple>::value
+                                             || std::is_same<T, title_and_axis_constructor_tuple>::value;
+
   const std::string name() const;
   const std::string title() const;
   const std::string x_title() const;
@@ -147,6 +171,35 @@ private:
   histogram();
   struct histogram_impl;
   std::unique_ptr<histogram_impl> _impl;
+};
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Collection Type___________________________________________________________________
+class histogram_collection {
+public:
+
+
+  histogram& emplace(const std::string& name,
+                     const size_t bins,
+                     const real min,
+                     const real max);
+  histogram& emplace(const std::string& name,
+                     const std::string& title,
+                     const size_t bins,
+                     const real min,
+                     const real max);
+  histogram& emplace(const std::string& name,
+                     const std::string& title,
+                     const std::string& x_title,
+                     const std::string& y_title,
+                     const size_t bins,
+                     const real min,
+                     const real max);
+
+  histogram& operator[](const std::string& name);
+
+private:
+
 };
 //----------------------------------------------------------------------------------------------
 

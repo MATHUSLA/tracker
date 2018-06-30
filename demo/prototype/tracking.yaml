@@ -3,14 +3,20 @@
 verbose-output: true
 
 # Thresholds and Settings
-compression-size:     15, 15, 15, 15
+compression-size:     15, 1.5, 1.5, 1.5
 layer-axis:           Z
-layer-depth:          500
-line-width:           300
+layer-depth:          50
+line-width:           20
 seed-size:            3
 event-overload-limit: 2   # unused
-event-density-limit:  0.2
+event-density-limit:  0.1
 track-density-limit:  0.5 # unused
+# seed-to-track-min-overlap: 2
+
+# add keys:
+# default-length-unit: cm
+# default-time-unit: ns
+# default-energy-unit: MeV
 
 # maybe? -> allow-seed-overlaps: true/false
 

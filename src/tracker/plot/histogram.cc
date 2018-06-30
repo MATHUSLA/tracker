@@ -31,22 +31,6 @@ namespace plot { ///////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-//__Histogram and Canvas Name Map_______________________________________________________________
-std::unordered_map<std::string, size_t> _names;
-//----------------------------------------------------------------------------------------------
-
-//__Create a Unique Name________________________________________________________________________
-const std::string _make_unique_name(const std::string& name) {
-  const auto& search = _names.find(name);
-  if (search != _names.end()) {
-    return name + std::to_string(search->second++);
-  } else {
-    _names.insert({name, 1});
-    return name;
-  }
-}
-//----------------------------------------------------------------------------------------------
-
 //__Build TCanvas_______________________________________________________________________________
 TCanvas* _build_TCanvas(const std::string& name,
                         const std::string& title) {
@@ -85,10 +69,9 @@ struct histogram::histogram_impl {
                  const std::string& y_title,
                  const size_t bins,
                  const real min,
-                 const real max) : _has_updated(false) {
-    const auto unique_name = _make_unique_name(name);
-    _canvas = _build_TCanvas(unique_name, title);
-    _hist = _build_TH1D(unique_name, title, bins, min, max);
+                 const real max)
+    : _canvas(_build_TCanvas(name, title)), _hist(_build_TH1D(name, title, bins, min, max)),
+      _has_updated(false) {
     _hist->SetDirectory(nullptr);
     x_axis()->SetTitle(x_title.c_str());
     y_axis()->SetTitle(y_title.c_str());

@@ -119,7 +119,7 @@ public:
   const full_hit full_back() const { return _full_event.back(); }
   const analysis::full_event& full_event() const { return _full_event; }
 
-  size_t count() const { return _full_event.size(); }
+  std::size_t size() const { return _full_event.size(); }
   bool empty() const { return _full_event.empty(); }
 
   const geometry::structure_vector& detectors() const { return _detectors; }
@@ -154,9 +154,11 @@ const track_vector independent_fit_seeds(const full_event_vector& seeds,
 
 //__Fit all Seeds to Tracks using Overlaps______________________________________________________
 const track_vector overlap_fit_seeds(const event_vector& seeds,
-                                     const Coordinate direction=Coordinate::Z);
+                                     const Coordinate direction=Coordinate::Z,
+                                     const std::size_t min_overlap=2UL);
 const track_vector overlap_fit_seeds(const full_event_vector& seeds,
-                                     const Coordinate direction=Coordinate::Z);
+                                     const Coordinate direction=Coordinate::Z,
+                                     const std::size_t min_overlap=2UL);
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////

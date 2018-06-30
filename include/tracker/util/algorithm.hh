@@ -212,6 +212,27 @@ Range stable_copy_sort_range(const Range& range,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Find Element from Binary Search_____________________________________________________________
+// [Implementation from cppreference]
+template<class ForwardIt, class T, class Compare=std::less<>>
+constexpr ForwardIt binary_find(ForwardIt first,
+                                ForwardIt last,
+                                const T& value,
+                                Compare comp={}) {
+  first = std::lower_bound(first, last, value, comp);
+  return first != last && !comp(value, *first) ? first : last;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Find Element from Binary Search in Range____________________________________________________
+template<class Range, class T, class Compare=std::less<>>
+constexpr typename Range::iterator binary_find_range(const Range& range,
+                                                     const T& value,
+                                                     Compare comp={}) {
+  return binary_find(std::cbegin(range), std::cend(range), value, comp);
+}
+//----------------------------------------------------------------------------------------------
+
 } } /* namespace util::algorithm */ ////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */

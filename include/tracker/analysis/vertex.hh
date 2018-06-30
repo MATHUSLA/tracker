@@ -77,7 +77,7 @@ public:
   const covariance_matrix_type& covariance_matrix() const { return _covariance; }
 
   const track_vector tracks() const { return _tracks; };
-  size_t count() const { return _tracks.size(); }
+  std::size_t size() const { return _tracks.size(); }
   bool empty() const { return _tracks.size() <= 1; }
 
 private:

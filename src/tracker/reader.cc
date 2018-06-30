@@ -814,7 +814,8 @@ void _parse_key_value_size_type(const std::string& key,
 //__Parse R4 Key Value__________________________________________________________________________
 void _parse_key_value_r4_point(const std::string& key,
                                const std::string& value,
-                               r4_point& out) {
+                               r4_point& out,
+                               bool use_units) {
   std::vector<std::string> point;
   util::string::split(value, point, ",;");
   const auto size = point.size();
@@ -824,10 +825,10 @@ void _parse_key_value_r4_point(const std::string& key,
     "              Expected 4 arguments \"T, X, Y, Z\" but received ", size, ".\n");
   try {
     out = {
-      static_cast<real>(std::stold(point[0])),
-      static_cast<real>(std::stold(point[1])),
-      static_cast<real>(std::stold(point[2])),
-      static_cast<real>(std::stold(point[3])) };
+      (use_units ? units::time   : 1.0L) * static_cast<real>(std::stold(point[0])),
+      (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[1])),
+      (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[2])),
+      (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[3])) };
   } catch (...) {
     util::error::exit(
       "[FATAL ERROR] Invalid R4 Point Argument for \"", key, "\" in Tracking Script.\n"
@@ -917,14 +918,17 @@ const tracking_options read(const std::string& path) {
         out.data_track_id_key = value;
       } else if (key == "geometry-default-time-error") {
         _parse_key_value_positive_real(key, value, out.default_time_error);
+        out.default_time_error *= units::time;
       } else if (key == "compression-size") {
-        _parse_key_value_r4_point(key, value, out.compression_size);
+        _parse_key_value_r4_point(key, value, out.compression_size, true);
       } else if (key == "layer-axis") {
         _parse_key_value_r3_coordinate(key, value, out.layer_axis);
       } else if (key == "layer-depth") {
         _parse_key_value_positive_real(key, value, out.layer_depth);
+        out.layer_depth *= units::length;
       } else if (key == "line-width") {
         _parse_key_value_positive_real(key, value, out.line_width);
+        out.line_width *= units::length;
       } else if (key == "seed-size") {
         _parse_key_value_size_type(key, value, out.seed_size);
       } else if (key == "event-density-limit") {

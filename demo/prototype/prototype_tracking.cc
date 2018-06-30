@@ -46,7 +46,7 @@ const analysis::track_vector find_tracks(const analysis::event& event,
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-  return analysis::independent_fit_seeds(tracking_vector);
+  return analysis::overlap_fit_seeds(tracking_vector);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -147,11 +147,9 @@ int prototype_tracking(int argc,
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
 
-  const auto data_directory = reader::root::search_directory(options.data_directory, options.data_file_extension);
-  const auto data_directory_size = data_directory.size();
-  for (uint_fast64_t path_counter{}; path_counter < data_directory_size; ++path_counter) {
-    const auto& path = data_directory[path_counter];
-    const auto path_counter_string = std::to_string(path_counter);
+  uint_fast64_t path_counter{};
+  for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
+    const auto path_counter_string = std::to_string(path_counter++);
 
     print_bar();
     std::cout << "Read Path: " << path << "\n";
@@ -174,6 +172,15 @@ int prototype_tracking(int argc,
     plot::histogram event_density_histogram("event_density",
       "Event Density Distribution", "Track Count", "Event Count",
       100, 0, 100);
+
+    /* TODO: Implement. Example:
+    plot::histogram_collection histograms(
+      {"chi_squared", "Track Chi-Squared Distribution", "chi^2/dof",   "Track Count", 200, 0, 10},
+      {"beta",        "Track Beta Distribution",        "beta",        "Track Count", 200, 0,  2},
+      {"track_count", "Track Count Distribution",       "Track Count", "Event Count", 100, 0, 50}
+    );
+    //histograms["chi-squared"].insert(track.chi_squared_per_dof());
+    */
 
     for (uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
@@ -203,7 +210,7 @@ int prototype_tracking(int argc,
       const auto tracks = find_tracks(compressed_event, options);
 
       if (tracks.size() > 1000) {
-        const auto name = "event" + std::to_string(event_counter);
+        const auto name = "event" + event_counter_string;
         plot::histogram individual_chi_squared_histogram(name + "_chi_squared",
           name + " Chi-Squared Distribution", "chi^2/dof", "Track Count",
           200, 0, 10);
@@ -231,15 +238,19 @@ int prototype_tracking(int argc,
       if (options.verbose_output)
         std::cout << "  Track Count: "   << tracks.size() << "\n"
                   << "  Track Density: " << tracks.size() / static_cast<type::real>(event.size()) * 100.0L << " %\n";
-      /*
-      const analysis::vertex vertex(tracks);
-      if (options.verbose_output) {
-        draw_vertex_and_guess(canvas, vertex);
+
+      //const analysis::vertex vertex(tracks);
+      //if (options.verbose_output) {
+        //draw_vertex_and_guess(canvas, vertex);
         // std::cout << vertex << "\n";
-      }
-      */
+      //}
 
       canvas.draw();
+
+      std::clog << "event: " << event_counter << "\n";
+      for (const auto& track : tracks) {
+        util::io::print_range(track.event(), " ", "", std::clog) << "\n";
+      }
     }
     plot::draw_all(chi_squared_histogram, beta_histogram, event_density_histogram);
     plot::save_all(statistics_path, chi_squared_histogram, beta_histogram, event_density_histogram);
@@ -255,7 +266,7 @@ int prototype_tracking(int argc,
 //__Silent Prototype Tracking Algorithm_________________________________________________________
 int silent_prototype_tracking(int argc,
                               char* argv[]) {
-  util::io::remove_buffer(std::cout, std::cerr, std::clog);
+  util::io::remove_buffer(std::cout, std::cerr /*, std::clog*/);
   return prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------
@@ -265,6 +276,6 @@ int silent_prototype_tracking(int argc,
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc,
          char* argv[]) {
-  return MATHUSLA::prototype_tracking(argc, argv);
+  return MATHUSLA::silent_prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

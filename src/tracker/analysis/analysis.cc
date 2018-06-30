@@ -322,7 +322,7 @@ template<class EventPartition,
 const EventVector seed(const size_t n,
                        const EventPartition& partition,
                        const real line_threshold) {
-  if (n <= 2)
+  if (n <= 1)
     return EventVector{};
 
   const auto& layers = partition.parts;
@@ -698,8 +698,8 @@ namespace { ////////////////////////////////////////////////////////////////////
 template<class Event,
   typename Point = typename Event::value_type,
   typename = std::enable_if_t<is_r4_type_v<Point>>>
-const Event _time_relative_loop_join(const Event& first,
-                                     const Event& second) {
+const Event _time_ordered_loop_join(const Event& first,
+                                    const Event& second) {
   return first.front().t <= second.front().t
     ? loop_join(first, second)
     : loop_join(second, first);
@@ -739,7 +739,7 @@ const EventVector loop_join_all(const EventVector& seeds) {
       continue;
     }
     const auto& bottom_seed = seed_buffer[bottom_index];
-    const auto joined = _time_relative_loop_join(top_seed, bottom_seed);
+    const auto joined = _time_ordered_loop_join(top_seed, bottom_seed);
     if (!joined.empty()) {
       if (joined != seed_buffer.back()) {
         seed_buffer.push_back(joined);

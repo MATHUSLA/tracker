@@ -82,22 +82,6 @@ struct _style_equal {
 using _style_point_map = std::unordered_multimap<_style, r3_point, _style_hash, _style_equal>;
 //----------------------------------------------------------------------------------------------
 
-//__Canvas Names________________________________________________________________________________
-std::unordered_map<std::string, size_t> _canvas_names;
-//----------------------------------------------------------------------------------------------
-
-//__Create a Unique Name for Canvas_____________________________________________________________
-const std::string _make_unique_name(const std::string& name) {
-  const auto& search = _canvas_names.find(name);
-  if (search != _canvas_names.end()) {
-    return name + std::to_string(search->second++);
-  } else {
-    _canvas_names.insert({name, 1});
-    return name;
-  }
-}
-//----------------------------------------------------------------------------------------------
-
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Canvas Implementation Definition____________________________________________________________
@@ -132,7 +116,7 @@ struct canvas::canvas_impl {
 canvas::canvas(const std::string& name,
                const size_t width,
                const size_t height)
-    : _impl(std::make_unique<canvas_impl>(_make_unique_name(name), width, height)) {}
+    : _impl(std::make_unique<canvas_impl>(name, width, height)) {}
 //----------------------------------------------------------------------------------------------
 
 //__Canvas Destructor___________________________________________________________________________

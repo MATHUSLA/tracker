@@ -112,6 +112,7 @@ inline TMinuit& execute(TMinuit& minimizer,
     case 2:
     case 3: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"", settings::command,
                               "\". Exited with Error Code ", error_flag, ".\n");
+    // FIXME: what to do about this?
     //case 4: util::error::exit("[FATAL ERROR] MINUIT Exited Abnormally ",
     //                          "with Error Code ", error_flag, ".\n");
     default: break;
