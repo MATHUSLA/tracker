@@ -3,13 +3,13 @@
 verbose-output: true
 
 # Thresholds and Settings
-compression-size:     15, 1.5, 1.5, 1.5
+compression-size:     2, 1, 1, 1
 layer-axis:           Z
 layer-depth:          50
-line-width:           20
+line-width:           25
 seed-size:            3
 event-overload-limit: 2   # unused
-event-density-limit:  0.1
+event-density-limit:  0.22
 track-density-limit:  0.5 # unused
 # seed-to-track-min-overlap: 2
 

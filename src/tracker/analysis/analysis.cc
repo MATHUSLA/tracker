@@ -674,6 +674,7 @@ const EventVector subset_join_all(const EventVector& seeds) {
     const auto& bottom_seed = sorted[bottom_index];
     if (util::algorithm::range_includes(top_seed, bottom_seed, t_ordered<Point>{})) {
       joined_list.set(bottom_index);
+      // TODO: check this line vvvvvvvvvvvvvvvvvvvvvvvvvv
       top_index = joined_list.first_unset(1 + top_index);
       bottom_index = 1 + top_index;
     } else {
@@ -714,7 +715,7 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<Point>>>
 const EventVector loop_join_all(const EventVector& seeds) {
   const auto size = seeds.size();
-  if (size == 1)
+  if (size <= 1)
     return seeds;
 
   EventVector out;
@@ -723,7 +724,7 @@ const EventVector loop_join_all(const EventVector& seeds) {
 
   util::bit_vector join_list(size);
 
-  size_t top_rindex = 0, bottom_rindex = 1;
+  std::size_t top_rindex{}, bottom_rindex = 1UL;
   while (top_rindex < seed_buffer.size()) {
     const auto last_index = seed_buffer.size() - 1;
     const auto top_index = last_index - top_rindex;
@@ -733,7 +734,7 @@ const EventVector loop_join_all(const EventVector& seeds) {
     const auto& top_seed = seed_buffer[top_index];
     if (bottom_index == last_index + 1) {
       out.push_back(top_seed);
-      join_list[top_index] = true;
+      join_list.set(top_index);
       top_rindex = last_index - join_list.last_unset(1 + top_rindex);
       bottom_rindex = 1 + top_rindex;
       continue;
@@ -745,9 +746,9 @@ const EventVector loop_join_all(const EventVector& seeds) {
         seed_buffer.push_back(joined);
         join_list.extend();
       }
-      join_list[top_index] = true;
-      join_list[bottom_index] = true;
-      top_rindex = 0;
+      join_list.set(top_index);
+      join_list.set(bottom_index);
+      top_rindex = 0UL;
     }
     ++bottom_rindex;
   }

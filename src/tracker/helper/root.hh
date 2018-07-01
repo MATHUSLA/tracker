@@ -54,7 +54,7 @@ inline void collect_paths(TSystemDirectory* dir,
                           std::vector<std::string>& paths,
                           const std::string& ext) {
   if (!dir || !dir->GetListOfFiles()) return;
-  for (const auto&& obj : *dir->GetListOfFiles()) {
+  for (const auto& obj : *dir->GetListOfFiles()) {
     const auto file = dynamic_cast<TSystemFile*>(obj);
     const auto name = std::string(file->GetName());
     if (!file->IsDirectory()) {
@@ -67,11 +67,11 @@ inline void collect_paths(TSystemDirectory* dir,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Search and Collect ROOT File Paths__________________________________________________________
+//__Search and Collect File Paths_______________________________________________________________
 inline const std::vector<std::string> search_directory(const std::string& path,
                                                        const std::string& ext) {
   std::vector<std::string> paths{};
-  collect_paths(new TSystemDirectory("search", path.c_str()), paths, ext);
+  collect_paths(new TSystemDirectory("", path.c_str()), paths, ext);
   return paths;
 }
 //----------------------------------------------------------------------------------------------

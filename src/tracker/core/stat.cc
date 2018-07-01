@@ -31,6 +31,66 @@ real chi_squared_p_value(const real chi2,
 }
 //----------------------------------------------------------------------------------------------
 
+namespace random { /////////////////////////////////////////////////////////////////////////////
+
+//__Min Element of Distribution_________________________________________________________________
+real generator::min() const {
+  real out;
+  detail::distribution_apply(_type, _distribution, [&](const auto& dist) { out = dist.min(); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Max Element of Distribution_________________________________________________________________
+real generator::max() const {
+  real out;
+  detail::distribution_apply(_type, _distribution, [&](const auto& dist) { out = dist.max(); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Calculate Next Random Number________________________________________________________________
+real generator::operator()() {
+  real out;
+  detail::distribution_apply(_type, _distribution, [&](auto& dist) { out = dist(_engine); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seed Engine_________________________________________________________________________________
+void generator::seed(const std::uint_least32_t seed) {
+  _engine.seed(seed);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seed Engine_________________________________________________________________________________
+void generator::seed(std::seed_seq& seq) {
+  _engine.seed(seq);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reset Distribution__________________________________________________________________________
+void generator::reset() {
+  detail::distribution_apply(_type, _distribution, [](auto& dist) { dist.reset(); });
+}
+//----------------------------------------------------------------------------------------------
+
+//__Discard Elements from Engine________________________________________________________________
+void generator::discard(const std::size_t z) {
+  _engine.discard(z);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Random Number Generator Equality____________________________________________________________
+bool generator::operator==(const generator& other) const {
+  return _engine == other._engine && _type == other._type;
+  // TODO: add distribution equality
+  // TODO: add parameter equality
+}
+//----------------------------------------------------------------------------------------------
+
+} /* namespace random */ ///////////////////////////////////////////////////////////////////////
+
 } /* namespace stat */ /////////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */

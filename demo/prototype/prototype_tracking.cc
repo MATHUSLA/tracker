@@ -42,6 +42,12 @@ const analysis::track_vector find_tracks(const analysis::event& event,
                                          const reader::tracking_options& options) {
   analysis::event combined_rpc_hits;
   analysis::full_event original_rpc_hits;
+
+  std::clog << "Raw Event:\n";
+  for (const auto& point : event)
+    std::clog << point << " ";
+  std::clog << "\n";
+
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
@@ -88,13 +94,19 @@ void draw_mc_tracks(plot::canvas& canvas,
     const auto hits = track.hits;
     const auto size = hits.size();
     for (std::size_t i = 0; i < size - 1; ++i) {
-      canvas.add_point(type::reduce_to_r3(hits[i]), 0.8, plot::color::BLUE);
-      canvas.add_line(type::reduce_to_r3(hits[i]),
-                      type::reduce_to_r3(hits[i+1]),
-                      1,
-                      plot::color::BLUE);
+      canvas.add_line(type::reduce_to_r3(hits[i]), type::reduce_to_r3(hits[i+1]), 1, plot::color::BLUE);
     }
-    canvas.add_point(type::reduce_to_r3(hits.back()), 0.8, plot::color::BLUE);
+    for (const auto& point : hits) {
+      const auto center = type::reduce_to_r3(point);
+      canvas.add_point(center, 0.5, plot::color::BLUE);
+      const auto box = geometry::limits_of_volume(center);
+      canvas.add_box(box.center,
+                     box.max.x - box.min.x,
+                     box.max.y - box.min.y,
+                     box.max.z - box.min.z,
+                     1,
+                     plot::color::BLUE);
+    }
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -164,13 +176,13 @@ int prototype_tracking(int argc,
     const auto statistics_path = statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension;
     plot::histogram_collection histograms({
       {"track_chi_squared",   "Track Chi-Squared Distribution",    "chi^2/dof",    "Track Count",  200, 0, 10},
-      {"vertex_chi_squared",  "Track Chi-Squared Distribution",    "chi^2/dof",    "Vertex Count", 200, 0, 10},
+      {"vertex_chi_squared",  "Vertex Chi-Squared Distribution",   "chi^2/dof",    "Vertex Count", 200, 0, 10},
       {"beta",                "Track Beta Distribution",           "beta",         "Track Count",  200, 0,  2},
       {"beta_error",          "Track Beta Error Distribution",     "beta error",   "Track Count",  200, 0,  2},
       {"beta_with_cut",       "Track Beta Distribution With Cut",  "beta",         "Track Count",  200, 0,  2},
-      {"track_count",         "Track Count Distribution",          "Track Count",  "Event Count",   51, 0, 50},
+      {"track_count",         "Track Count Distribution",          "Track Count",  "Event Count",   50, 0, 50},
       {"vertex_count",        "Vertex Count Distribution",         "Vertex Count", "Event Count",  100, 0, 50},
-      {"track_size",          "Track Size Distribution",           "Hit Count",    "Track Count",   11, 0, 10},
+      {"track_size",          "Track Size Distribution",           "Hit Count",    "Track Count",   50, 0, 50},
       {"non_track_hit_count", "Non-Track Hit Count Distribution",  "Hit Count",    "Event Count",  100, 0, 50},
       {"vertex_t_error",      "Vertex T Error Distribution",       "t error (" + units::time_string   + ")", "Vertex Count", 100, 0, 20},
       {"vertex_x_error",      "Vertex X Error Distribution",       "x error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
@@ -269,6 +281,11 @@ int silent_prototype_tracking(int argc,
 //----------------------------------------------------------------------------------------------
 
 } /* namespace MATHUSLA */
+
+#include <tracker/core/stat.hh>
+
+#include <map>
+#include <iomanip>
 
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc,

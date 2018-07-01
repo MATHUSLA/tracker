@@ -20,6 +20,8 @@
 #define TRACKER__CORE__STAT_HH
 #pragma once
 
+#include <random>
+
 #include <tracker/core/type.hh>
 
 #include <tracker/util/algorithm.hh>
@@ -429,6 +431,445 @@ uncertain<T> uncertain<T>::from_uniform(T value,
 //----------------------------------------------------------------------------------------------
 
 } /* namespace type */ /////////////////////////////////////////////////////////////////////////
+
+namespace random { /////////////////////////////////////////////////////////////////////////////
+
+//__Random Distribution Types___________________________________________________________________
+enum class Distribution {
+  UniformInt,
+  UniformReal,
+  Bernoulli,
+  Binomial,
+  NegativeBinomial,
+  Geometric,
+  Poisson,
+  Exponential,
+  Gamma,
+  Weibull,
+  ExtremeValue,
+  Normal,
+  LogNormal,
+  ChiSquared,
+  Cauchy,
+  FisherF,
+  StudentT,
+  Discrete,
+  PiecewiseConstant,
+  PiecewiseLinear,
+};
+//----------------------------------------------------------------------------------------------
+
+//__Random Distribution Parameter Base Type_____________________________________________________
+template<Distribution D>
+struct distribution_parameters { static constexpr auto type = D; };
+//----------------------------------------------------------------------------------------------
+
+//__Random Distribution Parameter Derived Type__________________________________________________
+struct uniform_int       : public distribution_parameters<Distribution::UniformInt> {
+  integer a, b;
+  uniform_int(integer left, integer right)         : a(left), b(right) {}
+};
+struct uniform_real      : public distribution_parameters<Distribution::UniformReal> {
+  real a, b;
+  uniform_real(real left, real right)              : a(left), b(right) {}
+};
+struct bernoulli         : public distribution_parameters<Distribution::Bernoulli> {
+  real p;
+  bernoulli(real prob)                             : p(prob) {}
+};
+struct binomial          : public distribution_parameters<Distribution::Binomial> {
+  integer t; real p;
+  binomial(std::size_t trials, real prob)          : t(trials), p(prob) {}
+};
+struct negative_binomial : public distribution_parameters<Distribution::NegativeBinomial> {
+  integer k; real p;
+  negative_binomial(std::size_t trials, real prob) : k(trials), p(prob) {}
+};
+struct geometric         : public distribution_parameters<Distribution::Geometric> {
+  real p;
+  geometric(real prob)                             : p(prob) {}
+};
+struct poisson           : public distribution_parameters<Distribution::Poisson> {
+  real mean;
+  poisson(real m)                                  : mean(m) {}
+};
+struct exponential       : public distribution_parameters<Distribution::Exponential> {
+  real lambda;
+  exponential(real l)                              : lambda(l) {}
+};
+struct gamma             : public distribution_parameters<Distribution::Gamma> {
+  real alpha, beta;
+  gamma(real a, real b)                            : alpha(a), beta(b) {}
+};
+struct weibull           : public distribution_parameters<Distribution::Weibull> {
+  real a, b;
+  weibull(real pa, real pb)                        : a(pa), b(pb) {}
+};
+struct extreme_value     : public distribution_parameters<Distribution::ExtremeValue> {
+  real a, b;
+  extreme_value(real pa, real pb)                  : a(pa), b(pb) {}
+};
+struct normal            : public distribution_parameters<Distribution::Normal> {
+  real mean, stddev;
+  normal(real m, real s)                           : mean(m), stddev(s) {}
+};
+struct lognormal         : public distribution_parameters<Distribution::LogNormal> {
+  real mean, stddev;
+  lognormal(real m, real s)                        : mean(m), stddev(s) {}
+};
+struct chi_squared       : public distribution_parameters<Distribution::ChiSquared> {
+  real n;
+  chi_squared(real dof)                            : n(dof) {}
+};
+struct cauchy            : public distribution_parameters<Distribution::Cauchy> {
+  real a, b;
+  cauchy(real pa, real pb)                         : a(pa), b(pb) {}
+};
+struct fisher_f          : public distribution_parameters<Distribution::FisherF> {
+  real m, n;
+  fisher_f(real pm, real pn)                       : m(pm), n(pn) {}
+};
+struct student_t         : public distribution_parameters<Distribution::StudentT> {
+  real n;
+  student_t(real dof)                              : n(dof) {}
+};
+// TODO:
+// struct discrete : public distribution_parameters<Distribution::Discrete> {
+//   real_vector probabilities;
+// };
+// TODO:
+// struct piecewise_constant : public distribution_parameters<Distribution::PiecewiseConstant> {
+//   real_vector intervals, densities;
+// };
+// TODO: struct piecewise_linear : public distribution_parameters<Distribution::PiecewiseLinear> {
+//   real_vector intervals, densities;
+// };
+//----------------------------------------------------------------------------------------------
+
+namespace detail { /////////////////////////////////////////////////////////////////////////////
+
+//__Random Distribution Generator Type Union____________________________________________________
+union distribution_union {
+  distribution_union() {}
+  std::uniform_int_distribution<integer>        uniform_int;
+  std::uniform_real_distribution<real>          uniform_real;
+  std::bernoulli_distribution                   bernoulli;
+  std::binomial_distribution<integer>           binomial;
+  std::negative_binomial_distribution<integer>  negative_binomial;
+  std::geometric_distribution<integer>          geometric;
+  std::poisson_distribution<integer>            poisson;
+  std::exponential_distribution<real>           exponential;
+  std::gamma_distribution<real>                 gamma;
+  std::weibull_distribution<real>               weibull;
+  std::extreme_value_distribution<real>         extreme_value;
+  std::normal_distribution<real>                normal;
+  std::lognormal_distribution<real>             lognormal;
+  std::chi_squared_distribution<real>           chi_squared;
+  std::cauchy_distribution<real>                cauchy;
+  std::fisher_f_distribution<real>              fisher_f;
+  std::student_t_distribution<real>             student_t;
+  std::discrete_distribution<integer>           discrete;
+  std::piecewise_constant_distribution<real>    piecewise_constant;
+  std::piecewise_linear_distribution<real>      piecewise_linear;
+  ~distribution_union() {}
+};
+//----------------------------------------------------------------------------------------------
+
+//__Apply Function to Proper Distribution Type__________________________________________________
+template<class UnaryFunction>
+UnaryFunction distribution_apply(const Distribution type,
+                                 distribution_union& dist,
+                                 UnaryFunction f) {
+  switch (type) {
+    case Distribution::UniformInt:        f(dist.uniform_int);        break;
+    case Distribution::UniformReal:       f(dist.uniform_real);       break;
+    case Distribution::Bernoulli:         f(dist.bernoulli);          break;
+    case Distribution::Binomial:          f(dist.binomial);           break;
+    case Distribution::NegativeBinomial:  f(dist.negative_binomial);  break;
+    case Distribution::Geometric:         f(dist.geometric);          break;
+    case Distribution::Poisson:           f(dist.poisson);            break;
+    case Distribution::Exponential:       f(dist.exponential);        break;
+    case Distribution::Gamma:             f(dist.gamma);              break;
+    case Distribution::Weibull:           f(dist.weibull);            break;
+    case Distribution::ExtremeValue:      f(dist.extreme_value);      break;
+    case Distribution::Normal:            f(dist.normal);             break;
+    case Distribution::LogNormal:         f(dist.lognormal);          break;
+    case Distribution::ChiSquared:        f(dist.chi_squared);        break;
+    case Distribution::Cauchy:            f(dist.cauchy);             break;
+    case Distribution::FisherF:           f(dist.fisher_f);           break;
+    case Distribution::StudentT:          f(dist.student_t);          break;
+    case Distribution::Discrete:          f(dist.discrete);           break;
+    case Distribution::PiecewiseConstant: f(dist.piecewise_constant); break;
+    case Distribution::PiecewiseLinear:   f(dist.piecewise_linear);   break;
+    default:                                                          break;
+  }
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Apply Function to Proper Distribution Type without Modification_____________________________
+template<class UnaryFunction>
+UnaryFunction distribution_apply(const Distribution type,
+                                 const distribution_union& dist,
+                                 UnaryFunction f) {
+  switch (type) {
+    case Distribution::UniformInt:        f(dist.uniform_int);        break;
+    case Distribution::UniformReal:       f(dist.uniform_real);       break;
+    case Distribution::Bernoulli:         f(dist.bernoulli);          break;
+    case Distribution::Binomial:          f(dist.binomial);           break;
+    case Distribution::NegativeBinomial:  f(dist.negative_binomial);  break;
+    case Distribution::Geometric:         f(dist.geometric);          break;
+    case Distribution::Poisson:           f(dist.poisson);            break;
+    case Distribution::Exponential:       f(dist.exponential);        break;
+    case Distribution::Gamma:             f(dist.gamma);              break;
+    case Distribution::Weibull:           f(dist.weibull);            break;
+    case Distribution::ExtremeValue:      f(dist.extreme_value);      break;
+    case Distribution::Normal:            f(dist.normal);             break;
+    case Distribution::LogNormal:         f(dist.lognormal);          break;
+    case Distribution::ChiSquared:        f(dist.chi_squared);        break;
+    case Distribution::Cauchy:            f(dist.cauchy);             break;
+    case Distribution::FisherF:           f(dist.fisher_f);           break;
+    case Distribution::StudentT:          f(dist.student_t);          break;
+    case Distribution::Discrete:          f(dist.discrete);           break;
+    case Distribution::PiecewiseConstant: f(dist.piecewise_constant); break;
+    case Distribution::PiecewiseLinear:   f(dist.piecewise_linear);   break;
+    default:                                                          break;
+  }
+  return std::move(f);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameter Vector___________________________________________________________
+template<class ParameterType>
+void set_distribution_parameters(ParameterType&& parameters,
+                                 distribution_union& distribution);
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Uniform Integer Distribution________________________________
+template<>
+inline void set_distribution_parameters<uniform_int>(uniform_int&& parameters,
+                                                     distribution_union& distribution) {
+  distribution.uniform_int.param(decltype(distribution.uniform_int)::param_type{
+    parameters.a, parameters.b});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Uniform Real Distribution___________________________________
+template<>
+inline void set_distribution_parameters<uniform_real>(uniform_real&& parameters,
+                                                      distribution_union& distribution) {
+  distribution.uniform_real.param(decltype(distribution.uniform_real)::param_type{
+    parameters.a, parameters.b});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Bernoulli Distribution______________________________________
+template<>
+inline void set_distribution_parameters<bernoulli>(bernoulli&& parameters,
+                                                   distribution_union& distribution) {
+  distribution.bernoulli.param(decltype(distribution.bernoulli)::param_type{
+    static_cast<double>(parameters.p)});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Binomial Distribution_______________________________________
+template<>
+inline void set_distribution_parameters<binomial>(binomial&& parameters,
+                                                  distribution_union& distribution) {
+  distribution.binomial.param(decltype(distribution.binomial)::param_type{
+    parameters.t, static_cast<double>(parameters.p)});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Negative Binomial Distribution______________________________
+template<>
+inline void set_distribution_parameters<negative_binomial>(negative_binomial&& parameters,
+                                                           distribution_union& distribution) {
+  distribution.negative_binomial.param(decltype(distribution.negative_binomial)::param_type{
+    parameters.k, static_cast<double>(parameters.p)});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Geometric Distribution______________________________________
+template<>
+inline void set_distribution_parameters<geometric>(geometric&& parameters,
+                                                   distribution_union& distribution) {
+  distribution.geometric.param(decltype(distribution.geometric)::param_type{
+    static_cast<double>(parameters.p)});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Poisson Distribution________________________________________
+template<>
+inline void set_distribution_parameters<poisson>(poisson&& parameters,
+                                                 distribution_union& distribution) {
+  distribution.poisson.param(decltype(distribution.poisson)::param_type{
+    static_cast<double>(parameters.mean)});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Exponential Distribution____________________________________
+template<>
+inline void set_distribution_parameters<exponential>(exponential&& parameters,
+                                                     distribution_union& distribution) {
+  distribution.exponential.param(decltype(distribution.exponential)::param_type{
+    parameters.lambda});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Gamma Distribution__________________________________________
+template<>
+inline void set_distribution_parameters<gamma>(gamma&& parameters,
+                                               distribution_union& distribution) {
+  distribution.gamma.param(decltype(distribution.gamma)::param_type{
+    parameters.alpha, parameters.beta});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Weibull Distribution________________________________________
+template<>
+inline void set_distribution_parameters<weibull>(weibull&& parameters,
+                                                 distribution_union& distribution) {
+  distribution.weibull.param(decltype(distribution.weibull)::param_type{
+    parameters.a, parameters.b});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Extreme Value Distribution__________________________________
+template<>
+inline void set_distribution_parameters<extreme_value>(extreme_value&& parameters,
+                                                       distribution_union& distribution) {
+  distribution.extreme_value.param(decltype(distribution.extreme_value)::param_type{
+    parameters.a, parameters.b});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Normal Distribution_________________________________________
+template<>
+inline void set_distribution_parameters<normal>(normal&& parameters,
+                                                distribution_union& distribution) {
+  distribution.normal.param(decltype(distribution.normal)::param_type{
+    parameters.mean, parameters.stddev});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for LogNormal Distribution______________________________________
+template<>
+inline void set_distribution_parameters<lognormal>(lognormal&& parameters,
+                                                   distribution_union& distribution) {
+  distribution.lognormal.param(decltype(distribution.lognormal)::param_type{
+    parameters.mean, parameters.stddev});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Chi Squared Distribution____________________________________
+template<>
+inline void set_distribution_parameters<chi_squared>(chi_squared&& parameters,
+                                                     distribution_union& distribution) {
+  distribution.chi_squared.param(decltype(distribution.chi_squared)::param_type{
+    parameters.n});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Cauchy Distribution_________________________________________
+template<>
+inline void set_distribution_parameters<cauchy>(cauchy&& parameters,
+                                                distribution_union& distribution) {
+  distribution.cauchy.param(decltype(distribution.cauchy)::param_type{
+    parameters.a, parameters.b});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Fisher F Distribution_______________________________________
+template<>
+inline void set_distribution_parameters<fisher_f>(fisher_f&& parameters,
+                                                  distribution_union& distribution) {
+  distribution.fisher_f.param(decltype(distribution.fisher_f)::param_type{
+    parameters.m, parameters.n});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Student T Distribution______________________________________
+template<>
+inline void set_distribution_parameters<student_t>(student_t&& parameters,
+                                                   distribution_union& distribution) {
+  distribution.student_t.param(decltype(distribution.student_t)::param_type{
+    parameters.n});
+}
+//----------------------------------------------------------------------------------------------
+
+//__Build Distribution Parameter Type from Distribution Parameters______________________________
+template<class ParameterType>
+const ParameterType get_distribution_parameters(const distribution_union& distribution);
+//----------------------------------------------------------------------------------------------
+
+//__Build Uniform Integer Distribution Parameter Type from Distribution Parameters______________
+template<>
+inline const uniform_int get_distribution_parameters<uniform_int>(const distribution_union& distribution) {
+  const auto& dist = distribution.uniform_int;
+  return uniform_int(dist.a(), dist.b());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Build Uniform Real Distribution Parameter Type from Distribution Parameters_________________
+template<>
+inline const uniform_real get_distribution_parameters<uniform_real>(const distribution_union& distribution) {
+  const auto& dist = distribution.uniform_real;
+  return uniform_real(dist.a(), dist.b());
+}
+//----------------------------------------------------------------------------------------------
+
+// TODO: finish get_parameters
+
+} /* namespace detail */ ///////////////////////////////////////////////////////////////////////
+
+//__Random Number Generator_____________________________________________________________________
+class generator {
+public:
+  template<class Type>
+  generator(Type&& dist) {
+    // FIXME: better seeding
+    seed(time(0));
+    distribution(std::forward<Type>(dist));
+  }
+  generator() = default;
+  ~generator() = default;
+
+  template<class Type>
+  const Type distribution() const {
+    return detail::get_distribution_parameters<Type>(_distribution);
+  }
+
+  template<class Type>
+  void distribution(Type&& dist) {
+    _type = dist.type;
+    detail::set_distribution_parameters(std::forward<Type>(dist), _distribution);
+    reset();
+  }
+
+  real min() const;
+  real max() const;
+
+  real operator()();
+
+  operator real() { return (*this)(); };
+
+  void seed(const std::uint_least32_t seed);
+  void seed(std::seed_seq& seq);
+  void reset();
+  void discard(const std::size_t z);
+
+  bool operator==(const generator& other) const;
+  bool operator!=(const generator& other) const { return !(*this == other); }
+
+private:
+  std::mt19937 _engine;
+  detail::distribution_union _distribution;
+  Distribution _type;
+};
+//----------------------------------------------------------------------------------------------
+
+} /* namespace random */ ///////////////////////////////////////////////////////////////////////
 
 } /* namespace stat */ /////////////////////////////////////////////////////////////////////////
 

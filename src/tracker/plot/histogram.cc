@@ -78,7 +78,7 @@ struct histogram::impl {
   }
 
   impl(const impl& other)
-      : _canvas(dynamic_cast<TCanvas*>(other._canvas->Clone())),
+      : _canvas(_build_TCanvas(other._hist->GetName(), other._hist->GetTitle())),
         _hist(dynamic_cast<TH1D*>(other._hist->Clone())) {}
 
   impl(impl&& other) = default;
