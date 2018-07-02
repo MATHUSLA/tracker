@@ -266,17 +266,20 @@ void histogram::scale(const real weight) {
 
 //__Draw Histogram to Canvas____________________________________________________________________
 void histogram::draw() {
-  _impl->_canvas->cd();
-  _impl->_hist->Draw("HIST");
-  _impl->_canvas->Modified();
-  _impl->_canvas->Update();
-  _impl->_has_updated = true;
+  // TODO: think about plot::is_on uses
+  if (plot::is_on()) {
+    _impl->_canvas->cd();
+    _impl->_hist->Draw("HIST");
+    _impl->_canvas->Modified();
+    _impl->_canvas->Update();
+    _impl->_has_updated = true;
+  }
 }
 //----------------------------------------------------------------------------------------------
 
 //__Clear Histogram and Canvas__________________________________________________________________
 void histogram::clear() {
-  if (_impl->_has_updated) {
+  if (plot::is_on() && _impl->_has_updated) {
     _impl->_canvas->cd();
     _impl->_canvas->Clear();
     _impl->_canvas->Modified();

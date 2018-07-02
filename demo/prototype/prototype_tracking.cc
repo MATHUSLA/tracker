@@ -27,6 +27,7 @@
 #include <tracker/util/io.hh>
 
 #include "geometry.hh"
+#include "logging.hh"
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
@@ -56,120 +57,6 @@ const analysis::track_vector find_tracks(const analysis::event& event,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Print Bar___________________________________________________________________________________
-void print_bar(const size_t count=99,
-               const char b='=') {
-  std::cout << "\n" << std::string(count, b) << "\n\n";
-}
-//----------------------------------------------------------------------------------------------
-
-//__Add Detector Centers to Canvas______________________________________________________________
-void draw_detector_centers(plot::canvas& canvas) {
-  for (const auto& name : prototype_geometry())
-    canvas.add_point(geometry::limits_of(name).center, 0.25, plot::color::MAGENTA);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Add Track and Intersecting Geometry to Canvas_______________________________________________
-void draw_track(plot::canvas& canvas,
-                const analysis::track& track) {
-  const auto& full_event = track.full_event();
-  uint_fast8_t brightness = 0, step = 230 / full_event.size();
-  for (const auto& point : full_event) {
-    const auto center = type::reduce_to_r3(point);
-    canvas.add_box(center,
-                   point.width.x, point.width.y, point.width.z,
-                   2.5,
-                   {brightness, brightness, brightness});
-    brightness += step;
-  }
-  canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
-  for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
-    canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLACK);
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Draw MC Tracks to Canvas____________________________________________________________________
-void draw_mc_tracks(plot::canvas& canvas,
-                    const analysis::mc::track_vector& tracks) {
-  for (const auto& track : tracks) {
-    const auto hits = track.hits;
-    const auto size = hits.size();
-    for (const auto& point : hits) {
-      const auto center = type::reduce_to_r3(point);
-      canvas.add_point(center, 0.5, plot::color::BLUE);
-      const auto box = geometry::limits_of_volume(center);
-      canvas.add_box(box.center,
-                     box.max.x - box.min.x,
-                     box.max.y - box.min.y,
-                     box.max.z - box.min.z,
-                     1,
-                     plot::color::BLUE);
-    }
-    for (std::size_t i = 0; i < size - 1; ++i) {
-      canvas.add_line(type::reduce_to_r3(hits[i]), type::reduce_to_r3(hits[i+1]), 1, plot::color::BLUE);
-    }
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Add Track and Intersecting Geometry to Canvas_______________________________________________
-void draw_vertex_and_guess(plot::canvas& canvas,
-                           const analysis::vertex& vertex) {
-  const auto point = vertex.point();
-  const auto point_error = vertex.point_error();
-  canvas.add_point(point, 1.5, plot::color::GREEN);
-  canvas.add_box(point, point_error.x, point_error.y, point_error.z, 2.5, plot::color::GREEN);
-
-  const auto guess = vertex.guess_fit();
-  const type::r3_point guess_center{guess.x.value, guess.y.value, guess.z.value};
-  canvas.add_point(guess_center, 1.5, plot::color::RED);
-
-  for (const auto& track : vertex.tracks())
-    canvas.add_line(track(point.z), track.back(), 1.5, plot::color::GREEN);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Show and Add Tracks to Statistics___________________________________________________________
-void save_tracks(const analysis::track_vector& tracks,
-                 plot::canvas& canvas,
-                 plot::histogram_collection& histograms,
-                 bool verbose) {
-  for (const auto& track : tracks) {
-    histograms["track_chi_squared"].insert(track.chi_squared_per_dof());
-    histograms["beta"].insert(track.beta());
-    histograms["beta_error"].insert(track.beta_error());
-    histograms["track_size"].insert(track.size());
-    if (verbose) {
-      draw_track(canvas, track);
-      std::cout << track << "\n";
-    }
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Show and Add Vertex to Statistics___________________________________________________________
-void save_vertex(const analysis::vertex& vertex,
-                 plot::canvas& canvas,
-                 plot::histogram_collection& histograms,
-                 bool verbose) {
-  const auto size = vertex.size();
-  if (size <= 1)
-    return;
-
-  histograms["vertex_chi_squared"].insert(vertex.chi_squared_per_dof());
-  histograms["vertex_t_error"].insert(vertex.t_error() / units::time);
-  histograms["vertex_x_error"].insert(vertex.x_error() / units::length);
-  histograms["vertex_y_error"].insert(vertex.y_error() / units::length);
-  histograms["vertex_z_error"].insert(vertex.z_error() / units::length);
-  if (verbose) {
-    draw_vertex_and_guess(canvas, vertex);
-    std::cout << vertex << "\n";
-  }
-}
-//----------------------------------------------------------------------------------------------
-
 //__Prototype Tracking Algorithm________________________________________________________________
 int prototype_tracking(int argc,
                        char* argv[]) {
@@ -183,7 +70,7 @@ int prototype_tracking(int argc,
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
 
-  uint_fast64_t path_counter{};
+  std::uint_fast64_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
     const auto path_counter_string = std::to_string(path_counter++);
 
@@ -198,24 +85,8 @@ int prototype_tracking(int argc,
 
     const auto mc_imported_events = event_bundle.true_events;
 
-    const auto statistics_path = statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension;
-    plot::histogram_collection histograms({
-      {"track_chi_squared",   "Track Chi-Squared Distribution",    "chi^2/dof",    "Track Count",  200, 0, 10},
-      {"vertex_chi_squared",  "Vertex Chi-Squared Distribution",   "chi^2/dof",    "Vertex Count", 200, 0, 10},
-      {"beta",                "Track Beta Distribution",           "beta",         "Track Count",  200, 0,  2},
-      {"beta_error",          "Track Beta Error Distribution",     "beta error",   "Track Count",  200, 0,  2},
-      {"beta_with_cut",       "Track Beta Distribution With Cut",  "beta",         "Track Count",  200, 0,  2},
-      {"track_count",         "Track Count Distribution",          "Track Count",  "Event Count",   50, 0, 50},
-      {"vertex_count",        "Vertex Count Distribution",         "Vertex Count", "Event Count",  100, 0, 50},
-      {"track_size",          "Track Size Distribution",           "Hit Count",    "Track Count",   50, 0, 50},
-      {"non_track_hit_count", "Non-Track Hit Count Distribution",  "Hit Count",    "Event Count",  100, 0, 50},
-      {"vertex_t_error",      "Vertex T Error Distribution",       "t error (" + units::time_string   + ")", "Vertex Count", 100, 0, 20},
-      {"vertex_x_error",      "Vertex X Error Distribution",       "x error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
-      {"vertex_y_error",      "Vertex Y Error Distribution",       "y error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
-      {"vertex_z_error",      "Vertex Z Error Distribution",       "z error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
-    });
-
-    for (uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
+    auto histograms = generate_histograms();
+    for (std::uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -226,64 +97,31 @@ int prototype_tracking(int argc,
       if (event.empty() || compression_gain == event_size)
         continue;
 
-      std::cout << "Event " << event_counter << " with " << event_size << " hits.\n";
-
       const auto event_density = modified_geometry_event_density(compressed_event);
-      if (options.verbose_output)
-        std::cout << "  Compression Gain: " << compression_gain << "\n"
-                  << "  Event Density: "    << event_density * 100.0L << " %\n";
+      print_event_summary(event_counter, event_size, compression_gain, event_density);
 
       if (event_density >= options.event_density_limit)
         continue;
 
       plot::canvas canvas(path + event_counter_string);
-      draw_detector_centers(canvas);
-      draw_mc_tracks(canvas, analysis::mc::convert(mc_imported_events[event_counter]));
-
-      const auto tracks = find_tracks(compressed_event, options);
-      const auto tracks_size = tracks.size();
-
-      histograms["track_count"].insert(tracks_size);
-
-      if (tracks_size > 100) {
-        /*
-        const auto name = "event" + event_counter_string;
-        plot::canvas individual_canvas(name);
-        plot::histogram_collection individual_histograms(name + "_", {
-          {"track_chi_squared", name + " Chi-Squared Distribution", "chi^2/dof", "Track Count", 200, 0, 10},
-          {"beta", name + "Beta Distribution", "beta", "Track Count", 200, 0, 2}
-        });
-        save_tracks(tracks, individual_canvas, individual_histograms, options.verbose_output);
-        // FIXME: should not need a draw before a save
-        individual_canvas.draw();
-        plot::save_all(statistics_path, individual_canvas, individual_histograms);
-        */
-      } else {
+      if (options.verbose_output) {
+        draw_detector_centers(canvas);
+        draw_mc_tracks(canvas, analysis::mc::convert(mc_imported_events[event_counter]));
         canvas.add_points(compressed_event, 0.8, plot::color::BLACK);
-        save_tracks(tracks, canvas, histograms, options.verbose_output);
-        // TODO: to remove
-        for (const auto& track : tracks) {
-          util::io::print_range(track.event()) << "\n";
-        }
       }
 
-      histograms["track_count"].insert(tracks_size);
+      const auto tracks = find_tracks(compressed_event, options);
+      save_tracks(tracks, canvas, histograms, options.verbose_output);
 
       if (options.verbose_output)
-        std::cout << "  Track Count: "   << tracks.size() << "\n"
-                  << "  Track Density: " << tracks.size() / static_cast<type::real>(event.size()) * 100.0L << " %\n";
+        print_tracking_summary(event, tracks);
 
       save_vertex(analysis::vertex(tracks), canvas, histograms, options.verbose_output);
 
       canvas.draw();
-
-      std::clog << "event: " << event_counter << "\n";
-      //for (const auto& track : tracks) {
-        //util::io::print_range(track.event(), " ", "", std::clog) << "\n";
-      //}
     }
     histograms.draw_all();
-    histograms.save_all(statistics_path);
+    histograms.save_all(statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension);
   }
 
   print_bar();
@@ -296,17 +134,12 @@ int prototype_tracking(int argc,
 //__Silent Prototype Tracking Algorithm_________________________________________________________
 int silent_prototype_tracking(int argc,
                               char* argv[]) {
-  util::io::remove_buffer(std::cout, std::cerr /*, std::clog*/);
+  util::io::remove_buffer(/*std::cout,*/ std::cerr, std::clog);
   return prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------
 
 } /* namespace MATHUSLA */
-
-#include <tracker/core/stat.hh>
-
-#include <map>
-#include <iomanip>
 
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc,

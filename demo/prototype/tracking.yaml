@@ -27,6 +27,8 @@ data-position-keys:       Time, X, Y, Z
 data-position-error-keys: dT, dX, dY, dZ
 data-detector-key:        Detector
 data-track-id-key:        Track
+# data-parent-id-key:       Parent
+# data-momentum-keys:       E, PX, PY, PZ
 
 # Statistics Setup
 statistics-directory:      .temp/root_data_stat
