@@ -84,6 +84,9 @@ void draw_track(plot::canvas& canvas,
     brightness += step;
   }
   canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+  for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
+    canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLACK);
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -93,9 +96,6 @@ void draw_mc_tracks(plot::canvas& canvas,
   for (const auto& track : tracks) {
     const auto hits = track.hits;
     const auto size = hits.size();
-    for (std::size_t i = 0; i < size - 1; ++i) {
-      canvas.add_line(type::reduce_to_r3(hits[i]), type::reduce_to_r3(hits[i+1]), 1, plot::color::BLUE);
-    }
     for (const auto& point : hits) {
       const auto center = type::reduce_to_r3(point);
       canvas.add_point(center, 0.5, plot::color::BLUE);
@@ -106,6 +106,9 @@ void draw_mc_tracks(plot::canvas& canvas,
                      box.max.z - box.min.z,
                      1,
                      plot::color::BLUE);
+    }
+    for (std::size_t i = 0; i < size - 1; ++i) {
+      canvas.add_line(type::reduce_to_r3(hits[i]), type::reduce_to_r3(hits[i+1]), 1, plot::color::BLUE);
     }
   }
 }
@@ -138,9 +141,31 @@ void save_tracks(const analysis::track_vector& tracks,
     histograms["beta"].insert(track.beta());
     histograms["beta_error"].insert(track.beta_error());
     histograms["track_size"].insert(track.size());
-    draw_track(canvas, track);
-    //if (verbose)
-      //std::cout << track << "\n";
+    if (verbose) {
+      draw_track(canvas, track);
+      std::cout << track << "\n";
+    }
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Show and Add Vertex to Statistics___________________________________________________________
+void save_vertex(const analysis::vertex& vertex,
+                 plot::canvas& canvas,
+                 plot::histogram_collection& histograms,
+                 bool verbose) {
+  const auto size = vertex.size();
+  if (size <= 1)
+    return;
+
+  histograms["vertex_chi_squared"].insert(vertex.chi_squared_per_dof());
+  histograms["vertex_t_error"].insert(vertex.t_error() / units::time);
+  histograms["vertex_x_error"].insert(vertex.x_error() / units::length);
+  histograms["vertex_y_error"].insert(vertex.y_error() / units::length);
+  histograms["vertex_z_error"].insert(vertex.z_error() / units::length);
+  if (verbose) {
+    draw_vertex_and_guess(canvas, vertex);
+    std::cout << vertex << "\n";
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -248,18 +273,14 @@ int prototype_tracking(int argc,
         std::cout << "  Track Count: "   << tracks.size() << "\n"
                   << "  Track Density: " << tracks.size() / static_cast<type::real>(event.size()) * 100.0L << " %\n";
 
-      //const analysis::vertex vertex(tracks);
-      //if (options.verbose_output) {
-        //draw_vertex_and_guess(canvas, vertex);
-        // std::cout << vertex << "\n";
-      //}
+      save_vertex(analysis::vertex(tracks), canvas, histograms, options.verbose_output);
 
       canvas.draw();
 
       std::clog << "event: " << event_counter << "\n";
-      for (const auto& track : tracks) {
-        util::io::print_range(track.event(), " ", "", std::clog) << "\n";
-      }
+      //for (const auto& track : tracks) {
+        //util::io::print_range(track.event(), " ", "", std::clog) << "\n";
+      //}
     }
     histograms.draw_all();
     histograms.save_all(statistics_path);

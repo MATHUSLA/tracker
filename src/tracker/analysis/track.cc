@@ -633,9 +633,9 @@ std::size_t _overlap_size(const Event& first,
   while (first_index < first_size && second_index < second_size) {
     const auto& first_elem = first[first_index];
     const auto& second_elem = second[second_index];
-    std::clog << "INDICES: " << first_index << " " << second_index << "\n";
+    //std::clog << "INDICES: " << first_index << " " << second_index << "\n";
     if (first_elem == second_elem) {
-      std::clog << "MATCH\n";
+      std::clog << "MATCH(" << first_index << " " << second_index << "): " << reduce_to_r4(first_elem) << "\n";
       ++count;
       ++first_index;
       ++second_index;
@@ -645,7 +645,7 @@ std::size_t _overlap_size(const Event& first,
         if (search != second_end) {
           ++count;
           second_index = util::type::distance(second_begin, search);
-          std::clog << "1st BSEARCH" << "\n";
+          std::clog << "1st BSEARCH: " << reduce_to_r4(first_elem) << "\n";
         }
         ++first_index;
       } else {
@@ -653,7 +653,7 @@ std::size_t _overlap_size(const Event& first,
         if (search != first_end) {
           ++count;
           first_index = util::type::distance(first_begin, search);
-          std::clog << "1st BSEARCH" << "\n";
+          std::clog << "2nd BSEARCH: " << reduce_to_r4(second_elem) << "\n";
         }
         ++second_index;
       }
@@ -696,9 +696,10 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
   const auto sorted_seeds = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
 
     std::clog << "SEEDS: \n";
-    for (const auto seed : sorted_seeds) {
-      for (const auto point : seed)
-        std::clog << type::reduce_to_r4(point) << " ";
+    for (std::size_t i = 0; i < sorted_seeds.size(); ++i) {
+      std::clog << "[" << i << "]";
+      for (const auto point : sorted_seeds[i])
+        std::clog << "   " << type::reduce_to_r4(point) << "\n";
       std::clog << "\n";
     }
     std::clog << "\n";
@@ -706,6 +707,7 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
   const auto track_buffer = independent_fit_seeds(sorted_seeds, direction);
 
   util::index_vector<> track_indices(size);
+
   util::algorithm::stable_sort_range(track_indices, [&](const auto left, const auto right) {
     return track_buffer[left].chi_squared_per_dof() > track_buffer[right].chi_squared_per_dof();
   });
@@ -727,11 +729,8 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
     if (min_overlap <= _time_ordered_overlap_size(sorted_seeds[top_track_index],
                                                   sorted_seeds[track_indices[bottom_index]])) {
       visited.set(bottom_index);
-      // top_index = visited.first_unset(1 + top_index);
-      bottom_index = 1 + top_index;
-    } else {
-      bottom_index = visited.first_unset(1 + bottom_index);
     }
+    ++bottom_index;
   }
 
   for (std::size_t i = 0; i < size; ++i)
