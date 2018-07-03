@@ -654,21 +654,6 @@ namespace script { /////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-//__Allowed Keys for Tracking Script Options Map________________________________________________
-const std::array<std::string, 11> _allowed_keys{{
-  "geometry-file",
-  "geometry-map-file",
-  "geometry-map",
-  "root-data",
-  "root-position-keys",
-  "root-detector-key",
-  "compression-size",
-  "layer-axis",
-  "layer-depth",
-  "line-width",
-  "seed-size"}};
-//----------------------------------------------------------------------------------------------
-
 //__Reserved Symbols____________________________________________________________________________
 const char _comment_character           = '#';
 const char _space_character             = ' ';
@@ -919,6 +904,8 @@ const tracking_options read(const std::string& path) {
       } else if (key == "geometry-default-time-error") {
         _parse_key_value_positive_real(key, value, out.default_time_error);
         out.default_time_error *= units::time;
+      } else if (key == "time-smearing") {
+        _parse_key_value_boolean(key, value, out.time_smearing);
       } else if (key == "compression-size") {
         _parse_key_value_r4_point(key, value, out.compression_size, true);
       } else if (key == "layer-axis") {

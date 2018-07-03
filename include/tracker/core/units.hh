@@ -20,11 +20,14 @@
 #define TRACKER__CORE__UNITS_HH
 #pragma once
 
-#include <Geant4/G4UnitsTable.hh>
+namespace MATHUSLA {
+
+namespace units { //////////////////////////////////////////////////////////////////////////////
+
+//__Shielded Include of Units and Constants_____________________________________________________
 #include <Geant4/G4SystemOfUnits.hh>
 #include <Geant4/G4PhysicalConstants.hh>
-
-namespace MATHUSLA {
+//----------------------------------------------------------------------------------------------
 
 //__Extention Momentum Units____________________________________________________________________
 constexpr auto GeVperC = GeV;
@@ -32,8 +35,6 @@ constexpr auto MeVperC = MeV;
 constexpr auto keVperC = keV;
 constexpr auto  eVperC =  eV;
 //----------------------------------------------------------------------------------------------
-
-namespace units { //////////////////////////////////////////////////////////////////////////////
 
 //__Standard Units______________________________________________________________________________
 constexpr auto length   = cm;
@@ -49,19 +50,6 @@ static const std::string& time_string     = "ns";
 static const std::string& energy_string   = "MeV";
 static const std::string& momentum_string = "MeVperC";
 static const std::string& velocity_string = "cm/ns";
-//----------------------------------------------------------------------------------------------
-
-//__Install Momentum Units into Geant4__________________________________________________________
-inline void define() {
-  static bool defined = false;
-  if (!defined) {
-    new G4UnitDefinition("GeV/c", "GeV/c", "Momentum", GeVperC);
-    new G4UnitDefinition("MeV/c", "MeV/c", "Momentum", MeVperC);
-    new G4UnitDefinition("keV/c", "keV/c", "Momentum", keVperC);
-    new G4UnitDefinition( "eV/c",  "eV/c", "Momentum",  eVperC);
-    defined = true;
-  }
-}
 //----------------------------------------------------------------------------------------------
 
 //__Alias Units and Constants___________________________________________________________________

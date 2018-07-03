@@ -169,10 +169,10 @@ public:
   histogram_collection(const std::string& prefix,
                        std::initializer_list<histogram>&& histograms);
   histogram_collection(const histogram_collection& other) = default;
-  histogram_collection(histogram_collection&& other) = default;
+  histogram_collection(histogram_collection&& other) noexcept = default;
 
   histogram_collection& operator=(const histogram_collection& other) = default;
-  histogram_collection& operator=(histogram_collection&& other) = default;
+  histogram_collection& operator=(histogram_collection&& other) noexcept = default;
 
   ~histogram_collection() = default;
 
@@ -220,7 +220,7 @@ class canvas {
 public:
   canvas(const std::string& name="canvas",
          const size_t width=900,
-         const size_t height=600);
+         const size_t height=700);
   canvas(canvas&& other) = default;
   ~canvas();
 
@@ -343,6 +343,40 @@ public:
 private:
   struct impl;
   std::unique_ptr<impl> _impl;
+};
+//----------------------------------------------------------------------------------------------
+
+//__Tag to Write Key Value Pairs to Plotting Files______________________________________________
+class value_tag {
+public:
+  value_tag() = default;
+
+  value_tag(const std::string& key);
+  value_tag(const std::string& key,
+            const std::string& value);
+
+  value_tag(const value_tag& tag) = default;
+  value_tag(value_tag&& tag) noexcept = default;
+  ~value_tag() = default;
+
+  value_tag& operator=(const value_tag& other) = default;
+  value_tag& operator=(value_tag&& other) noexcept = default;
+
+  void key(const std::string& new_key);
+  const std::string& key() const;
+
+  void value(const std::string& new_value);
+  const std::string& value() const;
+
+  bool save(const std::string& path) const;
+
+  static value_tag load(const std::string& path,
+                        const std::string& key);
+
+  bool operator==(const value_tag& other);
+  bool operator!=(const value_tag& other) { return !(*this == other); }
+private:
+  std::string _key, _value;
 };
 //----------------------------------------------------------------------------------------------
 

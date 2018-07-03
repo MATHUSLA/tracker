@@ -215,8 +215,7 @@ real vertex::chi_squared() const {
 
 //__Vertex Degrees of Freedom___________________________________________________________________
 size_t vertex::degrees_of_freedom() const {
-  return -4 + std::accumulate(_tracks.cbegin(), _tracks.cend(), 0UL,
-    [](const auto sum, const auto& track) { return sum + track.degrees_of_freedom(); });
+  return 4UL;
 }
 //----------------------------------------------------------------------------------------------
 

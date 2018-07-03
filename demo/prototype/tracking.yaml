@@ -3,6 +3,7 @@
 verbose-output: true
 
 # Thresholds and Settings
+time-smearing:        true
 compression-size:     2, 1, 1, 1
 layer-axis:           Z
 layer-depth:          50

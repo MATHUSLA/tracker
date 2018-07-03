@@ -116,17 +116,21 @@ void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
                  plot::histogram_collection& histograms,
                  bool verbose) {
+  histograms["track_count"].insert(tracks.size());
   for (const auto& track : tracks) {
     histograms["track_chi_squared"].insert(track.chi_squared_per_dof());
-    histograms["beta"].insert(track.beta());
-    histograms["beta_error"].insert(track.beta_error());
+    const auto beta = track.beta();
+    const auto beta_error = track.beta_error();
+    histograms["beta"].insert(beta);
+    if (beta + 3.0L * beta_error <= 1)
+      histograms["beta_with_cut"].insert(beta);
+    histograms["beta_error"].insert(beta_error);
     histograms["track_size"].insert(track.size());
     if (verbose) {
       draw_track(canvas, track);
       std::cout << track << "\n";
     }
   }
-  histograms["track_count"].insert(tracks.size());
 }
 //----------------------------------------------------------------------------------------------
 

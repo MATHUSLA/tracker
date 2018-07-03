@@ -869,6 +869,16 @@ private:
 };
 //----------------------------------------------------------------------------------------------
 
+/*
+real gaussian_smear(const real point,
+                    const real error) {
+  static generator _gen{};
+  if (_gen.distribution.error != error)
+    _gen.distribution(normal(0UL, error));
+  return _gen;
+}
+*/
+
 } /* namespace random */ ///////////////////////////////////////////////////////////////////////
 
 } /* namespace stat */ /////////////////////////////////////////////////////////////////////////

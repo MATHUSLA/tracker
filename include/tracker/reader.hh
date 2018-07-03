@@ -37,6 +37,7 @@ struct tracking_options {
   std::string  geometry_file              = "";
   std::string  geometry_map_file          = "";
   std::string  geometry_time_file         = "";
+  real         default_time_error         = 2 * units::time;
 
   std::string  data_directory             = "";
   std::string  data_file_extension        = "root";
@@ -55,7 +56,7 @@ struct tracking_options {
   std::string  statistics_file_prefix     = "statistics";
   std::string  statistics_file_extension  = "root";
 
-  real         default_time_error         = 2 * units::time;
+  bool         time_smearing              = true;
   r4_point     compression_size           = {0, 0, 0, 0};
   Coordinate   layer_axis                 = Coordinate::Z;
   real         layer_depth                = 0;

@@ -26,8 +26,8 @@
 #include <Geant4/G4RunManager.hh>
 #include <Geant4/G4VoxelLimits.hh>
 #include <Geant4/G4AffineTransform.hh>
-#include <Geant4/G4IntersectionSolid.hh>
-#include <Geant4/G4UnionSolid.hh>
+// TODO: use #include <Geant4/G4IntersectionSolid.hh>
+// TODO: use #include <Geant4/G4UnionSolid.hh>
 
 #include <tracker/core/units.hh>
 
@@ -64,7 +64,7 @@ thread_local std::vector<structure_value> _geometry_insertion_order;
 thread_local real _default_time_resolution = 2 * units::time;
 thread_local time_resolution_map _time_resolution_map;
 thread_local std::unordered_map<r3_point, structure_value, r3_point_hash> _name_cache;
-//thread_local std::unordered_map<std::string, box_volume> _box_cache;
+// TODO: use -> thread_local std::unordered_map<std::string, box_volume> _box_cache;
 const G4VoxelLimits _blank_voxels;
 const G4AffineTransform _blank_transform;
 //----------------------------------------------------------------------------------------------
@@ -219,7 +219,6 @@ void open(const std::string& path,
 
 //__Close Geant4 Geometry Manager_______________________________________________________________
 void close() {
-  units::define();
   _path.clear();
   _geometry_insertion_order.clear();
   _geometry.clear();

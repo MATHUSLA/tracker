@@ -43,12 +43,6 @@ const analysis::track_vector find_tracks(const analysis::event& event,
                                          const reader::tracking_options& options) {
   analysis::event combined_rpc_hits;
   analysis::full_event original_rpc_hits;
-
-  std::clog << "Raw Event:\n";
-  for (const auto& point : event)
-    std::clog << point << " ";
-  std::clog << "\n";
-
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
@@ -69,6 +63,8 @@ int prototype_tracking(int argc,
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
+  const plot::value_tag filetype_tag("FILETYPE", "MATHUSLA TRACKING STATFILE");
+  const plot::value_tag project_tag("PROJECT", "Prototype");
 
   std::uint_fast64_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
@@ -120,8 +116,11 @@ int prototype_tracking(int argc,
 
       canvas.draw();
     }
+    plot::value_tag input_tag("DATAPATH", path);
+    plot::value_tag event_tag("EVENTS", std::to_string(import_size));
     histograms.draw_all();
-    histograms.save_all(statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension);
+    plot::save_all(statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension,
+      histograms, filetype_tag, project_tag, input_tag, event_tag);
   }
 
   print_bar();
