@@ -532,6 +532,32 @@ const std::vector<hit> track::event() const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Fill Plots with Tracking Variables__________________________________________________________
+void track::fill_plots(plot::histogram_collection& collection,
+                       const track::plotting_keys& keys) const {
+  if (collection.count(keys.t0)) collection[keys.t0].insert(t0_value() / units::time);
+  if (collection.count(keys.x0)) collection[keys.x0].insert(x0_value() / units::length);
+  if (collection.count(keys.y0)) collection[keys.y0].insert(y0_value() / units::length);
+  if (collection.count(keys.z0)) collection[keys.z0].insert(z0_value() / units::length);
+  if (collection.count(keys.vx)) collection[keys.vx].insert(vx_value() / units::velocity);
+  if (collection.count(keys.vy)) collection[keys.vy].insert(vy_value() / units::velocity);
+  if (collection.count(keys.vz)) collection[keys.vz].insert(vz_value() / units::velocity);
+  if (collection.count(keys.t0_error)) collection[keys.t0_error].insert(t0_error() / units::time);
+  if (collection.count(keys.x0_error)) collection[keys.x0_error].insert(x0_error() / units::length);
+  if (collection.count(keys.y0_error)) collection[keys.y0_error].insert(y0_error() / units::length);
+  if (collection.count(keys.z0_error)) collection[keys.z0_error].insert(z0_error() / units::length);
+  if (collection.count(keys.vx_error)) collection[keys.vx_error].insert(vx_error() / units::velocity);
+  if (collection.count(keys.vy_error)) collection[keys.vy_error].insert(vy_error() / units::velocity);
+  if (collection.count(keys.vz_error)) collection[keys.vz_error].insert(vz_error() / units::velocity);
+  if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
+  if (collection.count(keys.size)) collection[keys.size].insert(size());
+  if (collection.count(keys.beta)) collection[keys.beta].insert(beta());
+  if (collection.count(keys.beta_error)) collection[keys.beta_error].insert(beta_error());
+  // if (collection.count(keys.angle)) collection[keys.angle].insert(angle());
+  // if (collection.count(keys.angle_error)) collection[keys.angle_error].insert(angle_error());
+}
+//----------------------------------------------------------------------------------------------
+
 //__Track Output Stream Operator________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const track& track) {
@@ -708,9 +734,11 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
 
   util::index_vector<> track_indices(size);
 
+  /*
   util::algorithm::stable_sort_range(track_indices, [&](const auto left, const auto right) {
     return track_buffer[left].chi_squared_per_dof() > track_buffer[right].chi_squared_per_dof();
   });
+  */
 
   util::bit_vector visited(size);
 

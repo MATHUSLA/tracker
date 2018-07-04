@@ -54,6 +54,14 @@ void draw_vertex_and_guess(plot::canvas& canvas,
                            const analysis::vertex& vertex);
 //----------------------------------------------------------------------------------------------
 
+//__Track Plotting Keys for Prototype___________________________________________________________
+const analysis::track::plotting_keys& track_plotting_keys();
+//----------------------------------------------------------------------------------------------
+
+//__Vertex Plotting Keys for Prototype__________________________________________________________
+const analysis::vertex::plotting_keys& vertex_plotting_keys();
+//----------------------------------------------------------------------------------------------
+
 //__Generate Histograms for Prototype___________________________________________________________
 plot::histogram_collection generate_histograms();
 //----------------------------------------------------------------------------------------------

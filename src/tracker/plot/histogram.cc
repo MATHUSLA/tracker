@@ -101,7 +101,7 @@ histogram::histogram() : _impl() {}
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Partial Constructor_______________________________________________________________
-histogram::histogram(const std::string& name,
+histogram::histogram(const histogram::name_type& name,
                      const size_t bins,
                      const real min,
                      const real max)
@@ -109,7 +109,7 @@ histogram::histogram(const std::string& name,
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Partial Constructor_______________________________________________________________
-histogram::histogram(const std::string& name,
+histogram::histogram(const histogram::name_type& name,
                      const std::string& title,
                      const size_t bins,
                      const real min,
@@ -118,7 +118,7 @@ histogram::histogram(const std::string& name,
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Full Constructor__________________________________________________________________
-histogram::histogram(const std::string& name,
+histogram::histogram(const histogram::name_type& name,
                      const std::string& title,
                      const std::string& x_title,
                      const std::string& y_title,
@@ -153,7 +153,7 @@ histogram::~histogram() = default;
 //----------------------------------------------------------------------------------------------
 
 //__Get Histogram Name__________________________________________________________________________
-const std::string histogram::name() const {
+const histogram::name_type histogram::name() const {
   return _impl->_hist->GetName();
 }
 //----------------------------------------------------------------------------------------------
@@ -177,7 +177,7 @@ const std::string histogram::y_title() const {
 //----------------------------------------------------------------------------------------------
 
 //__Set Histogram Name__________________________________________________________________________
-void histogram::name(const std::string& new_name) {
+void histogram::name(const histogram::name_type& new_name) {
   _impl->_hist->SetName(new_name.c_str());
 }
 //----------------------------------------------------------------------------------------------
@@ -305,7 +305,7 @@ bool histogram::save(const std::string& path) const {
 
 //__Load Histogram From File____________________________________________________________________
 histogram histogram::load(const std::string& path,
-                          const std::string& name) {
+                          const histogram::name_type& name) {
   histogram out;
   TFile file(path.c_str(), "READ");
   if (!file.IsZombie()) {

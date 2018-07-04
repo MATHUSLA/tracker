@@ -91,22 +91,99 @@ void draw_vertex_and_guess(plot::canvas& canvas,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Track Plotting Keys for Prototype___________________________________________________________
+const analysis::track::plotting_keys& track_plotting_keys() {
+  static analysis::track::plotting_keys _keys{
+    "track_t0",
+    "track_x0",
+    "track_y0",
+    "track_z0",
+    "track_vx",
+    "track_vy",
+    "track_vz",
+    "track_t0_error",
+    "track_x0_error",
+    "track_y0_error",
+    "track_z0_error",
+    "track_vx_error",
+    "track_vy_error",
+    "track_vz_error",
+    "track_chi_squared_per_dof",
+    "track_size",
+    "track_beta",
+    "track_beta_error",
+    "", // TODO: "track_angle",
+    ""  // TODO: "track_angle_error"
+  };
+  return _keys;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Vertex Plotting Keys for Prototype__________________________________________________________
+const analysis::vertex::plotting_keys& vertex_plotting_keys() {
+  static analysis::vertex::plotting_keys _keys{
+    "vertex_t",
+    "vertex_x",
+    "vertex_y",
+    "vertex_z",
+    "vertex_t_error",
+    "vertex_x_error",
+    "vertex_y_error",
+    "vertex_z_error",
+    "vertex_chi_squared_per_dof",
+    "vertex_size",
+  };
+  return _keys;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Generate Histograms for Prototype___________________________________________________________
 plot::histogram_collection generate_histograms() {
+  static const auto& track = track_plotting_keys();
+  static const auto& vertex = vertex_plotting_keys();
+  static const auto time_unit = "(" + units::time_string + ")";
+  static const auto length_unit = "(" + units::time_string + ")";
+  static const auto velocity_unit = "(" + units::velocity_string + ")";
   return plot::histogram_collection({
-    {"track_chi_squared",   "Track Chi-Squared Distribution",    "chi^2/dof",    "Track Count",  200, 0, 10},
-    {"vertex_chi_squared",  "Vertex Chi-Squared Distribution",   "chi^2/dof",    "Vertex Count", 200, 0, 10},
-    {"beta",                "Track Beta Distribution",           "beta",         "Track Count",  200, 0,  2},
-    {"beta_error",          "Track Beta Error Distribution",     "beta error",   "Track Count",  200, 0,  2},
-    {"beta_with_cut",       "Track Beta Distribution With Cut",  "beta",         "Track Count",  200, 0,  2},
-    {"track_count",         "Track Count Distribution",          "Track Count",  "Event Count",   50, 0, 50},
-    {"vertex_count",        "Vertex Count Distribution",         "Vertex Count", "Event Count",  100, 0, 50},
-    {"track_size",          "Track Size Distribution",           "Hit Count",    "Track Count",   50, 0, 50},
-    {"non_track_hit_count", "Non-Track Hit Count Distribution",  "Hit Count",    "Event Count",  100, 0, 50},
-    {"vertex_t_error",      "Vertex T Error Distribution",       "t error (" + units::time_string   + ")", "Vertex Count", 100, 0, 20},
-    {"vertex_x_error",      "Vertex X Error Distribution",       "x error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
-    {"vertex_y_error",      "Vertex Y Error Distribution",       "y error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
-    {"vertex_z_error",      "Vertex Z Error Distribution",       "z error (" + units::length_string + ")", "Vertex Count", 100, 0, 100},
+    {track.t0, "Track T0 Distribution", "t0 " + time_unit,     "Track Count", 200,  300, 400},
+    {track.x0, "Track X0 Distribution", "x0 " + length_unit,   "Track Count", 200, -100, 100},
+    {track.y0, "Track Y0 Distribution", "y0 " + length_unit,   "Track Count", 200, -100, 100},
+    {track.z0, "Track Z0 Distribution", "z0 " + length_unit,   "Track Count", 200, -100, 100},
+    {track.vx, "Track VX Distribution", "vx " + velocity_unit, "Track Count", 200,  -35,  35},
+    {track.vy, "Track VY Distribution", "vy " + velocity_unit, "Track Count", 200,  -35,  35},
+    {track.vz, "Track VZ Distribution", "vz " + velocity_unit, "Track Count", 200,  -35,  35},
+
+    {track.t0_error, "Track T0 Error Distribution", "t0 error " + time_unit,     "Track Count", 200, 0, 10},
+    {track.x0_error, "Track X0 Error Distribution", "x0 error " + length_unit,   "Track Count", 200, 0, 10},
+    {track.y0_error, "Track Y0 Error Distribution", "y0 error " + length_unit,   "Track Count", 200, 0, 10},
+    {track.z0_error, "Track Z0 Error Distribution", "z0 error " + length_unit,   "Track Count", 200, 0, 10},
+    {track.vx_error, "Track VX Error Distribution", "vx error " + velocity_unit, "Track Count", 200, 0, 10},
+    {track.vy_error, "Track VY Error Distribution", "vy error " + velocity_unit, "Track Count", 200, 0, 10},
+    {track.vz_error, "Track VZ Error Distribution", "vz error " + velocity_unit, "Track Count", 200, 0, 10},
+
+    {track.chi_squared_per_dof, "Track Chi-Squared Distribution",           "chi^2/dof",  "Track Count",  200, 0, 10},
+    {track.beta,                "Track Beta Distribution",                  "#beta",       "Track Count",  200, 0,  2},
+    {track.beta_error,          "Track Beta Error Distribution",            "#beta error", "Track Count",  200, 0,  2},
+    {"track_beta_with_cut",     "Track Beta Distribution With 3#sigma Cut", "#beta",       "Track Count",  200, 0,  2},
+    {track.size,                "Track Size Distribution",                  "Hit Count",   "Track Count",   40, 0, 40},
+
+    {vertex.t, "Vertex T Distribution", "t " + time_unit, "Vertex Count", 100,  300, 400},
+    {vertex.x, "Vertex X Distribution", "x " + time_unit, "Vertex Count", 300, -100, 100},
+    {vertex.y, "Vertex Y Distribution", "y " + time_unit, "Vertex Count", 300, -100, 100},
+    {vertex.z, "Vertex Z Distribution", "z " + time_unit, "Vertex Count", 300, -100, 100},
+
+    {vertex.t_error, "Vertex T Error Distribution", "t error " + time_unit,   "Vertex Count", 100, 0, 20},
+    {vertex.x_error, "Vertex X Error Distribution", "x error " + length_unit, "Vertex Count", 100, 0, 20},
+    {vertex.y_error, "Vertex Y Error Distribution", "y error " + length_unit, "Vertex Count", 100, 0, 20},
+    {vertex.z_error, "Vertex Z Error Distribution", "z error " + length_unit, "Vertex Count", 100, 0, 20},
+
+    {vertex.chi_squared_per_dof, "Vertex Chi-Squared Distribution", "chi^2/dof",  "Vertex Count", 200, 0, 10},
+    {vertex.size,                "Tracks per Vertex Distribution",  "Track Count", "Vertex Count",  10, 0, 10},
+
+
+    {"non_track_hit_count", "Non-Track Hit Count Distribution", "Hit Count",    "Event Count", 100, 0, 50},
+    {"track_count",         "Track Count Distribution",         "Track Count",  "Event Count",  50, 0, 50},
+    {"vertex_count",        "Vertex Count Distribution",        "Vertex Count", "Event Count", 100, 0, 50}
   });
 }
 //----------------------------------------------------------------------------------------------
@@ -118,14 +195,11 @@ void save_tracks(const analysis::track_vector& tracks,
                  bool verbose) {
   histograms["track_count"].insert(tracks.size());
   for (const auto& track : tracks) {
-    histograms["track_chi_squared"].insert(track.chi_squared_per_dof());
+    track.fill_plots(histograms, track_plotting_keys());
     const auto beta = track.beta();
     const auto beta_error = track.beta_error();
-    histograms["beta"].insert(beta);
-    if (beta + 3.0L * beta_error <= 1)
-      histograms["beta_with_cut"].insert(beta);
-    histograms["beta_error"].insert(beta_error);
-    histograms["track_size"].insert(track.size());
+    if (beta - 3.0L * beta_error <= 1)
+      histograms["track_beta_with_cut"].insert(beta);
     if (verbose) {
       draw_track(canvas, track);
       std::cout << track << "\n";
@@ -139,15 +213,9 @@ void save_vertex(const analysis::vertex& vertex,
                  plot::canvas& canvas,
                  plot::histogram_collection& histograms,
                  bool verbose) {
-  const auto size = vertex.size();
-  if (size <= 1)
+  if (vertex.size() <= 1)
     return;
-
-  histograms["vertex_chi_squared"].insert(vertex.chi_squared_per_dof());
-  histograms["vertex_t_error"].insert(vertex.t_error() / units::time);
-  histograms["vertex_x_error"].insert(vertex.x_error() / units::length);
-  histograms["vertex_y_error"].insert(vertex.y_error() / units::length);
-  histograms["vertex_z_error"].insert(vertex.z_error() / units::length);
+  vertex.fill_plots(histograms, vertex_plotting_keys());
   if (verbose) {
     draw_vertex_and_guess(canvas, vertex);
     std::cout << vertex << "\n";

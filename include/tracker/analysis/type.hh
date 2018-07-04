@@ -63,11 +63,15 @@ constexpr bool operator==(const full_hit& left,
 //__Fitting Parameter Stream Operator Overload__________________________________________________
 inline std::ostream& operator<<(std::ostream& os,
                                 const fit_parameter& parameter) {
-  return os << "[" << parameter.min
-                   << " <= "
-                   << parameter.value << " (+/- " << parameter.error
-                   << ") <= "
-                   << parameter.max << "]";
+  if (parameter.min == 0.0L && parameter.max == 0.0L) {
+    return os << "[" << parameter.value << " (+/- " << parameter.error << ")]";
+  } else {
+    return os << "[" << parameter.min
+                     << " <= "
+                     << parameter.value << " (+/- " << parameter.error
+                     << ") <= "
+                     << parameter.max << "]";
+  }
 }
 //----------------------------------------------------------------------------------------------
 

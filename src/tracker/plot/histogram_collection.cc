@@ -108,6 +108,28 @@ histogram& histogram_collection::operator[](const std::string& name) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Count Number of Occurances of Key in Histogram Collection___________________________________
+std::size_t histogram_collection::count(const std::string& name) const {
+  return _histograms.count(name);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Size of Histogram Collection________________________________________________________________
+std::size_t histogram_collection::size() const {
+  return _histograms.size();
+}
+//----------------------------------------------------------------------------------------------
+
+//__List of Names in Histogram Collection_______________________________________________________
+const histogram::name_vector histogram_collection::names() const {
+  histogram::name_vector out;
+  out.reserve(size());
+  for (const auto& entry : _histograms)
+    out.push_back(entry.first);
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Load Histogram From File into Histogram Collection__________________________________________
 histogram& histogram_collection::load(const std::string& path,
                                       const std::string& name) {

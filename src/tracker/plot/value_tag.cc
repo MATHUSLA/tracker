@@ -63,7 +63,7 @@ bool value_tag::save(const std::string& path) const {
   TFile file(path.c_str(), "UPDATE");
   if (!file.IsZombie()) {
     file.cd();
-    TNamed named(_key, _value);
+    TNamed named(_key.c_str(), _value.c_str());
     named.Write();
     file.Close();
     return true;
@@ -75,7 +75,7 @@ bool value_tag::save(const std::string& path) const {
 //__Load Value Tag From File____________________________________________________________________
 value_tag value_tag::load(const std::string& path,
                           const std::string& key) {
-  value_tag out;
+  value_tag out{};
   TFile file(path.c_str(), "READ");
   if (!file.IsZombie()) {
     TNamed* test = nullptr;

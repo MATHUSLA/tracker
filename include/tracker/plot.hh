@@ -69,17 +69,21 @@ inline bool operator!=(const color& left,
 //__Plotting Histogram Type_____________________________________________________________________
 class histogram {
 public:
+  using name_type = std::string;
+  using name_vector = std::vector<name_type>;
+  using name_initializer_list = std::initializer_list<name_type>;
+
   histogram();
-  histogram(const std::string& name,
+  histogram(const name_type& name,
             const size_t bins,
             const real min,
             const real max);
-  histogram(const std::string& name,
+  histogram(const name_type& name,
             const std::string& title,
             const size_t bins,
             const real min,
             const real max);
-  histogram(const std::string& name,
+  histogram(const name_type& name,
             const std::string& title,
             const std::string& x_title,
             const std::string& y_title,
@@ -93,12 +97,12 @@ public:
 
   ~histogram();
 
-  const std::string name() const;
+  const name_type name() const;
   const std::string title() const;
   const std::string x_title() const;
   const std::string y_title() const;
 
-  void name(const std::string& new_name);
+  void name(const name_type& new_name);
   void title(const std::string& new_title);
   void x_title(const std::string& new_x_title);
   void y_title(const std::string& new_y_title);
@@ -124,7 +128,7 @@ public:
   bool save(const std::string& path) const;
 
   static histogram load(const std::string& path,
-                        const std::string& name="histogram");
+                        const name_type& name);
 
   template<class ...Histograms>
   static void draw_all(histogram& h,
@@ -164,9 +168,9 @@ private:
 class histogram_collection {
 public:
   histogram_collection() = default;
-  histogram_collection(const std::string& prefix);
+  histogram_collection(const histogram::name_type& prefix);
   histogram_collection(std::initializer_list<histogram>&& histograms);
-  histogram_collection(const std::string& prefix,
+  histogram_collection(const histogram::name_type& prefix,
                        std::initializer_list<histogram>&& histograms);
   histogram_collection(const histogram_collection& other) = default;
   histogram_collection(histogram_collection&& other) noexcept = default;
@@ -178,16 +182,16 @@ public:
 
   histogram& emplace(const histogram& hist);
   histogram& emplace(histogram&& hist);
-  histogram& emplace(const std::string& name,
+  histogram& emplace(const histogram::name_type& name,
                      const size_t bins,
                      const real min,
                      const real max);
-  histogram& emplace(const std::string& name,
+  histogram& emplace(const histogram::name_type& name,
                      const std::string& title,
                      const size_t bins,
                      const real min,
                      const real max);
-  histogram& emplace(const std::string& name,
+  histogram& emplace(const histogram::name_type& name,
                      const std::string& title,
                      const std::string& x_title,
                      const std::string& y_title,
@@ -196,11 +200,14 @@ public:
                      const real max);
 
   histogram& load(const std::string& path,
-                  const std::string& name="histogram");
+                  const histogram::name_type& name);
   histogram& load_with_prefix(const std::string& path,
-                              const std::string& name="histogram");
+                              const histogram::name_type& name);
 
-  histogram& operator[](const std::string& name);
+  histogram& operator[](const histogram::name_type& name);
+  std::size_t count(const histogram::name_type& name) const;
+  std::size_t size() const;
+  const histogram::name_vector names() const;
 
   // TODO: implement prefix adding/swapping
   // bool add_prefix(const std::string& prefix);
@@ -210,8 +217,8 @@ public:
   bool save_all(const std::string& path) const;
 
 private:
-  std::string _prefix;
-  std::unordered_map<std::string, histogram> _histograms;
+  histogram::name_type _prefix;
+  std::unordered_map<histogram::name_type, histogram> _histograms;
 };
 //----------------------------------------------------------------------------------------------
 

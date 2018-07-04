@@ -22,6 +22,7 @@
 
 #include <tracker/analysis/type.hh>
 #include <tracker/geometry.hh>
+#include <tracker/plot.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -101,6 +102,9 @@ public:
   const r3_point unit() const;
   const r3_point unit_error() const;
 
+  // TODO: real angle() const;
+  // TODO: real angle_error() const;
+
   real chi_squared() const;
   size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
@@ -125,6 +129,20 @@ public:
   const geometry::structure_vector& detectors() const { return _detectors; }
 
   Coordinate direction() const { return _direction; }
+
+  struct plotting_keys {
+    plot::histogram::name_type t0, x0, y0, z0, vx, vy, vz,
+      t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
+      chi_squared_per_dof,
+      size,
+      beta, beta_error,
+      angle, angle_error;
+  };
+
+  void fill_plots(plot::histogram_collection& collection,
+                  const plotting_keys& keys) const;
+
+  // TODO: void draw(plot::canvas& canvas) const;
 
 private:
   fit_parameters _guess, _final;

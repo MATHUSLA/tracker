@@ -18,9 +18,8 @@
 
 #include <tracker/analysis/vertex.hh>
 
-#include <ROOT/TMinuit.h>
-
 #include <tracker/core/stat.hh>
+#include <tracker/core/units.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/error.hh>
@@ -248,6 +247,22 @@ constexpr std::size_t _shift_covariance_index(const vertex::parameter p) {
 real vertex::covariance(const vertex::parameter p,
                         const vertex::parameter q) const {
   return _covariance[4 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fill Plots with Vertexing Variables_________________________________________________________
+void vertex::fill_plots(plot::histogram_collection& collection,
+                        const vertex::plotting_keys& keys) const {
+  if (collection.count(keys.t)) collection[keys.t].insert(t_value() / units::time);
+  if (collection.count(keys.x)) collection[keys.x].insert(x_value() / units::length);
+  if (collection.count(keys.y)) collection[keys.y].insert(y_value() / units::length);
+  if (collection.count(keys.z)) collection[keys.z].insert(z_value() / units::length);
+  if (collection.count(keys.t_error)) collection[keys.t_error].insert(t_error() / units::time);
+  if (collection.count(keys.x_error)) collection[keys.x_error].insert(x_error() / units::length);
+  if (collection.count(keys.y_error)) collection[keys.y_error].insert(y_error() / units::length);
+  if (collection.count(keys.z_error)) collection[keys.z_error].insert(z_error() / units::length);
+  if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
+  if (collection.count(keys.size)) collection[keys.size].insert(size());
 }
 //----------------------------------------------------------------------------------------------
 

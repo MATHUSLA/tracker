@@ -21,6 +21,7 @@
 #pragma once
 
 #include <tracker/analysis/track.hh>
+#include <tracker/plot.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -79,6 +80,18 @@ public:
   const track_vector tracks() const { return _tracks; };
   std::size_t size() const { return _tracks.size(); }
   bool empty() const { return _tracks.size() <= 1; }
+
+  struct plotting_keys {
+    plot::histogram::name_type t, x, y, z,
+      t_error, x_error, y_error, z_error,
+      chi_squared_per_dof,
+      size;
+  };
+
+  void fill_plots(plot::histogram_collection& collection,
+                  const plotting_keys& keys) const;
+
+  // TODO: void draw(plot::canvas& canvas) const;
 
 private:
   fit_parameters _guess, _final;
