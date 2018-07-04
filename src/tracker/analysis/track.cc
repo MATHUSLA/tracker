@@ -431,6 +431,30 @@ const r3_point track::unit_error() const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Angle of Track with Respect to Parameter____________________________________________________
+real track::angle() const {
+  switch (_direction) {
+    case Coordinate::T: return 0.0L; // FIXME: how to handle T direction parameterization
+    case Coordinate::X: return std::acos(unit().x);
+    case Coordinate::Y: return std::acos(unit().y);
+    case Coordinate::Z: return std::acos(unit().z);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Error in Angle of Track with Respect to Parameter___________________________________________
+real track::angle_error() const {
+  // TODO: implement
+  const auto unit_vector = unit();
+  switch (_direction) {
+    case Coordinate::T: return 0.0L;
+    case Coordinate::X: return unit_error().x / std::sqrt(1.0L - unit_vector.x * unit_vector.x);
+    case Coordinate::Y: return unit_error().y / std::sqrt(1.0L - unit_vector.y * unit_vector.y);
+    case Coordinate::Z: return unit_error().z / std::sqrt(1.0L - unit_vector.z * unit_vector.z);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
 //__Chi-Squared Test Statistic__________________________________________________________________
 real track::chi_squared() const {
   return std::accumulate(_delta_chi2.cbegin(), _delta_chi2.cend(), 0.0L);
@@ -553,8 +577,8 @@ void track::fill_plots(plot::histogram_collection& collection,
   if (collection.count(keys.size)) collection[keys.size].insert(size());
   if (collection.count(keys.beta)) collection[keys.beta].insert(beta());
   if (collection.count(keys.beta_error)) collection[keys.beta_error].insert(beta_error());
-  // if (collection.count(keys.angle)) collection[keys.angle].insert(angle());
-  // if (collection.count(keys.angle_error)) collection[keys.angle_error].insert(angle_error());
+  if (collection.count(keys.angle)) collection[keys.angle].insert(angle());
+  if (collection.count(keys.angle_error)) collection[keys.angle_error].insert(angle_error());
 }
 //----------------------------------------------------------------------------------------------
 
@@ -608,8 +632,9 @@ std::ostream& operator<<(std::ostream& os,
 
   os.precision(6);
   os << "* Dynamics: \n"
-     << "    beta:  " << track.beta()  << "  (+/- " << track.beta_error() << ")\n"
-     << "    unit:  " << track.unit()  << "  (+/- " << track.unit_error() << ")\n";
+     << "    beta:  " << track.beta()  << "  (+/- " << track.beta_error()  << ")\n"
+     << "    unit:  " << track.unit()  << "  (+/- " << track.unit_error()  << ")\n"
+     << "    angle: " << track.angle() << "  (+/- " << track.angle_error() << ")\n";
 
   return os << bar;
 }

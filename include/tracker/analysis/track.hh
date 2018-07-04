@@ -102,8 +102,8 @@ public:
   const r3_point unit() const;
   const r3_point unit_error() const;
 
-  // TODO: real angle() const;
-  // TODO: real angle_error() const;
+  real angle() const;
+  real angle_error() const;
 
   real chi_squared() const;
   size_t degrees_of_freedom() const;

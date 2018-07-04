@@ -112,8 +112,8 @@ const analysis::track::plotting_keys& track_plotting_keys() {
     "track_size",
     "track_beta",
     "track_beta_error",
-    "", // TODO: "track_angle",
-    ""  // TODO: "track_angle_error"
+    "track_angle",
+    "track_angle_error"
   };
   return _keys;
 }
@@ -161,16 +161,18 @@ plot::histogram_collection generate_histograms() {
     {track.vy_error, "Track VY Error Distribution", "vy error " + velocity_unit, "Track Count", 200, 0, 10},
     {track.vz_error, "Track VZ Error Distribution", "vz error " + velocity_unit, "Track Count", 200, 0, 10},
 
-    {track.chi_squared_per_dof, "Track Chi-Squared Distribution",           "chi^2/dof",  "Track Count",  200, 0, 10},
-    {track.beta,                "Track Beta Distribution",                  "#beta",       "Track Count",  200, 0,  2},
-    {track.beta_error,          "Track Beta Error Distribution",            "#beta error", "Track Count",  200, 0,  2},
-    {"track_beta_with_cut",     "Track Beta Distribution With 3#sigma Cut", "#beta",       "Track Count",  200, 0,  2},
-    {track.size,                "Track Size Distribution",                  "Hit Count",   "Track Count",   40, 0, 40},
+    {track.chi_squared_per_dof, "Track Chi-Squared Distribution",           "chi^2/dof",    "Track Count",  200,  0,    10   },
+    {track.beta,                "Track Beta Distribution",                  "#beta",        "Track Count",  200,  0,     2   },
+    {track.beta_error,          "Track Beta Error Distribution",            "#beta error",  "Track Count",  200,  0,     2   },
+    {track.angle,               "Track Angular Distribution",               "#theta",       "Track Count",  200, -6.28,  6.28},
+    {track.angle_error,         "Track Anglular Error Distribution",        "#theta error", "Track Count",  200,  0,     1   },
+    {"track_beta_with_cut",     "Track Beta Distribution With 3#sigma Cut", "#beta",        "Track Count",  200,  0,     2   },
+    {track.size,                "Track Size Distribution",                  "Hit Count",    "Track Count",   40,  0,    40   },
 
-    {vertex.t, "Vertex T Distribution", "t " + time_unit, "Vertex Count", 100,  300, 400},
-    {vertex.x, "Vertex X Distribution", "x " + time_unit, "Vertex Count", 300, -100, 100},
-    {vertex.y, "Vertex Y Distribution", "y " + time_unit, "Vertex Count", 300, -100, 100},
-    {vertex.z, "Vertex Z Distribution", "z " + time_unit, "Vertex Count", 300, -100, 100},
+    {vertex.t, "Vertex T Distribution", "t " + time_unit,   "Vertex Count", 100,  300, 400},
+    {vertex.x, "Vertex X Distribution", "x " + length_unit, "Vertex Count", 300, -100, 100},
+    {vertex.y, "Vertex Y Distribution", "y " + length_unit, "Vertex Count", 300, -100, 100},
+    {vertex.z, "Vertex Z Distribution", "z " + length_unit, "Vertex Count", 300, -100, 100},
 
     {vertex.t_error, "Vertex T Error Distribution", "t error " + time_unit,   "Vertex Count", 100, 0, 20},
     {vertex.x_error, "Vertex X Error Distribution", "x error " + length_unit, "Vertex Count", 100, 0, 20},
