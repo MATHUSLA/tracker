@@ -181,8 +181,8 @@ plot::histogram_collection generate_histograms() {
     {vertex.y_error, "Vertex Y Error Distribution", "y error " + length_unit, "Vertex Count", 100, 0, 20},
     {vertex.z_error, "Vertex Z Error Distribution", "z error " + length_unit, "Vertex Count", 100, 0, 20},
 
-    {vertex.distance,       "Vertex Distance Distribution",      "distance "       + length_unit, "Vertex Count", 100, 0, 100},
-    {vertex.distance_error, "Vertex Distanc Error Distribution", "distance error " + length_unit, "Vertex Count", 100, 0, 100},
+    {vertex.distance,       "Vertex Distance Distribution",      "distance "       + length_unit, "Vertex Count", 500, 0, 500},
+    {vertex.distance_error, "Vertex Distanc Error Distribution", "distance error " + length_unit, "Vertex Count", 500, 0, 500},
 
     {vertex.chi_squared_per_dof, "Vertex Chi-Squared Distribution", "chi^2/dof",  "Vertex Count", 200, 0, 10},
     {vertex.size,                "Tracks per Vertex Distribution",  "Track Count", "Vertex Count",  10, 0, 10},
