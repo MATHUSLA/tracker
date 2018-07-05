@@ -67,6 +67,9 @@ public:
   real z_error() const { return _final.z.error; }
   real error(const parameter p) const;
 
+  real_vector distances() const;
+  real_vector distance_errors() const;
+
   real chi_squared() const;
   size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
@@ -84,6 +87,7 @@ public:
   struct plotting_keys {
     plot::histogram::name_type t, x, y, z,
       t_error, x_error, y_error, z_error,
+      distance, distance_error,
       chi_squared_per_dof,
       size;
   };

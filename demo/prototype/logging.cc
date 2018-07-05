@@ -130,6 +130,8 @@ const analysis::vertex::plotting_keys& vertex_plotting_keys() {
     "vertex_x_error",
     "vertex_y_error",
     "vertex_z_error",
+    "vertex_distance",
+    "vertex_distance_error",
     "vertex_chi_squared_per_dof",
     "vertex_size",
   };
@@ -163,10 +165,10 @@ plot::histogram_collection generate_histograms() {
 
     {track.chi_squared_per_dof, "Track Chi-Squared Distribution",           "chi^2/dof",    "Track Count",  200,  0,    10   },
     {track.beta,                "Track Beta Distribution",                  "#beta",        "Track Count",  200,  0,     2   },
+    {"track_beta_with_cut",     "Track Beta Distribution With 3#sigma Cut", "#beta",        "Track Count",  200,  0,     2   },
     {track.beta_error,          "Track Beta Error Distribution",            "#beta error",  "Track Count",  200,  0,     2   },
     {track.angle,               "Track Angular Distribution",               "#theta",       "Track Count",  200, -6.28,  6.28},
     {track.angle_error,         "Track Anglular Error Distribution",        "#theta error", "Track Count",  200,  0,     1   },
-    {"track_beta_with_cut",     "Track Beta Distribution With 3#sigma Cut", "#beta",        "Track Count",  200,  0,     2   },
     {track.size,                "Track Size Distribution",                  "Hit Count",    "Track Count",   40,  0,    40   },
 
     {vertex.t, "Vertex T Distribution", "t " + time_unit,   "Vertex Count", 100,  300, 400},
@@ -179,9 +181,11 @@ plot::histogram_collection generate_histograms() {
     {vertex.y_error, "Vertex Y Error Distribution", "y error " + length_unit, "Vertex Count", 100, 0, 20},
     {vertex.z_error, "Vertex Z Error Distribution", "z error " + length_unit, "Vertex Count", 100, 0, 20},
 
+    {vertex.distance,       "Vertex Distance Distribution",      "distance "       + length_unit, "Vertex Count", 100, 0, 30},
+    {vertex.distance_error, "Vertex Distanc Error Distribution", "distance error " + length_unit, "Vertex Count", 100, 0, 30},
+
     {vertex.chi_squared_per_dof, "Vertex Chi-Squared Distribution", "chi^2/dof",  "Vertex Count", 200, 0, 10},
     {vertex.size,                "Tracks per Vertex Distribution",  "Track Count", "Vertex Count",  10, 0, 10},
-
 
     {"non_track_hit_count", "Non-Track Hit Count Distribution", "Hit Count",    "Event Count", 100, 0, 50},
     {"track_count",         "Track Count Distribution",         "Track Count",  "Event Count",  50, 0, 50},
@@ -215,7 +219,7 @@ void save_vertex(const analysis::vertex& vertex,
                  plot::canvas& canvas,
                  plot::histogram_collection& histograms,
                  bool verbose) {
-  if (vertex.size() <= 1)
+  if (vertex.size() != 2)
     return;
   vertex.fill_plots(histograms, vertex_plotting_keys());
   if (verbose) {

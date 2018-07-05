@@ -34,12 +34,23 @@ namespace analysis { ///////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-//__Calculate Distance from Vertex to Track_____________________________________________________
-const stat::type::uncertain_real _vertex_track_r3_distance(const real t,
-                                                           const real x,
-                                                           const real y,
-                                                           const real z,
-                                                           const track& track) {
+//__Calculate Distance from Vertex to Track at Fixed Time_______________________________________
+real _vertex_track_r3_distance(const real t,
+                               const real x,
+                               const real y,
+                               const real z,
+                               const track& track) {
+  const auto track_point = track.at_t(t);
+  return util::math::hypot(track_point.x - x, track_point.y - y, track_point.z - z);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Calculate Distance with Error from Vertex to Track at Fixed Time____________________________
+const stat::type::uncertain_real _vertex_track_r3_distance_with_error(const real t,
+                                                                      const real x,
+                                                                      const real y,
+                                                                      const real z,
+                                                                      const track& track) {
   const auto track_point = track.at_t(t);
   const auto dx = track_point.x - x;
   const auto dy = track_point.y - y;
@@ -77,7 +88,7 @@ real _vertex_squared_residual(const real t,
                               const real y,
                               const real z,
                               const track& track) {
-  return _vertex_squared_residual(_vertex_track_r3_distance(t, x, y, z, track));
+  return _vertex_squared_residual(_vertex_track_r3_distance_with_error(t, x, y, z, track));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -126,7 +137,7 @@ thread_local track_vector&& _nll_fit_tracks = {};
 void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
     [&](const auto sum, const auto& track) {
-      const auto distance = _vertex_track_r3_distance(x[0], x[1], x[2], x[3], track);
+      const auto distance = _vertex_track_r3_distance_with_error(x[0], x[1], x[2], x[3], track);
       return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
   });
 }
@@ -206,6 +217,26 @@ real vertex::error(const vertex::parameter p) const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get Distance from Each Track at Time of Vertex______________________________________________
+real_vector vertex::distances() const {
+  real_vector out;
+  out.reserve(_tracks.size());
+  util::algorithm::back_insert_transform(_tracks, out, [&](const auto& track) {
+    return _vertex_track_r3_distance(t_value(), x_value(), y_value(), z_value(), track); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Error in Distance of Each Track at Time of Vertex_______________________________________
+real_vector vertex::distance_errors() const {
+  real_vector out;
+  out.reserve(_tracks.size());
+  util::algorithm::back_insert_transform(_tracks, out, [&](const auto& track) {
+    return _vertex_track_r3_distance_with_error(t_value(), x_value(), y_value(), z_value(), track).error; });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Chi-Squared Test Statistic__________________________________________________________________
 real vertex::chi_squared() const {
   return std::accumulate(_delta_chi2.cbegin(), _delta_chi2.cend(), 0.0L);
@@ -261,6 +292,18 @@ void vertex::fill_plots(plot::histogram_collection& collection,
   if (collection.count(keys.x_error)) collection[keys.x_error].insert(x_error() / units::length);
   if (collection.count(keys.y_error)) collection[keys.y_error].insert(y_error() / units::length);
   if (collection.count(keys.z_error)) collection[keys.z_error].insert(z_error() / units::length);
+
+  if (collection.count(keys.distance)) {
+    auto& distance_histogram = collection[keys.distance];
+    for (const auto& distance : distances())
+      distance_histogram.insert(distance / units::length);
+  }
+  if (collection.count(keys.distance_error)) {
+    auto& distance_error_histogram = collection[keys.distance_error];
+    for (const auto& distance_error : distance_errors())
+      distance_error_histogram.insert(distance_error / units::length);
+  }
+
   if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
   if (collection.count(keys.size)) collection[keys.size].insert(size());
 }
