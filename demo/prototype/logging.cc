@@ -144,7 +144,7 @@ plot::histogram_collection generate_histograms() {
   static const auto& track = track_plotting_keys();
   static const auto& vertex = vertex_plotting_keys();
   static const auto time_unit = "(" + units::time_string + ")";
-  static const auto length_unit = "(" + units::time_string + ")";
+  static const auto length_unit = "(" + units::length_string + ")";
   static const auto velocity_unit = "(" + units::velocity_string + ")";
   return plot::histogram_collection({
     {track.t0, "Track T0 Distribution", "t0 " + time_unit,     "Track Count", 200,  300, 400},
@@ -181,8 +181,8 @@ plot::histogram_collection generate_histograms() {
     {vertex.y_error, "Vertex Y Error Distribution", "y error " + length_unit, "Vertex Count", 100, 0, 20},
     {vertex.z_error, "Vertex Z Error Distribution", "z error " + length_unit, "Vertex Count", 100, 0, 20},
 
-    {vertex.distance,       "Vertex Distance Distribution",      "distance "       + length_unit, "Vertex Count", 100, 0, 30},
-    {vertex.distance_error, "Vertex Distanc Error Distribution", "distance error " + length_unit, "Vertex Count", 100, 0, 30},
+    {vertex.distance,       "Vertex Distance Distribution",      "distance "       + length_unit, "Vertex Count", 100, 0, 100},
+    {vertex.distance_error, "Vertex Distanc Error Distribution", "distance error " + length_unit, "Vertex Count", 100, 0, 100},
 
     {vertex.chi_squared_per_dof, "Vertex Chi-Squared Distribution", "chi^2/dof",  "Vertex Count", 200, 0, 10},
     {vertex.size,                "Tracks per Vertex Distribution",  "Track Count", "Vertex Count",  10, 0, 10},
