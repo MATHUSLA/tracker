@@ -84,7 +84,7 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
   const auto parts = analysis::partition(points, type::Coordinate::Z, z_lower).parts;
   const auto partition_size = parts.size();
 
-  size_t layer_index = 0;
+  std::size_t layer_index{};
   for (; layer_index < partition_size - 1; ++layer_index) {
     const auto top = parts[layer_index];
     const auto bottom = parts[layer_index + 1];
@@ -94,7 +94,7 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
       const auto bottom_size = bottom.size();
       util::bit_vector discard_list(bottom_size);
 
-      size_t top_index = 0, bottom_index = 0;
+      std::size_t top_index{}, bottom_index{};
       while (top_index < top_size) {
         bottom_index = discard_list.first_unset(bottom_index);
 

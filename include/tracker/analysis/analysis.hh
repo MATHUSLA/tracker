@@ -108,6 +108,7 @@ bool is_linear(const full_event& points,
 //----------------------------------------------------------------------------------------------
 
 //__Seeding Algorithm___________________________________________________________________________
+// TODO: allow vector of thresholds
 const event_vector seed(const size_t n,
                         const event_partition& partition,
                         const real line_threshold);

@@ -251,10 +251,10 @@ const real_array<9> _3x3_covariance(const track& t,
 
 //__Get 4x4 Submatrix of Covariance Matrix______________________________________________________
 const real_array<16> _4x4_covariance(const track& t,
-                                    const track::parameter p1,
-                                    const track::parameter p2,
-                                    const track::parameter p3,
-                                    const track::parameter p4) {
+                                     const track::parameter p1,
+                                     const track::parameter p2,
+                                     const track::parameter p3,
+                                     const track::parameter p4) {
   return {t.variance(p1),       t.covariance(p1, p2), t.covariance(p1, p3), t.covariance(p1, p4),
           t.covariance(p1, p2), t.variance(p2),       t.covariance(p2, p3), t.covariance(p2, p4),
           t.covariance(p1, p3), t.covariance(p2, p3), t.variance(p3),       t.covariance(p3, p4),
@@ -395,7 +395,7 @@ real track::beta_error() const {
   const auto covariance = c_inv2 * _3x3_covariance(*this, parameter::VX, parameter::VY, parameter::VZ);
   const real_array<3> gradient{
     twice_c_inv * _final.vx.value, twice_c_inv * _final.vy.value, twice_c_inv * _final.vz.value};
-  return std::sqrt(stat::error::propagate(gradient, covariance));
+  return stat::error::propagate(gradient, covariance);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -425,9 +425,9 @@ const r3_point track::unit_error() const {
     base * -vzvx,
     base * -vyvz,
     base * util::math::sum_squares(_final.vx.value, _final.vy.value)};
-  return {std::sqrt(stat::error::propagate(x_gradient, covariance)),
-          std::sqrt(stat::error::propagate(y_gradient, covariance)),
-          std::sqrt(stat::error::propagate(z_gradient, covariance))};
+  return {stat::error::propagate(x_gradient, covariance),
+          stat::error::propagate(y_gradient, covariance),
+          stat::error::propagate(z_gradient, covariance)};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -444,10 +444,9 @@ real track::angle() const {
 
 //__Error in Angle of Track with Respect to Parameter___________________________________________
 real track::angle_error() const {
-  // TODO: implement
   const auto unit_vector = unit();
   switch (_direction) {
-    case Coordinate::T: return 0.0L;
+    case Coordinate::T: return 0.0L; // FIXME: how to handle T direction parameterization
     case Coordinate::X: return unit_error().x / std::sqrt(1.0L - unit_vector.x * unit_vector.x);
     case Coordinate::Y: return unit_error().y / std::sqrt(1.0L - unit_vector.y * unit_vector.y);
     case Coordinate::Z: return unit_error().z / std::sqrt(1.0L - unit_vector.z * unit_vector.z);
@@ -684,9 +683,7 @@ std::size_t _overlap_size(const Event& first,
   while (first_index < first_size && second_index < second_size) {
     const auto& first_elem = first[first_index];
     const auto& second_elem = second[second_index];
-    //std::clog << "INDICES: " << first_index << " " << second_index << "\n";
     if (first_elem == second_elem) {
-      std::clog << "MATCH(" << first_index << " " << second_index << "): " << reduce_to_r4(first_elem) << "\n";
       ++count;
       ++first_index;
       ++second_index;
@@ -696,7 +693,6 @@ std::size_t _overlap_size(const Event& first,
         if (search != second_end) {
           ++count;
           second_index = util::type::distance(second_begin, search);
-          std::clog << "1st BSEARCH: " << reduce_to_r4(first_elem) << "\n";
         }
         ++first_index;
       } else {
@@ -704,13 +700,11 @@ std::size_t _overlap_size(const Event& first,
         if (search != first_end) {
           ++count;
           first_index = util::type::distance(first_begin, search);
-          std::clog << "2nd BSEARCH: " << reduce_to_r4(second_elem) << "\n";
         }
         ++second_index;
       }
     }
   }
-  std::clog << "COUNT: " << count << "\n";
   return count;
 }
 //----------------------------------------------------------------------------------------------
@@ -745,20 +739,9 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
   out.reserve(size);
 
   const auto sorted_seeds = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
-
-    std::clog << "SEEDS: \n";
-    for (std::size_t i = 0; i < sorted_seeds.size(); ++i) {
-      std::clog << "[" << i << "]";
-      for (const auto point : sorted_seeds[i])
-        std::clog << "   " << type::reduce_to_r4(point) << "\n";
-      std::clog << "\n";
-    }
-    std::clog << "\n";
-
   const auto track_buffer = independent_fit_seeds(sorted_seeds, direction);
 
   util::index_vector<> track_indices(size);
-
   /*
   util::algorithm::stable_sort_range(track_indices, [&](const auto left, const auto right) {
     return track_buffer[left].chi_squared_per_dof() > track_buffer[right].chi_squared_per_dof();
@@ -770,7 +753,6 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
   std::size_t top_index{}, bottom_index = 1UL;
   while (top_index < size) {
     bottom_index = visited.first_unset(bottom_index);
-    std::clog << "indicies: " << top_index << " " << bottom_index << "\n";
     const auto top_track_index = track_indices[top_index];
     if (bottom_index == size) {
       out.push_back(track_buffer[top_track_index]);
@@ -789,9 +771,6 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
   for (std::size_t i = 0; i < size; ++i)
     if (!visited[i])
       out.push_back(track_buffer[track_indices[i]]);
-
-  std::clog << "BEFORE: " << track_buffer.size() << "\n"
-            << "AFTER: " << out.size() << "\n";
 
   out.shrink_to_fit();
   return out;

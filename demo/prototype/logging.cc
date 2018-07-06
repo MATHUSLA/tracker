@@ -174,15 +174,15 @@ plot::histogram_collection generate_histograms() {
     {vertex.t, "Vertex T Distribution", "t " + time_unit,   "Vertex Count", 100,  300, 400},
     {vertex.x, "Vertex X Distribution", "x " + length_unit, "Vertex Count", 300, -100, 100},
     {vertex.y, "Vertex Y Distribution", "y " + length_unit, "Vertex Count", 300, -100, 100},
-    {vertex.z, "Vertex Z Distribution", "z " + length_unit, "Vertex Count", 300, -100, 100},
+    {vertex.z, "Vertex Z Distribution", "z " + length_unit, "Vertex Count", 300, -600,  10},
 
     {vertex.t_error, "Vertex T Error Distribution", "t error " + time_unit,   "Vertex Count", 100, 0, 20},
     {vertex.x_error, "Vertex X Error Distribution", "x error " + length_unit, "Vertex Count", 100, 0, 20},
     {vertex.y_error, "Vertex Y Error Distribution", "y error " + length_unit, "Vertex Count", 100, 0, 20},
     {vertex.z_error, "Vertex Z Error Distribution", "z error " + length_unit, "Vertex Count", 100, 0, 20},
 
-    {vertex.distance,       "Vertex Distance Distribution",      "distance "       + length_unit, "Vertex Count", 300, 0, 600},
-    {vertex.distance_error, "Vertex Distanc Error Distribution", "distance error " + length_unit, "Vertex Count", 500, 0, 1000},
+    {vertex.distance,       "Vertex Distance Distribution",       "distance "       + length_unit, "Vertex Count", 300, 0, 600},
+    {vertex.distance_error, "Vertex Distance Error Distribution", "distance error " + length_unit, "Vertex Count", 500, 0, 1000},
 
     {vertex.chi_squared_per_dof, "Vertex Chi-Squared Distribution", "chi^2/dof",  "Vertex Count",  200, 0, 12},
     {vertex.size,                "Tracks per Vertex Distribution",  "Track Count", "Vertex Count",  10, 0, 10},

@@ -58,13 +58,13 @@ const stat::type::uncertain_real _vertex_track_r3_distance_with_error(const real
   const auto total_dt = t - track.t0_value();
   const auto distance = util::math::hypot(dx, dy, dz);
   const auto inverse_distance = 1.0L / distance;
-  const auto dx_by_D = inverse_distance * dx;
-  const auto dy_by_D = inverse_distance * dy;
-  const auto dz_by_D = inverse_distance * dz;
+  const auto dx_by_D = dx * inverse_distance;
+  const auto dy_by_D = dy * inverse_distance;
+  const auto dz_by_D = dz * inverse_distance;
   const real_array<6UL> gradient{
-    util::math::fused_product(track.vx_value(), dx_by_D,
-                              track.vy_value(), dy_by_D,
-                              track.vz_value(), dz_by_D),
+    -util::math::fused_product(track.vx_value(), dx_by_D,
+                               track.vy_value(), dy_by_D,
+                               track.vz_value(), dz_by_D),
     dx_by_D,
     dy_by_D,
     total_dt * dx_by_D,
@@ -99,12 +99,11 @@ vertex::fit_parameters _guess_vertex(const track_vector& tracks) {
   std::vector<full_hit> track_fronts;
   track_fronts.reserve(size);
   util::algorithm::back_insert_transform(tracks, track_fronts, [](const auto& track) {
-    const auto full_front = track.full_front();
-    const auto front_z = full_front.t;
-    const auto point = track.at_z(front_z);
-    const auto error = track.error_at_z(front_z);
+    const auto front_t = track.t0_value();
+    const auto point = track.at_t(front_t);
+    const auto error = track.error_at_t(front_t);
     return full_hit{point.t, point.x, point.y, point.z,
-             r4_point{error.t, error.x, error.y, stat::error::uniform(full_front.width.z)}};
+             r4_point{track.full_front().width.t, error.x, error.y, error.z}};
   });
 
   real_vector t_errors, x_errors, y_errors, z_errors;

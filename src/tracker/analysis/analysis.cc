@@ -525,21 +525,21 @@ namespace { ////////////////////////////////////////////////////////////////////
 //__Join All Secondaries matching Seed__________________________________________________________
 template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
-void _sequential_join_secondaries(const size_t seed_index,
-                                  const size_t difference,
+void _sequential_join_secondaries(const std::size_t seed_index,
+                                  const std::size_t difference,
                                   EventVector& seed_buffer,
                                   const util::index_vector<>& indices,
                                   util::bit_vector& join_list,
                                   util::index_vector<>& out) {
   const auto& seed = seed_buffer[indices[seed_index]];
   const auto size = indices.size();
-  for (size_t i = 0; i < size; ++i) {
-    const auto& next_seed = seed_buffer[indices[i]];
+  for (std::size_t index{}; index < size; ++index) {
+    const auto& next_seed = seed_buffer[indices[index]];
     const auto joined_seed = sequential_join(seed, next_seed, difference);
     if (!joined_seed.empty()) {
       out.joint_push_back(seed_buffer, joined_seed);
-      join_list[i] = true;
-      join_list[seed_index] = true;
+      join_list.set(index);
+      join_list.set(seed_index);
     }
   }
 }
@@ -554,27 +554,27 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 bool _sequential_partial_join(EventVector& seed_buffer,
                               const util::index_vector<>& indices,
-                              const size_t difference,
+                              const std::size_t difference,
                               seed_queue& joined,
                               seed_queue& singular,
                               EventVector& out) {
   const auto size = indices.size();
-  if (size <= 1)
-    return false;
 
-  util::bit_vector join_list(size);
-  util::index_vector<> to_joined, to_singular;
-  to_joined.reserve(size);
-  to_singular.reserve(size);
+  if (size > 1) {
+    util::bit_vector join_list(size);
+    util::index_vector<> to_joined, to_singular;
+    to_joined.reserve(size);
+    to_singular.reserve(size);
 
-  for (size_t index = 0; index < size; ++index)
-    _sequential_join_secondaries(index, difference, seed_buffer, indices, join_list, to_joined);
+    for (std::size_t index{}; index < size; ++index)
+      _sequential_join_secondaries(index, difference, seed_buffer, indices, join_list, to_joined);
 
-  if (!to_joined.empty()) {
-    join_list.unset_conditional_push_back(indices, to_singular);
-    joined.push(to_joined);
-    singular.push(to_singular);
-    return true;
+    if (!to_joined.empty()) {
+      join_list.unset_conditional_push_back(indices, to_singular);
+      joined.push(to_joined);
+      singular.push(to_singular);
+      return true;
+    }
   }
 
   indices.conditional_push_back(seed_buffer, out);
@@ -587,7 +587,7 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 void _sequential_join_next_in_queue(seed_queue& queue,
                                     EventVector& seed_buffer,
-                                    const size_t difference,
+                                    const std::size_t difference,
                                     seed_queue& joined,
                                     seed_queue& singular,
                                     EventVector& out) {
@@ -603,8 +603,8 @@ void _sequential_join_next_in_queue(seed_queue& queue,
 template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 void _sequential_full_join(EventVector& seed_buffer,
-                           const size_t difference,
-                           // TODO: const size_t max_difference,
+                           const std::size_t difference,
+                           // TODO: const std::size_t max_difference,
                            seed_queue& joined,
                            seed_queue& singular,
                            EventVector& out) {
@@ -631,7 +631,7 @@ const EventVector sequential_join_all(const EventVector& seeds) {
   seed_queue joined, singular;
   joined.emplace(size);
 
-  EventVector seed_buffer = seeds;
+  auto seed_buffer = seeds;
   _sequential_full_join(seed_buffer, 1, joined, singular, out);
   out.shrink_to_fit();
   return out;

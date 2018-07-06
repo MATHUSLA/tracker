@@ -108,9 +108,7 @@ int prototype_tracking(int argc,
 
       const auto tracks = find_tracks(compressed_event, options);
       save_tracks(tracks, canvas, histograms, options.verbose_output);
-
-      if (options.verbose_output)
-        print_tracking_summary(event, tracks);
+      print_tracking_summary(event, tracks);
 
       save_vertex(analysis::vertex(tracks), canvas, histograms, options.verbose_output);
 
@@ -133,7 +131,7 @@ int prototype_tracking(int argc,
 //__Silent Prototype Tracking Algorithm_________________________________________________________
 int silent_prototype_tracking(int argc,
                               char* argv[]) {
-  util::io::remove_buffer(/*std::cout,*/ std::cerr, std::clog);
+  util::io::remove_buffer(/*std::cout,*/ std::cerr /*, std::clog*/);
   return prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

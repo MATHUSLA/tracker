@@ -170,7 +170,7 @@ namespace error { //////////////////////////////////////////////////////////////
 template<std::size_t N>
 real propagate(const real_array<N>& gradient,
                const real_array<N*N>& covariance) {
-  return weighted_norm(gradient, covariance);
+  return std::sqrt(weighted_norm(gradient, covariance));
 }
 template<std::size_t N>
 real propagate(const real_vector& gradient,
