@@ -188,8 +188,8 @@ plot::histogram_collection generate_histograms() {
     {vertex.size,                "Tracks per Vertex Distribution",  "Track Count", "Vertex Count",  10, 0, 10},
 
     {"non_track_hit_count", "Non-Track Hit Count Distribution", "Hit Count",    "Event Count", 100, 0, 50},
-    {"track_count",         "Track Count Distribution",         "Track Count",  "Event Count",  50, 0, 50},
-    {"vertex_count",        "Vertex Count Distribution",        "Vertex Count", "Event Count", 100, 0, 50}
+    {"track_count",         "Track Count Distribution",         "Track Count",  "Event Count",  50, 0, 50} //,
+    // {"vertex_count",        "Vertex Count Distribution",        "Vertex Count", "Event Count", 100, 0, 50}
   });
 }
 //----------------------------------------------------------------------------------------------
