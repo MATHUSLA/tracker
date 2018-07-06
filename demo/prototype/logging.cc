@@ -147,28 +147,28 @@ plot::histogram_collection generate_histograms() {
   static const auto length_unit = "(" + units::length_string + ")";
   static const auto velocity_unit = "(" + units::velocity_string + ")";
   return plot::histogram_collection({
-    {track.t0, "Track T0 Distribution", "t0 " + time_unit,     "Track Count", 200,  300, 400},
-    {track.x0, "Track X0 Distribution", "x0 " + length_unit,   "Track Count", 200, -100, 100},
-    {track.y0, "Track Y0 Distribution", "y0 " + length_unit,   "Track Count", 200, -100, 100},
-    {track.z0, "Track Z0 Distribution", "z0 " + length_unit,   "Track Count", 200, -100, 100},
+    {track.t0, "Track T0 Distribution", "t0 " + time_unit,     "Track Count", 200,  250, 450},
+    {track.x0, "Track X0 Distribution", "x0 " + length_unit,   "Track Count", 200, -600, 600},
+    {track.y0, "Track Y0 Distribution", "y0 " + length_unit,   "Track Count", 200, -600, 600},
+    {track.z0, "Track Z0 Distribution", "z0 " + length_unit,   "Track Count", 200, -600, 600},
     {track.vx, "Track VX Distribution", "vx " + velocity_unit, "Track Count", 200,  -35,  35},
     {track.vy, "Track VY Distribution", "vy " + velocity_unit, "Track Count", 200,  -35,  35},
     {track.vz, "Track VZ Distribution", "vz " + velocity_unit, "Track Count", 200,  -35,  35},
 
-    {track.t0_error, "Track T0 Error Distribution", "t0 error " + time_unit,     "Track Count", 200, 0, 10},
-    {track.x0_error, "Track X0 Error Distribution", "x0 error " + length_unit,   "Track Count", 200, 0, 10},
-    {track.y0_error, "Track Y0 Error Distribution", "y0 error " + length_unit,   "Track Count", 200, 0, 10},
-    {track.z0_error, "Track Z0 Error Distribution", "z0 error " + length_unit,   "Track Count", 200, 0, 10},
+    {track.t0_error, "Track T0 Error Distribution", "t0 error " + time_unit,     "Track Count", 200, 0, 50},
+    {track.x0_error, "Track X0 Error Distribution", "x0 error " + length_unit,   "Track Count", 200, 0, 50},
+    {track.y0_error, "Track Y0 Error Distribution", "y0 error " + length_unit,   "Track Count", 200, 0, 50},
+    {track.z0_error, "Track Z0 Error Distribution", "z0 error " + length_unit,   "Track Count", 200, 0, 50},
     {track.vx_error, "Track VX Error Distribution", "vx error " + velocity_unit, "Track Count", 200, 0, 10},
     {track.vy_error, "Track VY Error Distribution", "vy error " + velocity_unit, "Track Count", 200, 0, 10},
     {track.vz_error, "Track VZ Error Distribution", "vz error " + velocity_unit, "Track Count", 200, 0, 10},
 
-    {track.chi_squared_per_dof, "Track Chi-Squared Distribution",           "chi^2/dof",    "Track Count",  200,  0,    10   },
+    {track.chi_squared_per_dof, "Track Chi-Squared Distribution",           "chi^2/dof",    "Track Count",  200,  0,    12   },
     {track.beta,                "Track Beta Distribution",                  "#beta",        "Track Count",  200,  0,     2   },
     {"track_beta_with_cut",     "Track Beta Distribution With 3#sigma Cut", "#beta",        "Track Count",  200,  0,     2   },
     {track.beta_error,          "Track Beta Error Distribution",            "#beta error",  "Track Count",  200,  0,     2   },
     {track.angle,               "Track Angular Distribution",               "#theta",       "Track Count",  200, -6.28,  6.28},
-    {track.angle_error,         "Track Anglular Error Distribution",        "#theta error", "Track Count",  200,  0,     1   },
+    {track.angle_error,         "Track Angular Error Distribution",         "#theta error", "Track Count",  200,  0,     1   },
     {track.size,                "Track Size Distribution",                  "Hit Count",    "Track Count",   40,  0,    40   },
 
     {vertex.t, "Vertex T Distribution", "t " + time_unit,   "Vertex Count", 100,  300, 400},
@@ -184,7 +184,7 @@ plot::histogram_collection generate_histograms() {
     {vertex.distance,       "Vertex Distance Distribution",      "distance "       + length_unit, "Vertex Count", 300, 0, 600},
     {vertex.distance_error, "Vertex Distanc Error Distribution", "distance error " + length_unit, "Vertex Count", 500, 0, 1000},
 
-    {vertex.chi_squared_per_dof, "Vertex Chi-Squared Distribution", "chi^2/dof",  "Vertex Count", 200, 0, 10},
+    {vertex.chi_squared_per_dof, "Vertex Chi-Squared Distribution", "chi^2/dof",  "Vertex Count",  200, 0, 12},
     {vertex.size,                "Tracks per Vertex Distribution",  "Track Count", "Vertex Count",  10, 0, 10},
 
     {"non_track_hit_count", "Non-Track Hit Count Distribution", "Hit Count",    "Event Count", 100, 0, 50},
