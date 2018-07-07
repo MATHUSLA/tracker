@@ -38,7 +38,7 @@ template<class Event,
   typename = std::enable_if_t<is_r4_type_v<Point>>>
 const r4_point event_density(const Event& points) {
   const auto size = points.size();
-  if (size == 0)
+  if (size == 0UL)
     return r4_point{};
   const auto begin = points.cbegin();
   const auto end = points.cend();

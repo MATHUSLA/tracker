@@ -107,10 +107,10 @@ int prototype_tracking(int argc,
       }
 
       const auto tracks = find_tracks(compressed_event, options);
-      save_tracks(tracks, canvas, histograms, options.verbose_output);
+      save_tracks(tracks, canvas, histograms, false/*options.verbose_output*/);
       print_tracking_summary(event, tracks);
 
-      save_vertex(analysis::vertex(tracks), canvas, histograms, options.verbose_output);
+      save_vertex(analysis::vertex(tracks), canvas, histograms, true/*options.verbose_output*/);
 
       canvas.draw();
     }

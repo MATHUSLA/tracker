@@ -71,7 +71,7 @@ const G4AffineTransform _blank_transform;
 
 //__Convert From G4ThreeVector to R3_Point______________________________________________________
 const r3_point _to_r3_point(const G4ThreeVector& vector) {
-  return { vector.x(), vector.y(), vector.z() };
+  return r3_point{vector.x(), vector.y(), vector.z()};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -160,7 +160,6 @@ bool _in_volume(const r3_point& point,
   const auto& translation = transform.NetTranslation();
   const auto& rotation = transform.NetRotation();
   const auto& position = _to_local_transform(_to_G4ThreeVector(point), translation, rotation);
-  // (rotation.inverse() * _to_G4ThreeVector(point)) - translation;
   return volume->GetLogicalVolume()->GetSolid()->Inside(position);
 }
 //----------------------------------------------------------------------------------------------
@@ -247,7 +246,7 @@ const structure_vector full_structure() {
 //----------------------------------------------------------------------------------------------
 
 //__List of all Geometry Volumes Except those in the List_______________________________________
-const structure_vector full_structure_except(const std::vector<std::string>& names) {
+const structure_vector full_structure_except(const structure_vector& names) {
   structure_vector out;
   out.reserve(_geometry.size());
   const auto names_begin = names.cbegin();
@@ -258,6 +257,7 @@ const structure_vector full_structure_except(const std::vector<std::string>& nam
       if (std::find(names_begin, names_end, name) == names_end)
         out.push_back(name);
     });
+  out.shrink_to_fit();
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -379,12 +379,12 @@ const box_volume _calculate_global_extent(const G4VSolid* solid,
 const box_volume limits_of(const structure_value& name) {
   const auto& geometry_search = _geometry.find(name);
   if (geometry_search == _geometry.cend())
-    return {};
+    return box_volume{};
 
   const auto& gvolume = geometry_search->second;
   const auto solid = _get_solid(gvolume);
   if (!solid)
-    return {};
+    return box_volume{};
 
   const auto& transform = gvolume.transform;
   const auto out = _calculate_global_extent(solid, transform.NetTranslation(), transform.NetRotation());
@@ -408,7 +408,6 @@ real time_resolution_of(const structure_value& name) {
 const box_volume coordinatewise_intersection(const box_volume& first,
                                              const box_volume& second) {
   box_volume out{};
-
   if (!(first.max.x < second.min.x || second.max.x < first.min.x)) {
     out.min.x = std::max(first.min.x, second.min.x);
     out.max.x = std::min(first.max.x, second.max.x);
@@ -429,7 +428,7 @@ const box_volume coordinatewise_intersection(const box_volume& first,
 //__Compute Union of Box Volumes________________________________________________________________
 const box_volume coordinatewise_union(const box_volume& first,
                                       const box_volume& second) {
-  box_volume out{};
+  box_volume out;
   out.min.x = std::min(first.min.x, second.min.x);
   out.max.x = std::max(first.max.x, second.max.x);
   out.min.y = std::min(first.min.y, second.min.y);
@@ -480,7 +479,7 @@ const r3_point find_center(const r3_point& point) {
   return limits_of_volume(point).center;
 }
 const r4_point find_center(const r4_point& point) {
-  const auto& center = limits_of_volume(point).center;
+  const auto center = limits_of_volume(point).center;
   return {point.t, center.x, center.y, center.z};
 }
 //----------------------------------------------------------------------------------------------

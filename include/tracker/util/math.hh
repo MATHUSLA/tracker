@@ -26,6 +26,8 @@
 #define FP_FAST_FMAF
 #define FP_FAST_FMAL
 
+#include <iostream> // TODO: remove
+
 namespace MATHUSLA {
 
 namespace util { namespace math { //////////////////////////////////////////////////////////////
@@ -45,13 +47,13 @@ constexpr const T fused_product(const T& left,
 template<class T, class Input>
 constexpr const T range_fused_product(Input begin,
                                       Input end) {
-  T value = *begin * *(++begin);
-  while (begin != end)
-    value = std::fma(*++begin, *++begin, std::move(value));
+  T value{*begin * *(++begin)};
+  while (++begin != end)
+    value = std::fma(*begin, *++begin, std::move(value));
   return value;
 }
 template<class Range,
-         typename Value = typename Range::value_type>
+  typename Value = typename Range::value_type>
 constexpr const Value range_fused_product(const Range& range) {
   return range_fused_product<Value>(std::cbegin(range), std::cend(range));
 }
@@ -70,13 +72,13 @@ constexpr const T sum_squares(const T& value,
 template<class T, class Input>
 constexpr const T range_sum_squares(Input begin,
                                     Input end) {
-  T value = *begin * *begin;
-  while (begin != end)
-    value = std::fma(*++begin, *begin, std::move(value));
+  T value{*begin * *begin};
+  while (++begin != end)
+    value = std::fma(*begin, *begin, std::move(value));
   return value;
 }
 template<class Range,
-         typename Value = typename Range::value_type>
+  typename Value = typename Range::value_type>
 constexpr const Value range_sum_squares(const Range& range) {
   return range_sum_squares<Value>(std::cbegin(range), std::cend(range));
 }
@@ -94,7 +96,7 @@ constexpr const T range_hypot(Input begin,
   return std::sqrt(range_sum_squares<T>(begin, end));
 }
 template<class Range,
-         typename Value = typename Range::value_type>
+  typename Value = typename Range::value_type>
 constexpr const Value range_hypot(const Range& range) {
   return range_hypot<Value>(std::cbegin(range), std::cend(range));
 }

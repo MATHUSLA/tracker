@@ -42,6 +42,7 @@ constexpr auto time     = ns;
 constexpr auto energy   = MeV;
 constexpr auto momentum = MeVperC;
 constexpr auto velocity = length / time;
+constexpr auto angle    = rad;
 //----------------------------------------------------------------------------------------------
 
 //__Standard Unit String________________________________________________________________________
@@ -50,6 +51,7 @@ static const std::string& time_string     = "ns";
 static const std::string& energy_string   = "MeV";
 static const std::string& momentum_string = "MeVperC";
 static const std::string& velocity_string = "cm/ns";
+static const std::string& angle_string    = "rad";
 //----------------------------------------------------------------------------------------------
 
 //__Alias Units and Constants___________________________________________________________________

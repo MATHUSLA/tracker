@@ -99,11 +99,12 @@ vertex::fit_parameters _guess_vertex(const track_vector& tracks) {
   std::vector<full_hit> track_fronts;
   track_fronts.reserve(size);
   util::algorithm::back_insert_transform(tracks, track_fronts, [](const auto& track) {
-    const auto front_t = track.t0_value();
-    const auto point = track.at_t(front_t);
-    const auto error = track.error_at_t(front_t);
+    const auto front = track.full_front();
+    const auto front_z = front.z;
+    const auto point = track.at_z(front_z);
+    const auto error = track.error_at_z(front_z);
     return full_hit{point.t, point.x, point.y, point.z,
-             r4_point{track.full_front().width.t, error.x, error.y, error.z}};
+             r4_point{error.t, error.x, error.y, stat::error::uniform(front.width.z)}};
   });
 
   real_vector t_errors, x_errors, y_errors, z_errors;
@@ -137,8 +138,10 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
     [&](const auto sum, const auto& track) {
       const auto distance = _vertex_track_r3_distance_with_error(x[0], x[1], x[2], x[3], track);
+      // std::cout << "distance: " << distance.value << "  (+/- " << distance.error << ")\n";
       return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
   });
+  // std::cout << "NLL: " << out << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -166,6 +169,7 @@ void _fit_tracks_minuit(const track_vector& tracks,
 vertex::vertex(const track_vector& tracks) : _tracks(tracks) {
   if (_tracks.size() > 1) {
     _guess = _guess_vertex(_tracks);
+    std::cout << _guess.t << " " << _guess.x << " " << _guess.y << " " << _guess.z << "\n";
     _final = _guess;
     _fit_tracks_minuit(_tracks, _final, _covariance);
     util::algorithm::back_insert_transform(_tracks, _delta_chi2,
@@ -314,18 +318,27 @@ std::ostream& operator<<(std::ostream& os,
   static const std::string bar(80, '-');
   os << bar << "\n";
 
-  os << "* Vertex:\n"
-     << "    " << vertex.point() << " (+/- " << vertex.point_error() << ")\n";
+  os << "* Vertex Parameters:\n"
+     << "    T: " << vertex.t_value() << "  (+/- " << vertex.t_error() << ")\n"
+     << "    X: " << vertex.x_value() << "  (+/- " << vertex.x_error() << ")\n"
+     << "    Y: " << vertex.y_value() << "  (+/- " << vertex.y_error() << ")\n"
+     << "    Z: " << vertex.z_value() << "  (+/- " << vertex.z_error() << ")\n";
 
   os << "* Tracks: \n";
-  for (const auto& track : vertex.tracks()) {
-    os << "    (" << track.t0_value() << ", "
-                  << track.x0_value() << ", "
-                  << track.y0_value() << ", "
-                  << track.z0_value() << ", "
-                  << track.vx_value() << ", "
-                  << track.vy_value() << ", "
-                  << track.vz_value() << ")\n";
+  const auto size = vertex.size();
+  const auto& tracks = vertex.tracks();
+  const auto& distances = vertex.distances();
+  const auto& errors = vertex.distance_errors();
+  for (std::size_t i{}; i < size; ++i) {
+    const auto& track = tracks[i];
+    os << "    " << distances[i] << "  (+/- " << errors[i]
+       << ")\n      from (" << track.t0_value() << ", "
+                            << track.x0_value() << ", "
+                            << track.y0_value() << ", "
+                            << track.z0_value() << ", "
+                            << track.vx_value() << ", "
+                            << track.vy_value() << ", "
+                            << track.vz_value() << ")\n";
   }
 
   os.precision(7);

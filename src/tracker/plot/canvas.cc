@@ -278,7 +278,7 @@ void canvas::add_box(const r3_point& center,
                      const real width_z,
                      const real width,
                      const color& color) {
-  const auto half_widths = r3_point{width_x, width_y, width_z} / 2;
+  const auto half_widths = r3_point{width_x, width_y, width_z} / 2.0L;
   add_box(center - half_widths, center + half_widths, width, color);
 }
 //----------------------------------------------------------------------------------------------
