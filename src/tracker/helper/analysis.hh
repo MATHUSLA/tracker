@@ -44,6 +44,24 @@ static const std::string&        strategy       = "SET STR 2";
 
 } /* namespace settings */ /////////////////////////////////////////////////////////////////////
 
+namespace error { //////////////////////////////////////////////////////////////////////////////
+
+//__MINUIT Minimization Error Codes_____________________________________________________________
+// TODO: populate with better names resembling the proper error code
+static const int unknown_1 = 1;
+static const int unknown_2 = 2;
+static const int unknown_3 = 3;
+static const int diverged  = 4;
+//----------------------------------------------------------------------------------------------
+
+/* TODO: use enum instead of above
+enum error {
+  diverged
+};
+ */
+
+} /* namespace error */ ////////////////////////////////////////////////////////////////////////
+
 //__Function to Minimize________________________________________________________________________
 using minimizing_function = void(Int_t&, Double_t*, Double_t&, Double_t*, Int_t);
 //----------------------------------------------------------------------------------------------
@@ -96,8 +114,9 @@ TMinuit& initialize(TMinuit& minimizer,
 //----------------------------------------------------------------------------------------------
 
 //__Execute Minimization________________________________________________________________________
-inline TMinuit& execute(TMinuit& minimizer,
-                        minimizing_function& f) {
+inline int execute(TMinuit& minimizer,
+                   minimizing_function& f,
+                   bool exit_on_error=false) {
   Int_t error_flag;
   auto parameters_copy = settings::parameters;
   minimizer.SetFCN(f);
@@ -107,17 +126,18 @@ inline TMinuit& execute(TMinuit& minimizer,
     parameters_copy.size(),
     error_flag);
 
-  switch (error_flag) {
-    case 1:
-    case 2:
-    case 3: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"", settings::command,
-                              "\". Exited with Error Code ", error_flag, ".\n");
-    // FIXME: what to do about this?
-    //case 4: util::error::exit("[FATAL ERROR] MINUIT Exited Abnormally ",
-    //                          "with Error Code ", error_flag, ".\n");
-    default: break;
+  if (exit_on_error) {
+    switch (error_flag) {
+      case 1:
+      case 2:
+      case 3: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"", settings::command,
+                                "\". Exited with Error Code ", error_flag, ".\n");
+      case 4: util::error::exit(error_flag,
+                                "[FATAL ERROR] MINUIT Exited Abnormally ",
+                                "with Error Code ", error_flag, ".\n");
+    }
   }
-  return minimizer;
+  return error_flag;
 }
 //----------------------------------------------------------------------------------------------
 

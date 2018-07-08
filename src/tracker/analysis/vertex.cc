@@ -138,10 +138,8 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
     [&](const auto sum, const auto& track) {
       const auto distance = _vertex_track_r3_distance_with_error(x[0], x[1], x[2], x[3], track);
-      // std::cout << "distance: " << distance.value << "  (+/- " << distance.error << ")\n";
       return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
   });
-  // std::cout << "NLL: " << out << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -157,7 +155,13 @@ void _fit_tracks_minuit(const track_vector& tracks,
 
   TMinuit minuit;
   helper::minuit::initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
-  helper::minuit::execute(minuit, _gaussian_nll);
+
+  const auto error_code = helper::minuit::execute(minuit, _gaussian_nll);
+  if (error_code == helper::minuit::error::diverged) {
+    // TODO: do something on divergence
+    //       maybe return to caller
+  }
+
   helper::minuit::get_parameters(minuit, t, x, y, z);
   helper::minuit::get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
 }

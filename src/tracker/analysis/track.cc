@@ -119,7 +119,12 @@ void _fit_event_minuit(const full_event& points,
     case Coordinate::Z: minuit.FixParameter(3); break;
   }
 
-  helper::minuit::execute(minuit, _gaussian_nll);
+  const auto error_code = helper::minuit::execute(minuit, _gaussian_nll);
+  if (error_code == helper::minuit::error::diverged) {
+    // TODO: do something on divergence
+    //       maybe return to caller
+  }
+
   helper::minuit::get_parameters(minuit, t0, x0, y0, z0, vx, vy, vz);
   helper::minuit::get_covariance<track::free_parameter_count>(minuit, covariance_matrix);
 }
@@ -742,7 +747,7 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
   const auto track_buffer = independent_fit_seeds(sorted_seeds, direction);
 
   util::index_vector<> track_indices(size);
-  /*
+  /* FIXME: what to do here?
   util::algorithm::stable_sort_range(track_indices, [&](const auto left, const auto right) {
     return track_buffer[left].chi_squared_per_dof() > track_buffer[right].chi_squared_per_dof();
   });
