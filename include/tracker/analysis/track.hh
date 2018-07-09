@@ -146,7 +146,7 @@ public:
 
 private:
   fit_parameters _guess, _final;
-  std::vector<full_hit> _full_event;
+  analysis::full_event _full_event;
   real_vector _delta_chi2;
   covariance_matrix_type _covariance;
   geometry::structure_vector _detectors;

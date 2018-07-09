@@ -144,7 +144,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
-void _fit_tracks_minuit(const track_vector& tracks,
+bool _fit_tracks_minuit(const track_vector& tracks,
                         vertex::fit_parameters& parameters,
                         vertex::covariance_matrix_type& covariance_matrix) {
   auto& t = parameters.t;
@@ -157,13 +157,12 @@ void _fit_tracks_minuit(const track_vector& tracks,
   helper::minuit::initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
 
   const auto error_code = helper::minuit::execute(minuit, _gaussian_nll);
-  if (error_code == helper::minuit::error::diverged) {
-    // TODO: do something on divergence
-    //       maybe return to caller
-  }
+  if (error_code == helper::minuit::error::diverged)
+    return false;
 
   helper::minuit::get_parameters(minuit, t, x, y, z);
   helper::minuit::get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
+  return true;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -173,13 +172,12 @@ void _fit_tracks_minuit(const track_vector& tracks,
 vertex::vertex(const track_vector& tracks) : _tracks(tracks) {
   if (_tracks.size() > 1) {
     _guess = _guess_vertex(_tracks);
-    std::cout << _guess.t << " " << _guess.x << " " << _guess.y << " " << _guess.z << "\n";
     _final = _guess;
-    _fit_tracks_minuit(_tracks, _final, _covariance);
-    util::algorithm::back_insert_transform(_tracks, _delta_chi2,
-      [&](const auto& track) {
-        return _vertex_squared_residual(
-          _final.t.value, _final.x.value, _final.y.value, _final.z.value, track); });
+    if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
+      util::algorithm::back_insert_transform(_tracks, _delta_chi2,
+        [&](const auto& track) {
+          return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track); });
+    }
   } else {
     _delta_chi2.resize(1, 0);
     _guess = {};

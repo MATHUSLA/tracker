@@ -95,7 +95,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
-void _fit_event_minuit(const full_event& points,
+bool _fit_event_minuit(const full_event& points,
                        const Coordinate direction,
                        track::fit_parameters& parameters,
                        track::covariance_matrix_type& covariance_matrix) {
@@ -120,49 +120,40 @@ void _fit_event_minuit(const full_event& points,
   }
 
   const auto error_code = helper::minuit::execute(minuit, _gaussian_nll);
-  if (error_code == helper::minuit::error::diverged) {
-    // TODO: do something on divergence
-    //       maybe return to caller
-  }
+  if (error_code == helper::minuit::error::diverged)
+    return false;
 
   helper::minuit::get_parameters(minuit, t0, x0, y0, z0, vx, vy, vz);
   helper::minuit::get_covariance<track::free_parameter_count>(minuit, covariance_matrix);
+  return true;
 }
 //----------------------------------------------------------------------------------------------
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
-track::track(const std::vector<hit>& points,
+track::track(const analysis::event& points,
              const Coordinate direction)
     : track(add_width(points), direction) {}
 
 //__Track Constructor___________________________________________________________________________
-track::track(const std::vector<full_hit>& points,
+track::track(const analysis::full_event& points,
              const Coordinate direction)
     : _full_event(points), _direction(direction) {
-
   _guess = _guess_track(_full_event);
   _final = _guess;
-  _fit_event_minuit(_full_event, _direction, _final, _covariance);
+  if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
+    const auto& full_event_begin = _full_event.cbegin();
+    const auto& full_event_end = _full_event.cend();
 
-  const auto& full_event_begin = _full_event.cbegin();
-  const auto& full_event_end = _full_event.cend();
+    std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi2),
+      [&](const auto& point) {
+        return _track_squared_residual(
+          t0_value(), x0_value(), y0_value(), z0_value(), vx_value(), vy_value(), vz_value(), point);
+      });
 
-  std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi2),
-    [&](const auto& point) {
-      return _track_squared_residual(
-        _final.t0.value,
-        _final.x0.value,
-        _final.y0.value,
-        _final.z0.value,
-        _final.vx.value,
-        _final.vy.value,
-        _final.vz.value,
-        point);
-    });
-
-  std::transform(full_event_begin, full_event_end, std::back_inserter(_detectors),
-    [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
+    std::transform(full_event_begin, full_event_end, std::back_inserter(_detectors),
+      [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
+  }
 }
 //----------------------------------------------------------------------------------------------
 
