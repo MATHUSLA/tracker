@@ -821,6 +821,16 @@ inline const uniform_real get_distribution_parameters<uniform_real>(const distri
 
 // TODO: finish get_parameters
 
+//__Build Normal Distribution Parameter Type from Distribution Parameters_______________________
+template<>
+inline const normal get_distribution_parameters<normal>(const distribution_union& distribution) {
+  const auto& dist = distribution.normal;
+  return normal(dist.mean(), dist.stddev());
+}
+//----------------------------------------------------------------------------------------------
+
+// TODO: finish get_parameters
+
 } /* namespace detail */ ///////////////////////////////////////////////////////////////////////
 
 //__Random Number Generator_____________________________________________________________________
@@ -828,8 +838,8 @@ class generator {
 public:
   template<class Type>
   generator(Type&& dist) {
-    // FIXME: better seeding
-    seed(time(0));
+    // FIXME: better seeding or remove
+    seed(time(nullptr));
     distribution(std::forward<Type>(dist));
   }
   generator() = default;

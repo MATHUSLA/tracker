@@ -87,7 +87,7 @@ int prototype_tracking(int argc,
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 
-      const auto compressed_event = analysis::compress(event, options.compression_size);
+      const auto compressed_event = analysis::compress(event, options.time_smearing);
       const auto compression_gain = event_size / static_cast<type::real>(compressed_event.size());
 
       if (event.empty() || compression_gain == event_size)

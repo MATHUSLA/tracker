@@ -51,13 +51,17 @@ struct tracking_options {
   std::string  data_dz_key                = "";
   std::string  data_detector_key          = "Detector";
   std::string  data_track_id_key          = "Track";
+  std::string  data_parent_id_key         = "Parent";
+  std::string  data_e_key                 = "";
+  std::string  data_px_key                = "";
+  std::string  data_py_key                = "";
+  std::string  data_pz_key                = "";
 
   std::string  statistics_directory       = "";
   std::string  statistics_file_prefix     = "statistics";
   std::string  statistics_file_extension  = "root";
 
   bool         time_smearing              = true;
-  r4_point     compression_size           = {0, 0, 0, 0};
   Coordinate   layer_axis                 = Coordinate::Z;
   real         layer_depth                = 0;
   real         line_width                 = 1;

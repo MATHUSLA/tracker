@@ -901,13 +901,16 @@ const tracking_options read(const std::string& path) {
         out.data_detector_key = value;
       } else if (key == "data-track-id-key") {
         out.data_track_id_key = value;
+      } else if (key == "data-parent-id-key") {
+        out.data_parent_id_key = value;
+      } else if (key == "data-momentum-keys") {
+        _parse_key_value_data_keys(key, value,
+          out.data_e_key, out.data_px_key, out.data_py_key, out.data_pz_key);
       } else if (key == "geometry-default-time-error") {
         _parse_key_value_positive_real(key, value, out.default_time_error);
         out.default_time_error *= units::time;
       } else if (key == "time-smearing") {
         _parse_key_value_boolean(key, value, out.time_smearing);
-      } else if (key == "compression-size") {
-        _parse_key_value_r4_point(key, value, out.compression_size, true);
       } else if (key == "layer-axis") {
         _parse_key_value_r3_coordinate(key, value, out.layer_axis);
       } else if (key == "layer-depth") {

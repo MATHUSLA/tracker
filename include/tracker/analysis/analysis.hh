@@ -46,18 +46,11 @@ const full_hit add_width(const hit& point);
 const full_event add_width(const event& points);
 //----------------------------------------------------------------------------------------------
 
-//__Center Events by Coordinate_________________________________________________________________
-const event centralize(const event& points,
-                       const Coordinate coordinate);
-const full_event centralize(const full_event& points,
-                            const Coordinate coordinate);
-//----------------------------------------------------------------------------------------------
-
 //__Compress Points by R4 Interval______________________________________________________________
 const event compress(const event& points,
-                     const r4_point& ds);
+                     bool time_smearing);
 const full_event compress(const full_event& points,
-                          const r4_point& ds);
+                          bool time_smearing);
 //----------------------------------------------------------------------------------------------
 
 //__Event Partition Type________________________________________________________________________

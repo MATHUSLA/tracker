@@ -21,12 +21,12 @@
 #include <numeric>
 #include <queue>
 
-#include <tracker/geometry.hh>
-
+#include <tracker/core/stat.hh>
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
 #include <tracker/util/index_vector.hh>
 #include <tracker/util/type.hh>
+#include <tracker/geometry.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -103,35 +103,19 @@ const full_event add_width(const event& points) {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Centralize Events by Coordinate_____________________________________________________________
-template<class Event,
-  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-const Event centralize(const Event& points,
-                       const Coordinate coordinate) {
-  return coordinate_copy_sort(coordinate, points);
-}
-const event centralize(const event& points,
-                       const Coordinate coordinate) {
-  return centralize<>(points, coordinate);
-}
-const full_event centralize(const full_event& points,
-                            const Coordinate coordinate) {
-  return centralize<>(points, coordinate);
-}
-//----------------------------------------------------------------------------------------------
-
 //__Compress Points by R4 Interval______________________________________________________________
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const Event compress(const Event& points,
-                     const r4_point& ds) {
+                     bool time_smearing) {
   const auto size = points.size();
-  if (size <= 1) return points;
+  if (size <= 1)
+    return points;
 
   Event out;
   out.reserve(size);
 
-  const auto& sorted_event = centralize(points, Coordinate::T);
+  const auto sorted_event = t_copy_sort(points);
 
   using size_type = typename Event::size_type;
 
@@ -140,7 +124,9 @@ const Event compress(const Event& points,
   while (index < size) {
     size_type collected = 1, missed_index = 0;
     const auto& point = sorted_event[index];
-    const auto time_interval = point.t + ds.t;
+    const auto volume = geometry::volume(reduce_to_r4(point));
+    const auto time_error = geometry::time_resolution_of(volume);
+    const auto time_interval = point.t + time_error;
     auto sum = point;
 
     auto skipped = false;
@@ -153,7 +139,7 @@ const Event compress(const Event& points,
       if (next.t > time_interval)
         break;
 
-      if (within_dr(point, next, ds)) {
+      if (volume == geometry::volume(reduce_to_r4(next))) {
         ++collected;
         sum += next;
         if (skipped)
@@ -167,18 +153,31 @@ const Event compress(const Event& points,
     if (skipped)
       index = missed_index;
 
-    out.push_back(sum / collected);
+    auto average = sum / collected;
+
+    if (time_smearing) {
+      using namespace stat;
+      static auto current_error = geometry::default_time_resolution();
+      static random::generator gen(random::normal(0, current_error));
+      if (current_error != time_error) {
+        gen.distribution(random::normal(0, time_error));
+        current_error = time_error;
+      }
+      average.t += gen;
+    }
+
+    out.push_back(average);
   }
 
-  return out;
+  return t_sort(out);
 }
 const event compress(const event& points,
-                     const r4_point& ds) {
-  return compress<>(points, ds);
+                     bool time_smearing) {
+  return compress<>(points, time_smearing);
 }
 const full_event compress(const full_event& points,
-                          const r4_point& ds) {
-  return compress<>(points, ds);
+                          bool time_smearing) {
+  return compress<>(points, time_smearing);
 }
 //----------------------------------------------------------------------------------------------
 
