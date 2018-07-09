@@ -21,7 +21,6 @@
 #pragma once
 
 #include <memory>
-#include <tuple>
 #include <unordered_map>
 
 #include <tracker/core/type.hh>
@@ -393,7 +392,7 @@ auto draw_all(T& t) -> decltype(t.draw()) {
   t.draw();
 }
 template<class T>
-auto draw_all(T& t) -> decltype (t.draw_all()){
+auto draw_all(T& t) -> decltype (t.draw_all()) {
   t.draw_all();
 }
 template<class T, class ...Ts>

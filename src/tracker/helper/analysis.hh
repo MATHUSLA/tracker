@@ -24,6 +24,8 @@
 
 #include <tracker/analysis/analysis.hh>
 
+#include <tracker/util/error.hh>
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { namespace helper { ////////////////////////////////////////////////////////

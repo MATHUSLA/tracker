@@ -122,13 +122,32 @@ public:
   const full_hit full_front() const { return _full_event.front(); }
   const full_hit full_back() const { return _full_event.back(); }
   const analysis::full_event& full_event() const { return _full_event; }
+  const geometry::structure_vector& detectors() const { return _detectors; }
+
+  Coordinate direction() const { return _direction; }
 
   std::size_t size() const { return _full_event.size(); }
   bool empty() const { return _full_event.empty(); }
 
-  const geometry::structure_vector& detectors() const { return _detectors; }
+  std::size_t reset(const analysis::event& points);
+  std::size_t reset(const analysis::full_event& points);
 
-  Coordinate direction() const { return _direction; }
+  std::size_t reset(const analysis::event& points,
+                    const Coordinate direction);
+  std::size_t reset(const analysis::full_event& points,
+                    const Coordinate direction);
+
+  std::size_t insert(const hit& point);
+  std::size_t insert(const analysis::event& points);
+  std::size_t insert(const full_hit& point);
+  std::size_t insert(const analysis::full_event& points);
+
+  std::size_t remove(const std::size_t index);
+  std::size_t remove(const std::vector<std::size_t>& indices);
+
+  std::size_t prune_on_chi_squared(const real max_chi_squared);
+
+  void reparameterize(const Coordinate direction);
 
   struct plotting_keys {
     plot::histogram::name_type t0, x0, y0, z0, vx, vy, vz,

@@ -131,29 +131,16 @@ bool _fit_event_minuit(const full_event& points,
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
+//__Track Constructor___________________________________________________________________________
 track::track(const analysis::event& points,
              const Coordinate direction)
     : track(add_width(points), direction) {}
+//----------------------------------------------------------------------------------------------
 
 //__Track Constructor___________________________________________________________________________
 track::track(const analysis::full_event& points,
-             const Coordinate direction)
-    : _full_event(points), _direction(direction) {
-  _guess = _guess_track(_full_event);
-  _final = _guess;
-  if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
-    const auto& full_event_begin = _full_event.cbegin();
-    const auto& full_event_end = _full_event.cend();
-
-    std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi2),
-      [&](const auto& point) {
-        return _track_squared_residual(
-          t0_value(), x0_value(), y0_value(), z0_value(), vx_value(), vy_value(), vz_value(), point);
-      });
-
-    std::transform(full_event_begin, full_event_end, std::back_inserter(_detectors),
-      [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
-  }
+             const Coordinate direction) {
+  reset(points, direction);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -531,23 +518,168 @@ real track::covariance(const track::parameter p,
 
 //__Get Front of Event from Track_______________________________________________________________
 const hit track::front() const {
-  return (*this)(_full_event.front().z);
+  switch (_direction) {
+    case Coordinate::T: return at_t(full_front().t);
+    case Coordinate::X: return at_x(full_front().x);
+    case Coordinate::Y: return at_y(full_front().y);
+    case Coordinate::Z: return at_z(full_front().z);
+  }
 }
 //----------------------------------------------------------------------------------------------
 
 //__Get Back of Event from Track________________________________________________________________
 const hit track::back() const {
-  return (*this)(_full_event.back().z);
+  switch (_direction) {
+    case Coordinate::T: return at_t(full_back().t);
+    case Coordinate::X: return at_x(full_back().x);
+    case Coordinate::Y: return at_y(full_back().y);
+    case Coordinate::Z: return at_z(full_back().z);
+  }
 }
 //----------------------------------------------------------------------------------------------
 
 //__Get Event from Track________________________________________________________________________
 const std::vector<hit> track::event() const {
   std::vector<hit> out;
-  out.reserve(_full_event.size());
+  out.reserve(size());
   util::algorithm::back_insert_transform(_full_event, out,
     [](const auto& point) { return reduce_to_r4(point); });
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reset Track_________________________________________________________________________________
+std::size_t track::reset(const analysis::event& points) {
+  return reset(add_width(points));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reset Track_________________________________________________________________________________
+std::size_t track::reset(const analysis::full_event& points) {
+  _full_event = points;
+  _guess = _guess_track(_full_event);
+  _final = _guess;
+  if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
+    const auto& full_event_begin = _full_event.cbegin();
+    const auto& full_event_end = _full_event.cend();
+
+    std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi2),
+      [&](const auto& point) {
+        return _track_squared_residual(
+          t0_value(), x0_value(), y0_value(), z0_value(), vx_value(), vy_value(), vz_value(), point);
+      });
+
+    std::transform(full_event_begin, full_event_end, std::back_inserter(_detectors),
+      [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
+  }
+  return size();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reset Track_________________________________________________________________________________
+std::size_t track::reset(const analysis::event& points,
+                         const Coordinate direction) {
+  _direction = direction;
+  return reset(points);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reset Track_________________________________________________________________________________
+std::size_t track::reset(const analysis::full_event& points,
+                         const Coordinate direction) {
+  _direction = direction;
+  return reset(points);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Insert Hit into Track and Refit_____________________________________________________________
+std::size_t track::insert(const hit& point) {
+  return insert(add_width(point));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Insert Hits into Track and Refit____________________________________________________________
+std::size_t track::insert(const analysis::event& points) {
+  return insert(add_width(points));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Insert Full Hit into Track and Refit________________________________________________________
+std::size_t track::insert(const full_hit& point) {
+  const auto search = util::algorithm::binary_find_range(_full_event, point, t_ordered<analysis::full_hit>{});
+  if (search != _full_event.cend()) {
+    _full_event.insert(search, point);
+    _full_event.shrink_to_fit();
+  }
+  return reset(_full_event);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Insert Full Hits into Track and Refit_______________________________________________________
+std::size_t track::insert(const analysis::full_event& points) {
+  analysis::full_event saved_hits;
+  saved_hits.reserve(size() + points.size());
+  const auto sorted = util::algorithm::copy_sort_range(points, t_ordered<analysis::full_hit>{});
+  std::set_union(_full_event.cbegin(), _full_event.cend(),
+                 sorted.cbegin(), sorted.cend(),
+                 std::back_inserter(saved_hits),
+                 t_ordered<analysis::full_hit>{});
+  saved_hits.shrink_to_fit();
+  return reset(saved_hits);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Remove Hit from Track and Refit_____________________________________________________________
+std::size_t track::remove(const std::size_t index) {
+  const auto s = size();
+  if (index >= s)
+    return s;
+
+  analysis::full_event saved_hits;
+  saved_hits.reserve(s - 1);
+  const auto begin = _full_event.cbegin();
+  const auto end = _full_event.cend();
+  saved_hits.insert(saved_hits.cend(), begin, begin + index);
+  saved_hits.insert(saved_hits.cend(), begin + index + 1, end);
+  return reset(saved_hits);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Remove Hits from Track and Refit____________________________________________________________
+std::size_t track::remove(const std::vector<std::size_t>& indices) {
+  const auto sorted = util::algorithm::copy_sort_range(indices);
+  const auto s = size();
+  analysis::full_event saved_hits;
+  saved_hits.reserve(s);
+  for (std::size_t hit_index{}, removal_index{}; hit_index < s; ++hit_index) {
+    if (sorted[removal_index] == hit_index) {
+      ++removal_index;
+    } else {
+      saved_hits.push_back(_full_event[hit_index]);
+    }
+  }
+  saved_hits.shrink_to_fit();
+  return reset(saved_hits);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Remove Hits from Track if Exceed Maximum Chi-Squared and Refit______________________________
+std::size_t track::prune_on_chi_squared(const real max_chi_squared) {
+  const auto s = size();
+  std::vector<std::size_t> indices;
+  indices.reserve(s);
+  for (std::size_t i{}; i < s; ++i) {
+    if (chi_squared_vector()[i] > max_chi_squared)
+      indices.push_back(i);
+  }
+  return remove(indices);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reparameterize Track in New Direction_______________________________________________________
+void track::reparameterize(const Coordinate direction) {
+  if (direction != _direction)
+    reset(_full_event, direction);
 }
 //----------------------------------------------------------------------------------------------
 

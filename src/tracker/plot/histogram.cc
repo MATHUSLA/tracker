@@ -81,7 +81,7 @@ struct histogram::impl {
       : _canvas(_build_TCanvas(other._hist->GetName(), other._hist->GetTitle())),
         _hist(dynamic_cast<TH1D*>(other._hist->Clone())) {}
 
-  impl(impl&& other) = default;
+  impl(impl&& other) noexcept = default;
 
   impl& operator=(const impl& other) {
     if (this != &other) {
@@ -91,7 +91,7 @@ struct histogram::impl {
     return *this;
   }
 
-  impl& operator=(impl&& other) = default;
+  impl& operator=(impl&& other) noexcept = default;
   ~impl() = default;
 };
 //----------------------------------------------------------------------------------------------

@@ -128,26 +128,12 @@ constexpr UnaryFunction back_insert_reverse_copy_until(const InputRange& in,
 
 //__Range Subset Inclusion______________________________________________________________________
 // [Implementation from cppreference]
-template<class InputIt1, class InputIt2>
-constexpr bool includes(InputIt1 first1,
-                        InputIt1 last1,
-                        InputIt2 first2,
-                        InputIt2 last2) {
-  for (; first2 != last2; ++first1) {
-    if (first1 == last1 || *first2 < *first1)
-      return false;
-    if (!(*first1 < *first2))
-      ++first2;
-  }
-  return true;
-}
-// [Implementation from cppreference]
-template<class InputIt1, class InputIt2, class Compare>
+template<class InputIt1, class InputIt2, class Compare=std::less<>>
 constexpr bool includes(InputIt1 first1,
                         InputIt1 last1,
                         InputIt2 first2,
                         InputIt2 last2,
-                        Compare comp) {
+                        Compare comp={}) {
   for (; first2 != last2; ++first1) {
     if (first1 == last1 || comp(*first2, *first1))
       return false;
@@ -159,43 +145,37 @@ constexpr bool includes(InputIt1 first1,
 //----------------------------------------------------------------------------------------------
 
 //__Range Subset Inclusion______________________________________________________________________
-template<class Range1, class Range2>
-constexpr bool range_includes(const Range1& range1,
-                              const Range2& range2) {
-  return util::algorithm::includes(std::cbegin(range1), std::cend(range1),
-                                   std::cbegin(range2), std::cend(range2));
-}
-template<class Range1, class Range2, class Compare>
+template<class Range1, class Range2, class Compare=std::less<>>
 constexpr bool range_includes(const Range1& range1,
                               const Range2& range2,
-                              const Compare comp) {
+                              Compare comp={}) {
   return util::algorithm::includes(std::cbegin(range1), std::cend(range1),
                                    std::cbegin(range2), std::cend(range2), comp);
 }
 //----------------------------------------------------------------------------------------------
 
 //__General Range Sorting Function______________________________________________________________
-template<class Range, class Compare>
+template<class Range, class Compare=std::less<>>
 Range& sort_range(Range& range,
-                  const Compare comp) {
+                  Compare comp={}) {
   std::sort(range.begin(), range.end(), comp);
   return range;
 }
 //----------------------------------------------------------------------------------------------
 
 //__General Range Stable Sorting Function_______________________________________________________
-template<class Range, class Compare>
+template<class Range, class Compare=std::less<>>
 Range& stable_sort_range(Range& range,
-                         const Compare comp) {
+                         Compare comp={}) {
   std::stable_sort(range.begin(), range.end(), comp);
   return range;
 }
 //----------------------------------------------------------------------------------------------
 
 //__General Range Copy Sorting Function_________________________________________________________
-template<class Range, class Compare>
+template<class Range, class Compare=std::less<>>
 Range copy_sort_range(const Range& range,
-                      const Compare comp) {
+                      Compare comp={}) {
   auto copy = range;
   std::partial_sort_copy(range.cbegin(), range.cend(), copy.begin(), copy.end(), comp);
   return copy;
@@ -203,9 +183,9 @@ Range copy_sort_range(const Range& range,
 //----------------------------------------------------------------------------------------------
 
 //__General Range Stable Sorting Function_______________________________________________________
-template<class Range, class Compare>
+template<class Range, class Compare=std::less<>>
 Range stable_copy_sort_range(const Range& range,
-                             const Compare comp) {
+                             Compare comp={}) {
   auto copy = range;
   std::stable_sort(copy.begin(), copy.end(), comp);
   return copy;
@@ -219,16 +199,16 @@ constexpr ForwardIt binary_find(ForwardIt first,
                                 ForwardIt last,
                                 const T& value,
                                 Compare comp={}) {
-  first = std::lower_bound(first, last, value, comp);
-  return first != last && !comp(value, *first) ? first : last;
+  first = std::upper_bound(first, last, value, comp);  // TODO: should be upper bound or lower bound?
+  return first != last && !comp(*first, value) ? first : last;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Find Element from Binary Search in Range____________________________________________________
 template<class Range, class T, class Compare=std::less<>>
-constexpr typename Range::iterator binary_find_range(const Range& range,
-                                                     const T& value,
-                                                     Compare comp={}) {
+constexpr typename Range::const_iterator binary_find_range(const Range& range,
+                                                           const T& value,
+                                                           Compare comp={}) {
   return binary_find(std::cbegin(range), std::cend(range), value, comp);
 }
 //----------------------------------------------------------------------------------------------
