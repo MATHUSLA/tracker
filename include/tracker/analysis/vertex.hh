@@ -72,7 +72,7 @@ public:
   real_vector distance_errors() const;
 
   real chi_squared() const;
-  size_t degrees_of_freedom() const;
+  std::size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
   const real_vector& chi_squared_vector() const { return _delta_chi2; }
 

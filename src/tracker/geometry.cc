@@ -272,10 +272,10 @@ real default_time_resolution() {
 const structure_vector volume_hierarchy(const structure_value& name) {
   // TODO: finish
   structure_vector out{};
-  _traverse_geometry([&](const auto&, const auto&) {
-    out.push_back(name);
-    return true;
-  });
+  // const auto& search = _geometry.find(name);
+  // if (search != _geometry.cend()) {
+  //   const auto& volume = search->second.volume->GetLogicalVolume();
+  // }
   return out;
 }
 //----------------------------------------------------------------------------------------------

@@ -88,7 +88,7 @@ track::fit_parameters _guess_track(const full_event& points) {
 //__Fix V to be C_______________________________________________________________________________
 real _vz_from_c(const real vx,
                 const real vy) {
-  static constexpr auto c2 = units::speed_of_light * units::speed_of_light;
+  static constexpr const auto c2 = units::speed_of_light * units::speed_of_light;
   return std::sqrt(c2 - vx * vx - vy * vy);
 }
 //----------------------------------------------------------------------------------------------
@@ -397,9 +397,9 @@ real track::beta() const {
 
 //__Error in Relativistic Beta for the Track____________________________________________________
 real track::beta_error() const {
-  constexpr auto c_inv = 1.0L / units::speed_of_light;
-  constexpr auto c_inv2 = c_inv * c_inv;
-  constexpr auto twice_c_inv = 2.0L * c_inv;
+  static constexpr const auto c_inv = 1.0L / units::speed_of_light;
+  static constexpr const auto c_inv2 = c_inv * c_inv;
+  static constexpr const auto twice_c_inv = 2.0L * c_inv;
   const auto covariance = c_inv2 * _3x3_covariance(*this, parameter::VX, parameter::VY, parameter::VZ);
   const real_array<3> gradient{
     twice_c_inv * _final.vx.value, twice_c_inv * _final.vy.value, twice_c_inv * _final.vz.value};

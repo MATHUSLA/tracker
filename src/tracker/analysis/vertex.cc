@@ -182,13 +182,13 @@ vertex::vertex(track_vector&& tracks) {
 
 //__Vertex Point________________________________________________________________________________
 const r4_point vertex::point() const {
-  return {_final.t.value, _final.x.value, _final.y.value, _final.z.value};
+  return r4_point{t_value(), x_value(), y_value(), z_value()};
 }
 //----------------------------------------------------------------------------------------------
 
 //__Error in Calculation of Vertex Point________________________________________________________
 const r4_point vertex::point_error() const {
-  return {_final.t.error, _final.x.error, _final.y.error, _final.z.error};
+  return r4_point{t_error(), x_error(), y_error(), z_error()};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -242,7 +242,7 @@ real vertex::chi_squared() const {
 //----------------------------------------------------------------------------------------------
 
 //__Vertex Degrees of Freedom___________________________________________________________________
-size_t vertex::degrees_of_freedom() const {
+std::size_t vertex::degrees_of_freedom() const {
   return 4UL;
 }
 //----------------------------------------------------------------------------------------------
@@ -288,14 +288,15 @@ std::size_t vertex::reset(const track_vector& tracks) {
     if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
       util::algorithm::back_insert_transform(_tracks, _delta_chi2,
         [&](const auto& track) {
-          return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track); });
+          return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track);
+        });
+      return size();
     }
-  } else {
-    _delta_chi2.resize(1, 0);
-    _guess = {};
-    _final = {};
-    _covariance = {};
   }
+  _delta_chi2.resize(1, 0);
+  _guess = {};
+  _final = {};
+  _covariance = {};
   return size();
 }
 //----------------------------------------------------------------------------------------------

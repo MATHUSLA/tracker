@@ -130,13 +130,17 @@ inline int execute(TMinuit& minimizer,
 
   if (exit_on_error) {
     switch (error_flag) {
+      case 0: break;
       case 1:
       case 2:
-      case 3: util::error::exit("[FATAL ERROR] Unknown MINUIT Command \"", settings::command,
+      case 3: util::error::exit(error_flag,
+                                "[FATAL ERROR] Unknown MINUIT Command \"", settings::command,
                                 "\". Exited with Error Code ", error_flag, ".\n");
       case 4: util::error::exit(error_flag,
                                 "[FATAL ERROR] MINUIT Exited Abnormally ",
                                 "with Error Code ", error_flag, ".\n");
+      default: util::error::exit(error_flag,
+                                 "[FATAL ERROR] Unknown MINUIT Error Code: ", error_flag, ".\n");
     }
   }
   return error_flag;

@@ -104,7 +104,7 @@ int prototype_tracking(int argc,
     const auto mc_imported_events = event_bundle.true_events;
 
     auto histograms = generate_histograms();
-    for (std::uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
+    for (std::uint_fast64_t event_counter=97; event_counter < 98/*import_size*/; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -131,7 +131,7 @@ int prototype_tracking(int argc,
       analysis::event non_track_points;
       const auto tracks = find_primary_tracks(compressed_event, options, non_track_points);
 
-      std::cout << "NONTRACK: " << non_track_points.size() << "\n";
+      // TODO: fit non-track points to beta=1 tracks
 
       save_tracks(tracks, canvas, histograms, options.verbose_output);
       print_tracking_summary(event, tracks);

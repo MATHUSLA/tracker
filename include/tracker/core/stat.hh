@@ -533,15 +533,16 @@ struct student_t         : public distribution_parameters<Distribution::StudentT
   real n;
   student_t(real dof)                              : n(dof) {}
 };
-// TODO:
+// TODO: finish
 // struct discrete : public distribution_parameters<Distribution::Discrete> {
 //   real_vector probabilities;
 // };
-// TODO:
+// TODO: finish
 // struct piecewise_constant : public distribution_parameters<Distribution::PiecewiseConstant> {
 //   real_vector intervals, densities;
 // };
-// TODO: struct piecewise_linear : public distribution_parameters<Distribution::PiecewiseLinear> {
+// TODO: finish
+// struct piecewise_linear : public distribution_parameters<Distribution::PiecewiseLinear> {
 //   real_vector intervals, densities;
 // };
 //----------------------------------------------------------------------------------------------
