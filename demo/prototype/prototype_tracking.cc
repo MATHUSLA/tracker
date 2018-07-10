@@ -24,6 +24,8 @@
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
 
+#include <tracker/util/index_vector.hh>
+#include <tracker/util/bit_vector.hh>
 #include <tracker/util/io.hh>
 
 #include "geometry.hh"
@@ -39,15 +41,35 @@ namespace reader   = MATHUSLA::TRACKER::reader;
 namespace MATHUSLA {
 
 //__Find Tracks for Prototype___________________________________________________________________
-const analysis::track_vector find_tracks(const analysis::event& event,
-                                         const reader::tracking_options& options) {
+const analysis::track_vector find_primary_tracks(const analysis::event& event,
+                                                 const reader::tracking_options& options,
+                                                 analysis::event& non_track_points) {
   analysis::event combined_rpc_hits;
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-  return analysis::overlap_fit_seeds(tracking_vector);
+  const auto out = analysis::overlap_fit_seeds(tracking_vector);
+
+  // TODO: improve efficiency
+  const auto size = event.size();
+  util::bit_vector save_list(size);
+  for (const auto& track : out) {
+    for (const auto& point : track.event()) {
+      const auto search = util::algorithm::range_binary_find_first(event,
+                                                                   point,
+                                                                   type::t_ordered<analysis::hit>{});
+      if (search != event.cend())
+        save_list.set(static_cast<std::size_t>(search - event.cbegin()));
+    }
+  }
+
+  non_track_points.clear();
+  non_track_points.reserve(size - save_list.count());
+  save_list.unset_conditional_push_back(event, non_track_points);
+
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -88,13 +110,13 @@ int prototype_tracking(int argc,
       const auto event_counter_string = std::to_string(event_counter);
 
       const auto compressed_event = analysis::compress(event, options.time_smearing);
-      const auto compression_gain = event_size / static_cast<type::real>(compressed_event.size());
+      const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
-      if (event.empty() || compression_gain == event_size)
+      if (event.empty() || compression_size == event_size)
         continue;
 
       const auto event_density = modified_geometry_event_density(compressed_event);
-      print_event_summary(event_counter, event_size, compression_gain, event_density);
+      print_event_summary(event_counter, event_size, compression_size, event_density);
 
       if (event_density >= options.event_density_limit)
         continue;
@@ -106,7 +128,11 @@ int prototype_tracking(int argc,
         canvas.add_points(compressed_event, 0.8, plot::color::BLACK);
       }
 
-      const auto tracks = find_tracks(compressed_event, options);
+      analysis::event non_track_points;
+      const auto tracks = find_primary_tracks(compressed_event, options, non_track_points);
+
+      std::cout << "NONTRACK: " << non_track_points.size() << "\n";
+
       save_tracks(tracks, canvas, histograms, options.verbose_output);
       print_tracking_summary(event, tracks);
 
@@ -131,7 +157,7 @@ int prototype_tracking(int argc,
 //__Silent Prototype Tracking Algorithm_________________________________________________________
 int silent_prototype_tracking(int argc,
                               char* argv[]) {
-  util::io::remove_buffer(/*std::cout,*/ std::cerr /*, std::clog*/);
+  util::io::remove_buffer(std::cout, std::cerr, std::clog);
   return prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------
@@ -141,6 +167,6 @@ int silent_prototype_tracking(int argc,
 //__Main Function: Prototype Tracker____________________________________________________________
 int main(int argc,
          char* argv[]) {
-  return MATHUSLA::silent_prototype_tracking(argc, argv);
+  return MATHUSLA::prototype_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

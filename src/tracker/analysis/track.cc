@@ -85,12 +85,25 @@ track::fit_parameters _guess_track(const full_event& points) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Fix V to be C_______________________________________________________________________________
+real _vz_from_c(const real vx,
+                const real vy) {
+  static constexpr auto c2 = units::speed_of_light * units::speed_of_light;
+  return std::sqrt(c2 - vx * vx - vy * vy);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
 thread_local full_event&& _nll_fit_event = {};
 void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
     [&](const auto sum, const auto& point) {
       return sum + _track_squared_residual(x[0], x[1], x[2], x[3], x[4], x[5], x[6], point); });
+}
+void _gaussian_nll_two_hit_track(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
+  out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
+    [&](const auto sum, const auto& point) {
+      return sum + _track_squared_residual(x[0], x[1], x[2], x[3], x[4], x[5], _vz_from_c(x[4], x[5]), point); });
 }
 //----------------------------------------------------------------------------------------------
 
@@ -99,6 +112,8 @@ bool _fit_event_minuit(const full_event& points,
                        const Coordinate direction,
                        track::fit_parameters& parameters,
                        track::covariance_matrix_type& covariance_matrix) {
+  using namespace helper::minuit;
+
   auto& t0 = parameters.t0;
   auto& x0 = parameters.x0;
   auto& y0 = parameters.y0;
@@ -109,9 +124,7 @@ bool _fit_event_minuit(const full_event& points,
   _nll_fit_event = points;
 
   TMinuit minuit;
-  helper::minuit::initialize(minuit,
-    "T0", t0, "X0", x0, "Y0", y0, "Z0", z0, "VX", vx, "VY", vy, "VZ", vz);
-
+  initialize(minuit, "T0", t0, "X0", x0, "Y0", y0, "Z0", z0, "VX", vx, "VY", vy);
   switch (direction) {
     case Coordinate::T: minuit.FixParameter(0); break;
     case Coordinate::X: minuit.FixParameter(1); break;
@@ -119,12 +132,24 @@ bool _fit_event_minuit(const full_event& points,
     case Coordinate::Z: minuit.FixParameter(3); break;
   }
 
-  const auto error_code = helper::minuit::execute(minuit, _gaussian_nll);
-  if (error_code == helper::minuit::error::diverged)
-    return false;
+  if (points.size() == 2) {
+    if (execute(minuit, _gaussian_nll_two_hit_track) == error::diverged)
+      return false;
+    vz.value = _vz_from_c(vx.value, vy.value);
+    vz.error = stat::error::propagate(
+      real_array<2>{-vx.value / vz.value, -vy.value / vz.value},
+      real_array<4>{vx.error * vx.error, vx.error * vy.error,
+                    vx.error * vy.error, vy.error * vy.error});
+  } else {
+    set_parameters(minuit, 6UL, "VZ", vz);
+    if (execute(minuit, _gaussian_nll) == error::diverged)
+      return false;
+    get_parameters(minuit, 6UL, vz);
+  }
 
-  helper::minuit::get_parameters(minuit, t0, x0, y0, z0, vx, vy, vz);
-  helper::minuit::get_covariance<track::free_parameter_count>(minuit, covariance_matrix);
+  get_parameters(minuit, t0, x0, y0, z0, vx, vy);
+  get_covariance<track::free_parameter_count>(minuit, covariance_matrix);
+
   return true;
 }
 //----------------------------------------------------------------------------------------------
@@ -606,26 +631,31 @@ std::size_t track::insert(const analysis::event& points) {
 
 //__Insert Full Hit into Track and Refit________________________________________________________
 std::size_t track::insert(const full_hit& point) {
-  const auto search = util::algorithm::binary_find_range(_full_event, point, t_ordered<analysis::full_hit>{});
+  const auto search = util::algorithm::range_binary_find_first(_full_event, point, t_ordered<analysis::full_hit>{});
   if (search != _full_event.cend()) {
     _full_event.insert(search, point);
     _full_event.shrink_to_fit();
+    return reset(_full_event);
   }
-  return reset(_full_event);
+  return size();
 }
 //----------------------------------------------------------------------------------------------
 
 //__Insert Full Hits into Track and Refit_______________________________________________________
 std::size_t track::insert(const analysis::full_event& points) {
+  const auto s = size();
   analysis::full_event saved_hits;
-  saved_hits.reserve(size() + points.size());
+  saved_hits.reserve(s + points.size());
   const auto sorted = util::algorithm::copy_sort_range(points, t_ordered<analysis::full_hit>{});
   std::set_union(_full_event.cbegin(), _full_event.cend(),
                  sorted.cbegin(), sorted.cend(),
                  std::back_inserter(saved_hits),
                  t_ordered<analysis::full_hit>{});
-  saved_hits.shrink_to_fit();
-  return reset(saved_hits);
+  if (saved_hits.size() != s) {
+    saved_hits.shrink_to_fit();
+    return reset(saved_hits);
+  }
+  return s;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -817,14 +847,20 @@ std::size_t _overlap_size(const Event& first,
       ++second_index;
     } else {
       if (first_size - first_index >= second_size - second_index) {
-        const auto search = util::algorithm::binary_find(second_begin + second_index, second_end, first_elem, t_ordered<Point>{});
+        const auto search = util::algorithm::binary_find_first(second_begin + second_index,
+                                                               second_end,
+                                                               first_elem,
+                                                               t_ordered<Point>{});
         if (search != second_end) {
           ++count;
           second_index = util::type::distance(second_begin, search);
         }
         ++first_index;
       } else {
-        const auto search = util::algorithm::binary_find(first_begin + first_index, first_end, second_elem, t_ordered<Point>{});
+        const auto search = util::algorithm::binary_find_first(first_begin + first_index,
+                                                               first_end,
+                                                               second_elem,
+                                                               t_ordered<Point>{});
         if (search != first_end) {
           ++count;
           first_index = util::type::distance(first_begin, search);

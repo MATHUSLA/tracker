@@ -195,21 +195,31 @@ Range stable_copy_sort_range(const Range& range,
 //__Find Element from Binary Search_____________________________________________________________
 // [Implementation from cppreference]
 template<class ForwardIt, class T, class Compare=std::less<>>
-constexpr ForwardIt binary_find(ForwardIt first,
-                                ForwardIt last,
-                                const T& value,
-                                Compare comp={}) {
-  first = std::upper_bound(first, last, value, comp);  // TODO: should be upper bound or lower bound?
-  return first != last && !comp(*first, value) ? first : last;
+constexpr ForwardIt binary_find_first(ForwardIt first,
+                                      ForwardIt last,
+                                      const T& value,
+                                      Compare comp={}) {
+  // TODO: should be upper bound or lower bound?
+  first = std::lower_bound(first, last, value, comp);
+  return first != last && !comp(value, *first) ? first : last;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Find Element from Binary Search in Range____________________________________________________
 template<class Range, class T, class Compare=std::less<>>
-constexpr typename Range::const_iterator binary_find_range(const Range& range,
-                                                           const T& value,
-                                                           Compare comp={}) {
-  return binary_find(std::cbegin(range), std::cend(range), value, comp);
+constexpr typename Range::const_iterator range_binary_find_first(const Range& range,
+                                                                 const T& value,
+                                                                 Compare comp={}) {
+  return binary_find_first(std::cbegin(range), std::cend(range), value, comp);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Find Element from Binary Search in Range____________________________________________________
+template<class Range, class T, class Compare=std::less<>>
+constexpr bool binary_search_range(const Range& range,
+                                   const T& value,
+                                   Compare comp={}) {
+  return std::binary_search(std::cbegin(range), std::cend(range), value, comp);
 }
 //----------------------------------------------------------------------------------------------
 

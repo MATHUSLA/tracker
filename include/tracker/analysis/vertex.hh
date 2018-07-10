@@ -37,6 +37,7 @@ public:
   using covariance_matrix_type = real_array<free_parameter_count * free_parameter_count>;
 
   vertex(const track_vector& tracks);
+  vertex(track_vector&& tracks);
 
   vertex(const vertex& rhs) = default;
   vertex(vertex&& rhs)      = default;
@@ -84,6 +85,23 @@ public:
   std::size_t size() const { return _tracks.size(); }
   bool empty() const { return _tracks.size() <= 1; }
 
+  track_vector::iterator begin() { return _tracks.begin(); }
+  track_vector::const_iterator begin() const { return _tracks.cbegin(); }
+  track_vector::const_iterator cbegin() const { return _tracks.cbegin(); }
+  track_vector::iterator end() { return _tracks.end(); }
+  track_vector::const_iterator end() const { return _tracks.cend(); }
+  track_vector::const_iterator cend() const { return _tracks.cend(); }
+
+  std::size_t reset(const track_vector& tracks);
+
+  std::size_t insert(const track& track);
+  std::size_t insert(const track_vector& tracks);
+
+  std::size_t remove(const std::size_t index);
+  std::size_t remove(const std::vector<std::size_t>& indices);
+
+  std::size_t prune_on_chi_squared(const real max_chi_squared);
+
   struct plotting_keys {
     plot::histogram::name_type t, x, y, z,
       t_error, x_error, y_error, z_error,
@@ -97,7 +115,7 @@ public:
 
   // TODO: void draw(plot::canvas& canvas) const;
 
-private:
+protected:
   fit_parameters _guess, _final;
   track_vector _tracks;
   real_vector _delta_chi2;

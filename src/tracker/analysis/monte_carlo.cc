@@ -62,9 +62,7 @@ const track_vector convert(const event& points) {
 //__Truth Evaluation Constructor________________________________________________________________
 truth_evaluation::truth_evaluation(const track_vector& true_tracks,
                                    const analysis::track_vector& tracks)
-    : _true_tracks(true_tracks), _tracks(tracks) {
-
-}
+    : _true_tracks(true_tracks), _tracks(tracks) {}
 //----------------------------------------------------------------------------------------------
 
 //__Truth Evaluation Constructor________________________________________________________________

@@ -53,24 +53,24 @@ public:
   explicit bit_vector(const std::size_t count,
                       const std::size_t size) {
     resize(size, false);
-    for (std::size_t i = count > size ? 0 : size - count; i < size; ++i)
+    for (std::size_t i = count > size ? 0UL : size - count; i < size; ++i)
       (*this)[i] = true;
   }
 
-  explicit bit_vector(const std::size_t size) : bit_vector(0, size) {}
+  explicit bit_vector(const std::size_t size) : bit_vector(0UL, size) {}
 
   std::size_t count() const noexcept {
     return std::count(cbegin(), cend(), true);
   }
 
-  std::size_t first_set(const std::size_t start=0) const noexcept {
+  std::size_t first_set(const std::size_t start=0UL) const noexcept {
     const auto s = size();
     for (std::size_t i = start; i < s; ++i)
       if ((*this)[i]) return i;
     return s;
   }
 
-  std::size_t last_set(const std::size_t start=0) const noexcept {
+  std::size_t last_set(const std::size_t start=0UL) const noexcept {
     const auto s = size();
     if (start >= s)
       return s;
@@ -79,14 +79,14 @@ public:
     return s;
   }
 
-  std::size_t first_unset(const std::size_t start=0) const noexcept {
+  std::size_t first_unset(const std::size_t start=0UL) const noexcept {
     const auto s = size();
     for (std::size_t i = start; i < s; ++i)
       if (!(*this)[i]) return i;
     return s;
   }
 
-  std::size_t last_unset(const std::size_t start=0) const noexcept {
+  std::size_t last_unset(const std::size_t start=0UL) const noexcept {
     const auto s = size();
     if (start >= s)
       return s;
@@ -97,7 +97,7 @@ public:
 
   bit_vector& set() noexcept {
     const auto s = size();
-    for (std::size_t i = 0; i < s; ++i)
+    for (std::size_t i{}; i < s; ++i)
       (*this)[i] = true;
     return *this;
   }
@@ -109,7 +109,7 @@ public:
 
   bit_vector& reset() noexcept {
     const auto s = size();
-    for (std::size_t i = 0; i < s; ++i)
+    for (std::size_t i{}; i < s; ++i)
       (*this)[i] = false;
     return *this;
   }
@@ -120,7 +120,7 @@ public:
   }
 
   std::size_t extend(const std::size_t count=1) {
-    for (std::size_t i = 0; i < count; ++i)
+    for (std::size_t i{}; i < count; ++i)
       push_back(false);
     return size();
   }
@@ -134,7 +134,7 @@ public:
                           BinaryFunction f) const noexcept {
     auto begin = std::cbegin(range);
     const auto s = std::min(size(), static_cast<std::size_t>(std::cend(range) - begin));
-    for (std::size_t i = 0; i < s; ++i)
+    for (std::size_t i{}; i < s; ++i)
       f((*this)[i], *begin++);
     return std::move(f);
   }

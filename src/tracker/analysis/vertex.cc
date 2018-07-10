@@ -139,7 +139,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
     [&](const auto sum, const auto& track) {
       const auto distance = _vertex_track_r3_distance_with_error(x[0], x[1], x[2], x[3], track);
       return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
-  });
+    });
 }
 //----------------------------------------------------------------------------------------------
 
@@ -147,6 +147,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 bool _fit_tracks_minuit(const track_vector& tracks,
                         vertex::fit_parameters& parameters,
                         vertex::covariance_matrix_type& covariance_matrix) {
+  using namespace helper::minuit;
   auto& t = parameters.t;
   auto& x = parameters.x;
   auto& y = parameters.y;
@@ -154,14 +155,13 @@ bool _fit_tracks_minuit(const track_vector& tracks,
   _nll_fit_tracks = tracks;
 
   TMinuit minuit;
-  helper::minuit::initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
+  initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
 
-  const auto error_code = helper::minuit::execute(minuit, _gaussian_nll);
-  if (error_code == helper::minuit::error::diverged)
+  if (execute(minuit, _gaussian_nll) == error::diverged)
     return false;
 
-  helper::minuit::get_parameters(minuit, t, x, y, z);
-  helper::minuit::get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
+  get_parameters(minuit, t, x, y, z);
+  get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
   return true;
 }
 //----------------------------------------------------------------------------------------------
@@ -169,21 +169,14 @@ bool _fit_tracks_minuit(const track_vector& tracks,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Vertex Constructor__________________________________________________________________________
-vertex::vertex(const track_vector& tracks) : _tracks(tracks) {
-  if (_tracks.size() > 1) {
-    _guess = _guess_vertex(_tracks);
-    _final = _guess;
-    if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
-      util::algorithm::back_insert_transform(_tracks, _delta_chi2,
-        [&](const auto& track) {
-          return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track); });
-    }
-  } else {
-    _delta_chi2.resize(1, 0);
-    _guess = {};
-    _final = {};
-    _covariance = {};
-  }
+vertex::vertex(const track_vector& tracks) {
+  reset(tracks);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Vertex Constructor__________________________________________________________________________
+vertex::vertex(track_vector&& tracks) {
+  reset(std::move(tracks));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -283,6 +276,98 @@ constexpr std::size_t _shift_covariance_index(const vertex::parameter p) {
 real vertex::covariance(const vertex::parameter p,
                         const vertex::parameter q) const {
   return _covariance[4 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reset Vertex with Given Tracks______________________________________________________________
+std::size_t vertex::reset(const track_vector& tracks) {
+  _tracks = tracks;
+  if (_tracks.size() > 1) {
+    _guess = _guess_vertex(_tracks);
+    _final = _guess;
+    if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
+      util::algorithm::back_insert_transform(_tracks, _delta_chi2,
+        [&](const auto& track) {
+          return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track); });
+    }
+  } else {
+    _delta_chi2.resize(1, 0);
+    _guess = {};
+    _final = {};
+    _covariance = {};
+  }
+  return size();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Insert Track into Vertex and Refit__________________________________________________________
+std::size_t vertex::insert(const track& track) {
+  if (std::find(_tracks.cbegin(), _tracks.cend(), track) != _tracks.cend()) {
+    _tracks.push_back(track);
+    _tracks.shrink_to_fit();
+    return reset(_tracks);
+  }
+  return size();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Insert Tracks into Vertex and Refit_________________________________________________________
+std::size_t vertex::insert(const track_vector& tracks) {
+  _tracks.reserve(size() + tracks.size());
+  const auto begin = _tracks.cbegin();
+  std::copy_if(tracks.cbegin(), tracks.cend(), std::back_inserter(_tracks),
+    [&](const auto& t) { return std::find(begin, _tracks.cend(), t) != _tracks.cend(); });
+  _tracks.shrink_to_fit();
+  return reset(_tracks);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Remove Track from Vertex and Refit__________________________________________________________
+std::size_t vertex::remove(const std::size_t index) {
+  // TODO: improve efficiency
+  const auto s = size();
+  if (index >= s)
+    return s;
+
+  track_vector saved_tracks;
+  saved_tracks.reserve(s - 1);
+  const auto begin = _tracks.cbegin();
+  const auto end = _tracks.cend();
+  saved_tracks.insert(saved_tracks.cend(), begin, begin + index);
+  saved_tracks.insert(saved_tracks.cend(), begin + index + 1, end);
+  return reset(saved_tracks);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Remove Tracks from Vertex and Refit_________________________________________________________
+std::size_t vertex::remove(const std::vector<std::size_t>& indices) {
+  // TODO: improve efficiency
+  const auto sorted = util::algorithm::copy_sort_range(indices);
+  const auto s = size();
+  track_vector saved_tracks;
+  saved_tracks.reserve(s);
+  for (std::size_t hit_index{}, removal_index{}; hit_index < s; ++hit_index) {
+    if (sorted[removal_index] == hit_index) {
+      ++removal_index;
+    } else {
+      saved_tracks.push_back(std::move(_tracks[hit_index]));
+    }
+  }
+  saved_tracks.shrink_to_fit();
+  return reset(saved_tracks);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Remove Track from Vertex Below Maximum Chi-Squared and Refit________________________________
+std::size_t vertex::prune_on_chi_squared(const real max_chi_squared) {
+  const auto s = size();
+  std::vector<std::size_t> indices;
+  indices.reserve(s);
+  for (std::size_t i{}; i < s; ++i) {
+    if (chi_squared_vector()[i] > max_chi_squared)
+      indices.push_back(i);
+  }
+  return remove(indices);
 }
 //----------------------------------------------------------------------------------------------
 

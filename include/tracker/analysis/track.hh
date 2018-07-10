@@ -44,9 +44,9 @@ public:
         const Coordinate direction=Coordinate::Z);
 
   track(const track& rhs) = default;
-  track(track&& rhs)      = default;
+  track(track&& rhs) noexcept = default;
   track& operator=(const track& rhs) = default;
-  track& operator=(track&& rhs)      = default;
+  track& operator=(track&& rhs) noexcept = default;
 
   const r4_point operator()(const real p) const;
 
@@ -119,15 +119,22 @@ public:
   const hit back() const;
   const analysis::event event() const;
 
-  const full_hit full_front() const { return _full_event.front(); }
-  const full_hit full_back() const { return _full_event.back(); }
-  const analysis::full_event& full_event() const { return _full_event; }
-  const geometry::structure_vector& detectors() const { return _detectors; }
+  const full_hit full_front() const noexcept { return _full_event.front(); }
+  const full_hit full_back() const noexcept { return _full_event.back(); }
+  const analysis::full_event& full_event() const noexcept { return _full_event; }
+  const geometry::structure_vector& detectors() const noexcept { return _detectors; }
 
-  Coordinate direction() const { return _direction; }
+  Coordinate direction() const noexcept { return _direction; }
 
-  std::size_t size() const { return _full_event.size(); }
-  bool empty() const { return _full_event.empty(); }
+  std::size_t size() const noexcept { return _full_event.size(); }
+  bool empty() const noexcept { return _full_event.empty(); }
+
+  analysis::full_event::iterator begin() { return _full_event.begin(); }
+  analysis::full_event::const_iterator begin() const { return _full_event.cbegin(); }
+  analysis::full_event::const_iterator cbegin() const { return _full_event.cbegin(); }
+  analysis::full_event::iterator end() { return _full_event.end(); }
+  analysis::full_event::const_iterator end() const { return _full_event.cend(); }
+  analysis::full_event::const_iterator cend() const { return _full_event.cend(); }
 
   std::size_t reset(const analysis::event& points);
   std::size_t reset(const analysis::full_event& points);
@@ -149,6 +156,13 @@ public:
 
   void reparameterize(const Coordinate direction);
 
+  bool operator==(const track& other) const noexcept {
+    return _direction == other._direction && _full_event == other._full_event;
+  }
+  bool operator!=(const track& other) const noexcept {
+    return !(*this == other);
+  }
+
   struct plotting_keys {
     plot::histogram::name_type t0, x0, y0, z0, vx, vy, vz,
       t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
@@ -163,7 +177,7 @@ public:
 
   // TODO: void draw(plot::canvas& canvas) const;
 
-private:
+protected:
   fit_parameters _guess, _final;
   analysis::full_event _full_event;
   real_vector _delta_chi2;
