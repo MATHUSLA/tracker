@@ -937,6 +937,8 @@ const tracking_options read(const std::string& path) {
         out.statistics_file_extension = value;
       } else if (key == "verbose-output") {
         _parse_key_value_boolean(key, value, out.verbose_output);
+      } else if (key == "draw-events") {
+        _parse_key_value_boolean(key, value, out.draw_events);
       } else {
         util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n");
       }
@@ -962,16 +964,21 @@ void _exit_on_missing_path(const std::string& path,
 const tracking_options parse_input(int& argc,
                                    char* argv[]) {
   using util::cli::option;
-  option help_opt    ('h', "help",     "MATHUSLA Tracking Algorithm", option::no_arguments);
-  option verbose_opt ('v', "",         "Verbose Output",              option::no_arguments);
-  option quiet_opt   ('q', "",         "Quiet Output",                option::no_arguments);
-  option geo_opt     ('g', "geometry", "Geometry Import",             option::required_arguments);
-  option map_opt     ('m', "map",      "Detector Map",                option::required_arguments);
-  option data_opt    ('d', "data",     "ROOT Data Directory",         option::required_arguments);
-  option script_opt  ('s', "script",   "Tracking Script",             option::required_arguments);
+  option help_opt    ('h', "help",      "MATHUSLA Tracking Algorithm", option::no_arguments);
+  option verbose_opt ('v', "",          "Verbose Output",              option::no_arguments);
+  option quiet_opt   ('q', "",          "Quiet Output",                option::no_arguments);
+  option event_opt   (0, "draw-events", "Draw Events",                 option::no_arguments);
 
-  util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &geo_opt, &data_opt, &map_opt, &script_opt});
+  // TODO: remove
+  option geo_opt     ('g', "geometry",  "Geometry Import",             option::required_arguments);
+  option map_opt     ('m', "map",       "Detector Map",                option::required_arguments);
+  option data_opt    ('d', "data",      "ROOT Data Directory",         option::required_arguments);
 
+  option script_opt  ('s', "script",    "Tracking Script",             option::required_arguments);
+
+  util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &event_opt, &geo_opt, &data_opt, &map_opt, &script_opt});
+
+   // TODO: remove
   util::error::exit_when((geo_opt.count && !data_opt.count)
                       || (data_opt.count && !geo_opt.count)
                       || !(script_opt.count || geo_opt.count || data_opt.count)
@@ -991,20 +998,25 @@ const tracking_options parse_input(int& argc,
     map_opt.count += !out.geometry_map_file.empty();
     data_opt.count += !out.data_directory.empty();
   } else {
+     // TODO: remove
     out.geometry_file = geo_opt.count ? geo_opt.argument : "";
     out.geometry_map_file = map_opt.count ? map_opt.argument : "";
     out.data_directory = data_opt.count ? data_opt.argument : "";
   }
 
+   // TODO: remove
   if (geo_opt.count) _exit_on_missing_path(out.geometry_file, "Geometry File");
   if (map_opt.count) _exit_on_missing_path(out.geometry_map_file, "Geometry Map");
   if (data_opt.count) _exit_on_missing_path(out.data_directory, "ROOT Directory");
 
   if (!quiet_opt.count) {
-    out.verbose_output += verbose_opt.count;
+    out.verbose_output |= verbose_opt.count;
   } else {
     out.verbose_output = false;
   }
+
+  if (event_opt.count)
+    out.draw_events |= event_opt.count;
 
   return out;
 }

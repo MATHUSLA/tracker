@@ -47,9 +47,6 @@ public:
   const r4_point point() const;
   const r4_point point_error() const;
 
-  const fit_parameters guess_fit() const { return _guess; }
-  const fit_parameters final_fit() const { return _final; }
-
   const fit_parameter t() const { return _final.t; }
   const fit_parameter x() const { return _final.x; }
   const fit_parameter y() const { return _final.y; }
@@ -67,6 +64,12 @@ public:
   real y_error() const { return _final.y.error; }
   real z_error() const { return _final.z.error; }
   real error(const parameter p) const;
+
+  const fit_parameters guess_fit() const { return _guess; }
+  const fit_parameters final_fit() const { return _final; }
+
+  bool fit_diverged() const noexcept;
+  bool fit_converged() const noexcept { return !fit_diverged(); }
 
   real_vector distances() const;
   real_vector distance_errors() const;
@@ -113,7 +116,18 @@ public:
   void fill_plots(plot::histogram_collection& collection,
                   const plotting_keys& keys) const;
 
-  // TODO: void draw(plot::canvas& canvas) const;
+  void draw(plot::canvas& canvas,
+            const real size,
+            const plot::color color,
+            const bool with_errors=false) const;
+
+  void draw_guess(plot::canvas& canvas,
+                  const real size,
+                  const plot::color color,
+                  const bool with_errors=false) const;
+
+  bool operator==(const vertex& other) const noexcept { return _tracks == other._tracks; }
+  bool operator!=(const vertex& other) const noexcept { return !(*this == other);        }
 
 protected:
   fit_parameters _guess, _final;
@@ -121,6 +135,20 @@ protected:
   real_vector _delta_chi2;
   covariance_matrix_type _covariance;
 };
+//----------------------------------------------------------------------------------------------
+
+//__Track Fitting Parameter Equality____________________________________________________________
+constexpr bool operator==(const vertex::fit_parameters& left,
+                          const vertex::fit_parameters& right) {
+  return left.t == right.t
+      && left.x == right.x
+      && left.y == right.y
+      && left.z == right.z;
+}
+constexpr bool operator!=(const vertex::fit_parameters& left,
+                          const vertex::fit_parameters& right) {
+  return !(left == right);
+}
 //----------------------------------------------------------------------------------------------
 
 //__Vertex Output Stream Operator_______________________________________________________________

@@ -67,9 +67,6 @@ public:
   const r4_point error_at(const Coordinate c,
                           const real r) const;
 
-  const fit_parameters guess_fit() const { return _guess; }
-  const fit_parameters final_fit() const { return _final; }
-
   const fit_parameter t0() const { return _final.t0; }
   const fit_parameter x0() const { return _final.x0; }
   const fit_parameter y0() const { return _final.y0; }
@@ -97,6 +94,12 @@ public:
   real vz_error() const { return _final.vz.error; }
   real error(const parameter p) const;
 
+  const fit_parameters guess_fit() const { return _guess; }
+  const fit_parameters final_fit() const { return _final; }
+
+  bool fit_diverged() const noexcept;
+  bool fit_converged() const noexcept { return !fit_diverged(); }
+
   real beta() const;
   real beta_error() const;
   const r3_point unit() const;
@@ -106,7 +109,7 @@ public:
   real angle_error() const;
 
   real chi_squared() const;
-  size_t degrees_of_freedom() const;
+  std::size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
   const real_vector& chi_squared_vector() const { return _delta_chi2; }
 
@@ -156,13 +159,6 @@ public:
 
   void reparameterize(const Coordinate direction);
 
-  bool operator==(const track& other) const noexcept {
-    return _direction == other._direction && _full_event == other._full_event;
-  }
-  bool operator!=(const track& other) const noexcept {
-    return !(*this == other);
-  }
-
   struct plotting_keys {
     plot::histogram::name_type t0, x0, y0, z0, vx, vy, vz,
       t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
@@ -175,7 +171,22 @@ public:
   void fill_plots(plot::histogram_collection& collection,
                   const plotting_keys& keys) const;
 
-  // TODO: void draw(plot::canvas& canvas) const;
+  void draw(plot::canvas& canvas,
+            const real size,
+            const plot::color color,
+            const bool with_errors=false) const;
+
+  void draw_guess(plot::canvas& canvas,
+                  const real size,
+                  const plot::color color,
+                  const bool with_errors=false) const;
+
+  bool operator==(const track& other) const noexcept {
+    return _direction == other._direction && _full_event == other._full_event;
+  }
+  bool operator!=(const track& other) const noexcept {
+    return !(*this == other);
+  }
 
 protected:
   fit_parameters _guess, _final;
@@ -185,6 +196,23 @@ protected:
   geometry::structure_vector _detectors;
   Coordinate _direction;
 };
+//----------------------------------------------------------------------------------------------
+
+//__Track Fitting Parameter Equality____________________________________________________________
+constexpr bool operator==(const track::fit_parameters& left,
+                          const track::fit_parameters& right) {
+  return left.t0 == right.t0
+      && left.x0 == right.x0
+      && left.y0 == right.y0
+      && left.z0 == right.z0
+      && left.vx == right.vx
+      && left.vy == right.vy
+      && left.vz == right.vz;
+}
+constexpr bool operator!=(const track::fit_parameters& left,
+                          const track::fit_parameters& right) {
+  return !(left == right);
+}
 //----------------------------------------------------------------------------------------------
 
 //__Track Output Stream Operator________________________________________________________________

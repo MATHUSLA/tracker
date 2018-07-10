@@ -71,6 +71,7 @@ struct tracking_options {
   real         track_density_limit        = 1;
 
   bool         verbose_output             = false;
+  bool         draw_events                = false;
 };
 //----------------------------------------------------------------------------------------------
 

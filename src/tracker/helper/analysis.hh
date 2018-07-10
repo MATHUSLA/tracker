@@ -40,7 +40,7 @@ static const std::vector<double> parameters     = {};
 static const bool                graphics       = false;
 static const integer             print_level    = -1;
 static const double              error_def      = 0.5;
-static const integer             max_iterations = 600;
+static const integer             max_iterations = 800;
 static const std::string&        strategy       = "SET STR 2";
 //----------------------------------------------------------------------------------------------
 

@@ -50,7 +50,7 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-  const auto out = analysis::overlap_fit_seeds(tracking_vector);
+  const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis);
 
   // TODO: improve efficiency
   const auto size = event.size();
@@ -81,9 +81,9 @@ const analysis::track_vector find_secondary_tracks(const analysis::event& event,
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
-  const auto seeds           = analysis::seed(2, layers, options.line_width);
+  const auto seeds           = analysis::seed(2UL, layers, options.line_width);
   const auto tracking_vector = reset_seeds(seeds, combined_rpc_hits, original_rpc_hits);
-  const auto out = analysis::overlap_fit_seeds(tracking_vector);
+  const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 0UL);
 
   // TODO: improve efficiency
   const auto size = event.size();
@@ -113,7 +113,7 @@ int prototype_tracking(int argc,
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
   const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
 
-  plot::init(options.verbose_output);
+  plot::init(options.draw_events);
   geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
@@ -155,23 +155,26 @@ int prototype_tracking(int argc,
         continue;
 
       plot::canvas canvas(path + event_counter_string);
-      if (options.verbose_output) {
+      if (options.draw_events) {
         draw_detector_centers(canvas);
         draw_mc_tracks(canvas, analysis::mc::convert(mc_imported_events[event_counter]));
         canvas.add_points(compressed_event, 0.8, plot::color::BLACK);
       }
 
-      analysis::event non_track_points;
-      auto tracks = find_primary_tracks(compressed_event, options, non_track_points);
+      analysis::event non_primary_track_points, non_secondary_track_points;
+      auto tracks = find_primary_tracks(compressed_event, options, non_primary_track_points);
+      auto secondary_tracks = find_secondary_tracks(non_primary_track_points,
+                                                    options,
+                                                    non_secondary_track_points);
+      tracks.reserve(tracks.size() + secondary_tracks.size());
+      tracks.insert(tracks.cend(),
+                    std::make_move_iterator(secondary_tracks.cbegin()),
+                    std::make_move_iterator(secondary_tracks.cend()));
 
-      for (const auto& secondary : find_secondary_tracks(non_track_points, options, non_track_points)) {
-        tracks.push_back(secondary);
-      }
-
-      save_tracks(tracks, canvas, histograms, options.verbose_output);
+      save_tracks(tracks, canvas, histograms, options);
       print_tracking_summary(event, tracks);
 
-      save_vertex(analysis::vertex(tracks), canvas, histograms, options.verbose_output);
+      save_vertex(analysis::vertex(tracks), canvas, histograms, options);
 
       canvas.draw();
     }

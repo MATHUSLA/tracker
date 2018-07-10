@@ -1,6 +1,7 @@
 ### MATHUSLA Prototype TRACKING SCRIPT ###
 
 verbose-output: true
+draw-events: false
 
 # Thresholds and Settings
 time-smearing:        true

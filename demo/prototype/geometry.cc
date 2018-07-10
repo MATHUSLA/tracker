@@ -144,6 +144,7 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
       [](const auto& part){ return part; });
   }
 
+  // NOTE: because upward going tracks are aligned -Z <-> T
   util::algorithm::reverse(event);
   return event;
 }
@@ -153,6 +154,7 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
 const analysis::full_event_vector reset_seeds(const analysis::event_vector& joined_seeds,
                                               const analysis::event& combined_rpc_hits,
                                               const analysis::full_event& original_rpc_hits) {
+  // FIXME: should output be resorted in Time?
   const auto combined_size = combined_rpc_hits.size();
   if (combined_size == 0) {
     analysis::full_event_vector out;
@@ -163,7 +165,7 @@ const analysis::full_event_vector reset_seeds(const analysis::event_vector& join
         next.push_back(analysis::add_width(hit));
       }
       next.shrink_to_fit();
-      out.push_back(type::t_sort(next));
+      out.push_back(/*type::t_sort*/(next));
     }
     out.shrink_to_fit();
     return out;
@@ -186,7 +188,7 @@ const analysis::full_event_vector reset_seeds(const analysis::event_vector& join
         next.push_back(analysis::add_width(hit));
     }
     next.shrink_to_fit();
-    out.push_back(type::t_sort(next));
+    out.push_back(/*type::t_sort*/(next));
   }
   out.shrink_to_fit();
   return out;

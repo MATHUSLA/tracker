@@ -44,7 +44,7 @@ void draw_track(plot::canvas& canvas,
                    {brightness, brightness, brightness});
     brightness += step;
   }
-  canvas.add_line(track.front(), track.back(), 1, plot::color::RED);
+  track.draw(canvas, 1.1, plot::color::RED);
   for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
     canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLACK);
   }
@@ -78,16 +78,8 @@ void draw_mc_tracks(plot::canvas& canvas,
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________
 void draw_vertex_and_guess(plot::canvas& canvas,
                            const analysis::vertex& vertex) {
-  const auto point = vertex.point();
-  const auto point_error = vertex.point_error();
-  canvas.add_point(point, 1.5, plot::color::GREEN);
-  canvas.add_box(point, point_error.x, point_error.y, point_error.z, 2.5, plot::color::GREEN);
-
-  const auto guess = vertex.guess_fit();
-  canvas.add_point(type::r3_point{guess.x.value, guess.y.value, guess.z.value}, 1.5, plot::color::RED);
-
-  for (const auto& track : vertex.tracks())
-    canvas.add_line(track(point.z), track.back(), 1.5, plot::color::GREEN);
+  vertex.draw(canvas, 1.5, plot::color::GREEN);
+  vertex.draw_guess(canvas, 1.5, plot::color::RED);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -198,18 +190,18 @@ plot::histogram_collection generate_histograms() {
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
                  plot::histogram_collection& histograms,
-                 bool verbose) {
+                 const reader::tracking_options& options) {
   histograms["track_count"].insert(tracks.size());
   for (const auto& track : tracks) {
     track.fill_plots(histograms, track_plotting_keys());
     const auto beta = track.beta();
     const auto beta_error = track.beta_error();
-    if (beta - 3.0L * beta_error <= 1)
+    if (beta - 1.0L * beta_error <= 1.0L)
       histograms["track_beta_with_cut"].insert(beta);
-    if (verbose) {
-      draw_track(canvas, track);
+    if (options.verbose_output)
       std::cout << track << "\n";
-    }
+    if (options.draw_events)
+      draw_track(canvas, track);
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -218,14 +210,14 @@ void save_tracks(const analysis::track_vector& tracks,
 void save_vertex(const analysis::vertex& vertex,
                  plot::canvas& canvas,
                  plot::histogram_collection& histograms,
-                 bool verbose) {
+                 const reader::tracking_options& options) {
   if (vertex.size() != 2)
     return;
   vertex.fill_plots(histograms, vertex_plotting_keys());
-  if (verbose) {
-    draw_vertex_and_guess(canvas, vertex);
+  if (options.verbose_output)
     std::cout << vertex << "\n";
-  }
+  if (options.draw_events)
+    draw_vertex_and_guess(canvas, vertex);
 }
 //----------------------------------------------------------------------------------------------
 

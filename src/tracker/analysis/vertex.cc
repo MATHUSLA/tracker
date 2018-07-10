@@ -100,11 +100,11 @@ vertex::fit_parameters _guess_vertex(const track_vector& tracks) {
   track_fronts.reserve(size);
   util::algorithm::back_insert_transform(tracks, track_fronts, [](const auto& track) {
     const auto front = track.full_front();
-    const auto front_z = front.z;
-    const auto point = track.at_z(front_z);
-    const auto error = track.error_at_z(front_z);
+    const auto front_t = front.t;
+    const auto point = track.at_t(front_t);
+    const auto error = track.error_at_t(front_t);
     return full_hit{point.t, point.x, point.y, point.z,
-             r4_point{error.t, error.x, error.y, stat::error::uniform(front.width.z)}};
+             r4_point{front.width.t, error.x, error.y, error.z}};
   });
 
   real_vector t_errors, x_errors, y_errors, z_errors;
@@ -138,8 +138,10 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
     [&](const auto sum, const auto& track) {
       const auto distance = _vertex_track_r3_distance_with_error(x[0], x[1], x[2], x[3], track);
+      // std::cout << "distance: " << distance.value << " error: " << distance.error << "\n";
       return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
     });
+  // std::cout << "NLL: " << out << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -157,6 +159,7 @@ bool _fit_tracks_minuit(const track_vector& tracks,
   TMinuit minuit;
   initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
 
+  // FIXME: error handling for -> execute(minuit, _gaussian_nll);
   if (execute(minuit, _gaussian_nll) == error::diverged)
     return false;
 
@@ -212,6 +215,12 @@ real vertex::value(const vertex::parameter p) const {
 //__Get Fit Parameter Error from Vertex_________________________________________________________
 real vertex::error(const vertex::parameter p) const {
   return fit_of(p).error;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Check if Track Fit Converged________________________________________________________________
+bool vertex::fit_diverged() const noexcept {
+  return _guess != _final && _final == vertex::fit_parameters{};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -282,7 +291,8 @@ real vertex::covariance(const vertex::parameter p,
 //__Reset Vertex with Given Tracks______________________________________________________________
 std::size_t vertex::reset(const track_vector& tracks) {
   _tracks = tracks;
-  if (_tracks.size() > 1) {
+  const auto new_size = _tracks.size();
+  if (new_size > 1) {
     _guess = _guess_vertex(_tracks);
     _final = _guess;
     if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
@@ -293,11 +303,10 @@ std::size_t vertex::reset(const track_vector& tracks) {
       return size();
     }
   }
-  _delta_chi2.resize(1, 0);
-  _guess = {};
+  _delta_chi2.resize(new_size, 0);
   _final = {};
   _covariance = {};
-  return size();
+  return new_size;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -400,56 +409,92 @@ void vertex::fill_plots(plot::histogram_collection& collection,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Draw Fit Vertex_____________________________________________________________________________
+void vertex::draw(plot::canvas& canvas,
+                  const real size,
+                  const plot::color color,
+                  const bool with_errors) const {
+  // TODO: decide what to do with convergence
+  if (fit_converged()) {
+    canvas.add_point(point(), size, color);
+    if (with_errors)
+      canvas.add_box(point(), point_error().x, point_error().y, point_error().z, size, color);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw Guess Vertex___________________________________________________________________________
+void vertex::draw_guess(plot::canvas& canvas,
+                        const real size,
+                        const plot::color color,
+                        const bool with_errors) const {
+  // TODO: add with_errors argument
+  canvas.add_point(r3_point{guess_fit().x.value, guess_fit().y.value, guess_fit().z.value}, size, color);
+}
+//----------------------------------------------------------------------------------------------
+
+
 //__Vertex Output Stream Operator_______________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const vertex& vertex) {
   static const std::string bar(80, '-');
   os << bar << "\n";
 
-  os << "* Vertex Parameters:\n"
-     << "    T: " << vertex.t_value() << "  (+/- " << vertex.t_error() << ")\n"
-     << "    X: " << vertex.x_value() << "  (+/- " << vertex.x_error() << ")\n"
-     << "    Y: " << vertex.y_value() << "  (+/- " << vertex.y_error() << ")\n"
-     << "    Z: " << vertex.z_value() << "  (+/- " << vertex.z_error() << ")\n";
+  if (vertex.fit_diverged()) {
+    os << "* Vertex Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n";
+    const auto guess = vertex.guess_fit();
+    os << "* Guess Parameters:\n"
+       << "    T: " << guess.t.value << "  (+/- " << guess.t.error << ")\n"
+       << "    X: " << guess.x.value << "  (+/- " << guess.x.error << ")\n"
+       << "    Y: " << guess.y.value << "  (+/- " << guess.y.error << ")\n"
+       << "    Z: " << guess.z.value << "  (+/- " << guess.z.error << ")\n";
+  } else {
+    os << "* Vertex Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n";
+    os << "* Parameters:\n"
+       << "    T: " << vertex.t_value() << "  (+/- " << vertex.t_error() << ")\n"
+       << "    X: " << vertex.x_value() << "  (+/- " << vertex.x_error() << ")\n"
+       << "    Y: " << vertex.y_value() << "  (+/- " << vertex.y_error() << ")\n"
+       << "    Z: " << vertex.z_value() << "  (+/- " << vertex.z_error() << ")\n";
 
-  os << "* Tracks: \n";
-  const auto size = vertex.size();
-  const auto& tracks = vertex.tracks();
-  const auto& distances = vertex.distances();
-  const auto& errors = vertex.distance_errors();
-  for (std::size_t i{}; i < size; ++i) {
-    const auto& track = tracks[i];
-    os << "    " << distances[i] << "  (+/- " << errors[i]
-       << ")\n      from (" << track.t0_value() << ", "
-                            << track.x0_value() << ", "
-                            << track.y0_value() << ", "
-                            << track.z0_value() << ", "
-                            << track.vx_value() << ", "
-                            << track.vy_value() << ", "
-                            << track.vz_value() << ")\n";
-  }
-
-  os.precision(7);
-  os << "* Statistics: \n"
-     << "    dof:      " << vertex.degrees_of_freedom()               << "\n"
-     << "    chi2:     " << vertex.chi_squared() << " = ";
-  util::io::print_range(vertex.chi_squared_vector(), " + ", "", os)   << "\n";
-  os << "    chi2/dof: " << vertex.chi_squared_per_dof()              << "\n"
-     << "    p-value:  " << stat::chi_squared_p_value(vertex)         << "\n"
-     << "    cov mat:  | ";
-  const auto matrix = vertex.covariance_matrix();
-  for (size_t i = 0; i < 4; ++i) {
-    if (i > 0) os << "              | ";
-    for (size_t j = 0; j < 4; ++j) {
-      const auto cell = matrix[4*i+j];
-      if (i == j) {
-        os << util::io::bold << util::io::underline
-           << cell << util::io::reset_font << " ";
-      } else {
-        os << cell << " ";
-      }
+    os << "* Tracks: \n";
+    const auto size = vertex.size();
+    const auto& tracks = vertex.tracks();
+    const auto& distances = vertex.distances();
+    const auto& errors = vertex.distance_errors();
+    for (std::size_t i{}; i < size; ++i) {
+      const auto& track = tracks[i];
+      os << "    " << distances[i] << "  (+/- " << errors[i]
+         << ")\n      from (" << track.t0_value() << ", "
+                              << track.x0_value() << ", "
+                              << track.y0_value() << ", "
+                              << track.z0_value() << ", "
+                              << track.vx_value() << ", "
+                              << track.vy_value() << ", "
+                              << track.vz_value() << ")\n";
     }
-    os << "|\n";
+
+    os.precision(7);
+    os << "* Statistics: \n"
+       << "    dof:      " << vertex.degrees_of_freedom()               << "\n"
+       << "    chi2:     " << vertex.chi_squared() << " = ";
+    util::io::print_range(vertex.chi_squared_vector(), " + ", "", os)   << "\n";
+    os << "    chi2/dof: " << vertex.chi_squared_per_dof()              << "\n"
+       << "    p-value:  " << stat::chi_squared_p_value(vertex)         << "\n"
+       << "    cov mat:  | ";
+    const auto matrix = vertex.covariance_matrix();
+    for (size_t i = 0; i < 4; ++i) {
+      if (i > 0) os << "              | ";
+      for (size_t j = 0; j < 4; ++j) {
+        const auto cell = matrix[4*i+j];
+        if (i == j) {
+          os << util::io::bold << util::io::underline
+             << cell << util::io::reset_font << " ";
+        } else {
+          os << cell << " ";
+        }
+      }
+      os << "|\n";
+    }
   }
 
   return os << bar;
