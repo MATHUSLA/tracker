@@ -137,7 +137,7 @@ int prototype_tracking(int argc,
     const auto mc_imported_events = event_bundle.true_events;
 
     auto histograms = generate_histograms();
-    for (std::uint_fast64_t event_counter=97; event_counter < 98/*import_size*/; ++event_counter) {
+    for (std::uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
