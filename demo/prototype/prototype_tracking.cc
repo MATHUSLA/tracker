@@ -40,7 +40,7 @@ namespace reader   = MATHUSLA::TRACKER::reader;
 
 namespace MATHUSLA {
 
-//__Find Tracks for Prototype___________________________________________________________________
+//__Find Primary Tracks for Prototype___________________________________________________________
 const analysis::track_vector find_primary_tracks(const analysis::event& event,
                                                  const reader::tracking_options& options,
                                                  analysis::event& non_track_points) {
@@ -50,6 +50,39 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
+  const auto out = analysis::overlap_fit_seeds(tracking_vector);
+
+  // TODO: improve efficiency
+  const auto size = event.size();
+  util::bit_vector save_list(size);
+  for (const auto& track : out) {
+    for (const auto& point : track.event()) {
+      const auto search = util::algorithm::range_binary_find_first(event,
+                                                                   point,
+                                                                   type::t_ordered<analysis::hit>{});
+      if (search != event.cend())
+        save_list.set(static_cast<std::size_t>(search - event.cbegin()));
+    }
+  }
+
+  non_track_points.clear();
+  non_track_points.reserve(size - save_list.count());
+  save_list.unset_conditional_push_back(event, non_track_points);
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Find Secondary Tracks for Prototype_________________________________________________________
+const analysis::track_vector find_secondary_tracks(const analysis::event& event,
+                                                   const reader::tracking_options& options,
+                                                   analysis::event& non_track_points) {
+  analysis::event combined_rpc_hits;
+  analysis::full_event original_rpc_hits;
+  const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
+  const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
+  const auto seeds           = analysis::seed(2, layers, options.line_width);
+  const auto tracking_vector = reset_seeds(seeds, combined_rpc_hits, original_rpc_hits);
   const auto out = analysis::overlap_fit_seeds(tracking_vector);
 
   // TODO: improve efficiency
@@ -129,9 +162,11 @@ int prototype_tracking(int argc,
       }
 
       analysis::event non_track_points;
-      const auto tracks = find_primary_tracks(compressed_event, options, non_track_points);
+      auto tracks = find_primary_tracks(compressed_event, options, non_track_points);
 
-      // TODO: fit non-track points to beta=1 tracks
+      for (const auto& secondary : find_secondary_tracks(non_track_points, options, non_track_points)) {
+        tracks.push_back(secondary);
+      }
 
       save_tracks(tracks, canvas, histograms, options.verbose_output);
       print_tracking_summary(event, tracks);
