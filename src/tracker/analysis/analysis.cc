@@ -233,6 +233,7 @@ const full_event_partition partition(const full_event& points,
 //----------------------------------------------------------------------------------------------
 
 //__Reset Partition by new Interval_____________________________________________________________
+// TODO: implement move repartition
 template<class EventPartition,
   typename Event = typename EventPartition::parts::value_type,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
@@ -243,9 +244,8 @@ const EventPartition repartition(const EventPartition& previous,
   reset_parts.reserve(std::accumulate(parts.cbegin(), parts.cend(), 0ULL,
     [](const auto size, const auto& event) { return size + event.size(); }));
 
-  for (const auto& event : parts) {
+  for (const auto& event : parts)
     reset_parts.insert(reset_parts.cend(), event.cbegin(), event.cend());
-  }
 
   return partition(reset_parts, previous.coordinate, interval);
 }
@@ -260,6 +260,7 @@ const full_event_partition repartition(const full_event_partition& previous,
 //----------------------------------------------------------------------------------------------
 
 //__Fast Check if Points Form a Line____________________________________________________________
+// TODO: implement different topological types like cylinder (done), cone, parabola, ...etc
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 bool is_linear_2d(const Event& points,
@@ -318,7 +319,7 @@ template<class EventPartition,
   typename EventVector = typename EventPartition::parts,
   typename Event = typename EventVector::value_type,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-const EventVector seed(const size_t n,
+const EventVector seed(const std::size_t n,
                        const EventPartition& partition,
                        const real line_threshold) {
   if (n <= 1)
@@ -351,12 +352,12 @@ const EventVector seed(const size_t n,
 
   return out;
 }
-const event_vector seed(const size_t n,
+const event_vector seed(const std::size_t n,
                         const event_partition& partition,
                         const real line_threshold) {
   return seed<event_partition, event_vector>(n, partition, line_threshold);
 }
-const full_event_vector seed(const size_t n,
+const full_event_vector seed(const std::size_t n,
                              const full_event_partition& partition,
                              const real line_threshold) {
   return seed<full_event_partition, full_event_vector>(n, partition, line_threshold);
@@ -368,18 +369,18 @@ template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const Event sequential_join(const Event& first,
                             const Event& second,
-                            const size_t difference) {
+                            const std::size_t difference) {
   const auto second_size = second.size();
   const auto overlap = first.size() - difference;
 
-  if (overlap <= 0 || second_size < overlap)
+  if (overlap <= 0UL || second_size < overlap)
     return Event{};
 
   const auto size = difference + second_size;
   Event out;
   out.reserve(size);
 
-  size_t index = 0;
+  std::size_t index{};
   for (; index < difference; ++index) out.push_back(first[index]);
   for (; index < difference + overlap; ++index) {
     const auto& point = first[index];
@@ -387,18 +388,20 @@ const Event sequential_join(const Event& first,
       return Event{};
     out.push_back(point);
   }
+
+  // FIXME: index -= difference instead ?
   for (; index < size; ++index) out.push_back(second[index - difference]);
 
   return out;
 }
 const event sequential_join(const event& first,
-                 const event& second,
-                 const size_t difference) {
+                            const event& second,
+                            const std::size_t difference) {
   return sequential_join<>(first, second, difference);
 }
 const full_event sequential_join(const full_event& first,
-                      const full_event& second,
-                      const size_t difference) {
+                                 const full_event& second,
+                                 const std::size_t difference) {
   return sequential_join<>(first, second, difference);
 }
 //----------------------------------------------------------------------------------------------
@@ -426,6 +429,7 @@ const full_event subset_join(const full_event& first,
 //----------------------------------------------------------------------------------------------
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
+
 //__Traverse Loop_Join Seeds____________________________________________________________________
 template<class Iter, class BackIter, class UnaryFunction>
 std::size_t _loop_join_copy_traverse(Iter begin,
@@ -437,6 +441,21 @@ std::size_t _loop_join_copy_traverse(Iter begin,
   return static_cast<std::size_t>(traversal - begin);
 }
 //----------------------------------------------------------------------------------------------
+
+/* TODO: implement
+//__Traverse Loop_Join Seeds____________________________________________________________________
+template<class Iter, class BackIter, class UnaryFunction>
+std::size_t _loop_join_move_traverse(Iter begin,
+                                     Iter end,
+                                     BackIter out,
+                                     Iter& traversal,
+                                     UnaryFunction f) {
+  traversal = util::algorithm::move_until(begin, end, out, f).first;
+  return static_cast<std::size_t>(traversal - begin);
+}
+//----------------------------------------------------------------------------------------------
+*/
+
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Join Two Seeds Which form a Loop____________________________________________________________
@@ -673,7 +692,7 @@ const EventVector subset_join_all(const EventVector& seeds) {
     const auto& bottom_seed = sorted[bottom_index];
     if (util::algorithm::range_includes(top_seed, bottom_seed, t_ordered<Point>{})) {
       joined_list.set(bottom_index);
-      // TODO: check this line vvvvvvvvvvvvvvvvvvvvvvvvvv
+      // FIXME: check this line vvvvvvvvvvvvvvvvvvvvvvvvv
       top_index = joined_list.first_unset(1 + top_index);
       bottom_index = 1 + top_index;
     } else {

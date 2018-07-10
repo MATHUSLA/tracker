@@ -37,10 +37,10 @@ public:
        const std::string& title);
   tree(const tree& other);
   tree(tree&& other) noexcept;
+  ~tree();
+
   tree& operator=(const tree& other);
   tree& operator=(tree&& other) noexcept;
-
-  ~tree();
 
   const std::string name() const;
   const std::string title() const;

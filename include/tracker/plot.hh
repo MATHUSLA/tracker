@@ -91,20 +91,20 @@ public:
             const real max);
   histogram(const histogram& other);
   histogram(histogram&& other) noexcept;
+  ~histogram();
+
   histogram& operator=(const histogram& other);
   histogram& operator=(histogram&& other) noexcept;
-
-  ~histogram();
 
   const name_type name() const;
   const std::string title() const;
   const std::string x_title() const;
   const std::string y_title() const;
 
-  void name(const name_type& new_name);
-  void title(const std::string& new_title);
-  void x_title(const std::string& new_x_title);
-  void y_title(const std::string& new_y_title);
+  void name(const name_type& name);
+  void title(const std::string& title);
+  void x_title(const std::string& x_title);
+  void y_title(const std::string& y_title);
 
   bool empty() const;
   size_t size() const;
@@ -173,11 +173,12 @@ public:
                        std::initializer_list<histogram>&& histograms);
   histogram_collection(const histogram_collection& other) = default;
   histogram_collection(histogram_collection&& other) noexcept = default;
+  ~histogram_collection() = default;
+
 
   histogram_collection& operator=(const histogram_collection& other) = default;
   histogram_collection& operator=(histogram_collection&& other) noexcept = default;
 
-  ~histogram_collection() = default;
 
   histogram& emplace(const histogram& hist);
   histogram& emplace(histogram&& hist);
@@ -224,17 +225,34 @@ private:
 //__Plotting Canvas Type________________________________________________________________________
 class canvas {
 public:
-  canvas(const std::string& name="canvas",
-         const size_t width=900,
-         const size_t height=700);
-  canvas(canvas&& other) = default;
+  static constexpr const std::size_t default_width = 900UL;
+  static constexpr const std::size_t default_height = 700UL;
+
+  canvas() = default;
+  canvas(const std::string& name,
+         const std::size_t width=default_width,
+         const std::size_t height=default_height);
+  canvas(const std::string& name,
+         const std::string& title,
+         const std::size_t width=default_width,
+         const std::size_t height=default_height);
+  canvas(canvas&& other) noexcept = default;
   ~canvas();
 
-  canvas& operator=(canvas&& other) = default;
+  canvas& operator=(canvas&& other) noexcept = default;
 
   const std::string name() const;
-  size_t width() const;
-  size_t height() const;
+  const std::string title() const;
+  std::size_t width() const;
+  std::size_t height() const;
+
+  void name(const std::string& name);
+  void title(const std::string& title);
+  void width(const std::size_t width);
+  void height(const std::size_t height);
+  void set_shape(const std::size_t width,
+                 const std::size_t height);
+
   bool empty() const;
 
   void add_point(const real x,
@@ -356,11 +374,9 @@ private:
 class value_tag {
 public:
   value_tag() = default;
-
   value_tag(const std::string& key);
   value_tag(const std::string& key,
             const std::string& value);
-
   value_tag(const value_tag& tag) = default;
   value_tag(value_tag&& tag) noexcept = default;
   ~value_tag() = default;

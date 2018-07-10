@@ -50,7 +50,7 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-  const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis);
+  const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 1UL);
 
   // TODO: improve efficiency
   const auto size = event.size();
@@ -124,6 +124,9 @@ int prototype_tracking(int argc,
   std::uint_fast64_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
     const auto path_counter_string = std::to_string(path_counter++);
+    const auto statistics_save_path = statistics_path_prefix
+                                    + path_counter_string
+                                    + "." + options.statistics_file_extension;
 
     print_bar();
     std::cout << "Read Path: " << path << "\n";
@@ -154,7 +157,7 @@ int prototype_tracking(int argc,
       if (event_density >= options.event_density_limit)
         continue;
 
-      plot::canvas canvas(path + event_counter_string);
+      plot::canvas canvas("event" + event_counter_string, path + event_counter_string);
       if (options.draw_events) {
         draw_detector_centers(canvas);
         draw_mc_tracks(canvas, analysis::mc::convert(mc_imported_events[event_counter]));
@@ -163,6 +166,7 @@ int prototype_tracking(int argc,
 
       analysis::event non_primary_track_points, non_secondary_track_points;
       auto tracks = find_primary_tracks(compressed_event, options, non_primary_track_points);
+      /*
       auto secondary_tracks = find_secondary_tracks(non_primary_track_points,
                                                     options,
                                                     non_secondary_track_points);
@@ -170,7 +174,7 @@ int prototype_tracking(int argc,
       tracks.insert(tracks.cend(),
                     std::make_move_iterator(secondary_tracks.cbegin()),
                     std::make_move_iterator(secondary_tracks.cend()));
-
+      */
       save_tracks(tracks, canvas, histograms, options);
       print_tracking_summary(event, tracks);
 
@@ -181,8 +185,7 @@ int prototype_tracking(int argc,
     plot::value_tag input_tag("DATAPATH", path);
     plot::value_tag event_tag("EVENTS", std::to_string(import_size));
     histograms.draw_all();
-    plot::save_all(statistics_path_prefix + path_counter_string + "." + options.statistics_file_extension,
-      histograms, filetype_tag, project_tag, input_tag, event_tag);
+    plot::save_all(statistics_save_path, histograms, filetype_tag, project_tag, input_tag, event_tag);
   }
 
   print_bar();

@@ -102,10 +102,10 @@ bool is_linear(const full_event& points,
 
 //__Seeding Algorithm___________________________________________________________________________
 // TODO: allow vector of thresholds
-const event_vector seed(const size_t n,
+const event_vector seed(const std::size_t n,
                         const event_partition& partition,
                         const real line_threshold);
-const full_event_vector seed(const size_t n,
+const full_event_vector seed(const std::size_t n,
                              const full_event_partition& partition,
                              const real line_threshold);
 //----------------------------------------------------------------------------------------------
@@ -113,10 +113,10 @@ const full_event_vector seed(const size_t n,
 //__Join Two Seeds in Sequence__________________________________________________________________
 const event sequential_join(const event& first,
                             const event& second,
-                            const size_t difference);
+                            const std::size_t difference);
 const full_event sequential_join(const full_event& first,
                                  const full_event& second,
-                                 const size_t difference);
+                                 const std::size_t difference);
 //----------------------------------------------------------------------------------------------
 
 //__Join Two Seeds Such That One is a Subset of the Other_______________________________________

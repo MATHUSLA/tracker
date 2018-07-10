@@ -22,7 +22,7 @@
 
 #include <tracker/analysis/type.hh>
 #include <tracker/analysis/track.hh>
-// #include <tracker/analysis/vertex.hh>
+// TODO: add features for -> #include <tracker/analysis/vertex.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -35,6 +35,9 @@ using event_vector = std::vector<event>;
 struct track { std::size_t track_id; std::vector<analysis::hit> hits; };
 using track_vector = std::vector<track>;
 //----------------------------------------------------------------------------------------------
+
+// FIXME: implement. Current form insufficient to compare to analysis::track
+// class track { ... };
 
 //__Monte-Carlo and Analysis Event Bundle Type__________________________________________________
 struct event_bundle { event true_hits; analysis::event hits; };
@@ -63,6 +66,8 @@ public:
 
   const track_vector truth_tracks() const { return _true_tracks; }
   const analysis::track_vector analysis_tracks() const { return _tracks; }
+
+  integer size_difference() const { return _tracks.size() - _true_tracks.size(); }
 
 private:
   track_vector _true_tracks;

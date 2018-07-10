@@ -45,9 +45,11 @@ void draw_track(plot::canvas& canvas,
     brightness += step;
   }
   track.draw(canvas, 1.1, plot::color::RED);
+  /*
   for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
     canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLACK);
   }
+  */
 }
 //----------------------------------------------------------------------------------------------
 
@@ -157,7 +159,7 @@ plot::histogram_collection generate_histograms() {
 
     {track.chi_squared_per_dof, "Track Chi-Squared Distribution",           "chi^2/dof",    "Track Count",  200,  0,    12   },
     {track.beta,                "Track Beta Distribution",                  "#beta",        "Track Count",  200,  0,     2   },
-    {"track_beta_with_cut",     "Track Beta Distribution With 3#sigma Cut", "#beta",        "Track Count",  200,  0,     2   },
+    {"track_beta_with_cut",     "Track Beta Distribution With 1#sigma Cut", "#beta",        "Track Count",  200,  0,     2   },
     {track.beta_error,          "Track Beta Error Distribution",            "#beta error",  "Track Count",  200,  0,     2   },
     {track.angle,               "Track Angular Distribution",               "#theta",       "Track Count",  200, -6.28,  6.28},
     {track.angle_error,         "Track Angular Error Distribution",         "#theta error", "Track Count",  200,  0,     1   },

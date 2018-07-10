@@ -54,7 +54,7 @@ std::ostream& print_range(const Range& range,
 inline std::ostream& repeat(const std::size_t count,
                             const std::string& string,
                             std::ostream& os=std::cout) {
-  for (std::size_t i = 0; i < count; ++i)
+  for (std::size_t i{}; i < count; ++i)
     os << string;
   return os;
 }

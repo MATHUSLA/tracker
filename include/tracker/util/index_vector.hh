@@ -138,6 +138,8 @@ template<std::size_t N=default_index_vector_size>
 inline std::ostream& operator<<(std::ostream& os,
                                 const index_vector<N>& indices) {
   const auto size = indices.size();
+  if (size == 0UL)
+    return os;
   for (std::size_t i = 0; i < size - 1; ++i)
     os << indices[i] << " ";
   return os << indices.back();

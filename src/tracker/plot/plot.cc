@@ -37,10 +37,11 @@ thread_local bool _app_on = false;
 void init(bool on) {
   root::helper::init();
   _app_on = on;
-  int argc = 1;
-  std::array<char*, 1> argv{strdup("app")};
-  if (!_app && _app_on)
+  if (!_app && _app_on) {
+    static int argc = 1;
+    static std::array<char*, 1> argv{strdup("app")};
     _app = new TApplication("app", &argc, argv.data());
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -51,7 +52,7 @@ void end() {
       _app->Run(true);
       delete _app;
       _app = nullptr;
-    } catch(...) {}
+    } catch (...) {}
   }
 }
 //----------------------------------------------------------------------------------------------

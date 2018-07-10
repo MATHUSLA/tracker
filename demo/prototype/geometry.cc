@@ -55,6 +55,12 @@ const geometry::box_volume combine_rpc_volume_pair(const geometry::box_volume& f
 }
 //----------------------------------------------------------------------------------------------
 
+//__Check If RPC Combine Created a Valid Strip Overlap__________________________________________
+bool was_combine_successful(const geometry::box_volume& combined) {
+  return (combined.min.x || combined.max.x) && (combined.min.y || combined.max.y);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Construct True Hit from RPC Hit Volumes_____________________________________________________
 const analysis::hit construct_hit(const type::real top_time,
                                   const type::real bottom_time,
@@ -70,7 +76,7 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
 
   static const type::real z_lower = 24.0L * units::length;
   static const type::real z_upper = 45.0L * units::length;
-  static const type::real time_threshold = 2.0L * units::time;
+  static const type::real time_threshold = 4.0L * units::time;
 
   using namespace util::math;
 
@@ -144,9 +150,8 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
       [](const auto& part){ return part; });
   }
 
-  // NOTE: because upward going tracks are aligned -Z <-> T
-  util::algorithm::reverse(event);
-  return event;
+  // FIXME: because upward going tracks are aligned -Z <-> T
+  return util::algorithm::reverse(event);;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -165,7 +170,7 @@ const analysis::full_event_vector reset_seeds(const analysis::event_vector& join
         next.push_back(analysis::add_width(hit));
       }
       next.shrink_to_fit();
-      out.push_back(/*type::t_sort*/(next));
+      out.push_back(type::t_sort(next));
     }
     out.shrink_to_fit();
     return out;
@@ -188,7 +193,7 @@ const analysis::full_event_vector reset_seeds(const analysis::event_vector& join
         next.push_back(analysis::add_width(hit));
     }
     next.shrink_to_fit();
-    out.push_back(/*type::t_sort*/(next));
+    out.push_back(type::t_sort(next));
   }
   out.shrink_to_fit();
   return out;

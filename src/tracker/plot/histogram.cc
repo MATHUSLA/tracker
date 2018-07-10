@@ -177,26 +177,26 @@ const std::string histogram::y_title() const {
 //----------------------------------------------------------------------------------------------
 
 //__Set Histogram Name__________________________________________________________________________
-void histogram::name(const histogram::name_type& new_name) {
-  _impl->_hist->SetName(new_name.c_str());
+void histogram::name(const histogram::name_type& name) {
+  _impl->_hist->SetName(name.c_str());
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Histogram Title_________________________________________________________________________
-void histogram::title(const std::string& new_title) {
-  _impl->_hist->SetTitle(new_title.c_str());
+void histogram::title(const std::string& title) {
+  _impl->_hist->SetTitle(title.c_str());
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Histogram X-Axis Title__________________________________________________________________
-void histogram::x_title(const std::string& new_x_title) {
-  _impl->x_axis()->SetTitle(new_x_title.c_str());
+void histogram::x_title(const std::string& x_title) {
+  _impl->x_axis()->SetTitle(x_title.c_str());
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Histogram Y-Axis Title__________________________________________________________________
-void histogram::y_title(const std::string& new_y_title) {
-  _impl->y_axis()->SetTitle(new_y_title.c_str());
+void histogram::y_title(const std::string& y_title) {
+  _impl->y_axis()->SetTitle(y_title.c_str());
 }
 //----------------------------------------------------------------------------------------------
 

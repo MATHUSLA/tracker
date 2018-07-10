@@ -98,9 +98,10 @@ struct canvas::impl {
   }
 
   impl(const std::string& name,
+       const std::string& title,
        const size_t width,
        const size_t height)
-      : _canvas(new TCanvas(name.c_str(), name.c_str(), width, height)) {
+      : _canvas(new TCanvas(name.c_str(), title.c_str(), width, height)) {
     reset_view();
   }
 
@@ -116,28 +117,75 @@ struct canvas::impl {
 canvas::canvas(const std::string& name,
                const size_t width,
                const size_t height)
-    : _impl(std::make_unique<impl>(name, width, height)) {}
+    : canvas(name, name, width, height) {}
+//----------------------------------------------------------------------------------------------
+
+//__Canvas Constructor__________________________________________________________________________
+canvas::canvas(const std::string& name,
+               const std::string& title,
+               const size_t width,
+               const size_t height)
+    : _impl(std::make_unique<impl>(name, title, width, height)) {}
 //----------------------------------------------------------------------------------------------
 
 //__Canvas Destructor___________________________________________________________________________
 canvas::~canvas() = default;
 //----------------------------------------------------------------------------------------------
 
-//__Canvas Name_________________________________________________________________________________
+//__Get Canvas Name_____________________________________________________________________________
 const std::string canvas::name() const {
   return _impl->_canvas->GetName();
 }
 //----------------------------------------------------------------------------------------------
 
-//__Canvas Width________________________________________________________________________________
-size_t canvas::width() const {
+//__Get Canvas Title____________________________________________________________________________
+const std::string canvas::title() const {
+  return _impl->_canvas->GetTitle();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Canvas Width____________________________________________________________________________
+std::size_t canvas::width() const {
   return _impl->_canvas->GetWindowWidth();
 }
 //----------------------------------------------------------------------------------------------
 
-//__Canvas Height_______________________________________________________________________________
-size_t canvas::height() const {
+//__Get Canvas Height___________________________________________________________________________
+std::size_t canvas::height() const {
   return _impl->_canvas->GetWindowHeight();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Name_____________________________________________________________________________
+void canvas::name(const std::string& name) {
+  _impl->_canvas->SetName(name.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Title____________________________________________________________________________
+void canvas::title(const std::string& title) {
+  _impl->_canvas->SetTitle(title.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Width____________________________________________________________________________
+void canvas::width(const std::size_t width) {
+  // TODO: check sizing
+  _impl->_canvas->SetCanvasSize(width, height());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Height___________________________________________________________________________
+void canvas::height(const std::size_t height) {
+  // TODO: check sizing
+  _impl->_canvas->SetCanvasSize(width(), height);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Shape____________________________________________________________________________
+void canvas::set_shape(const std::size_t width,
+                       const std::size_t height) {
+  _impl->_canvas->SetCanvasSize(width, height);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -321,6 +369,7 @@ void canvas::draw() {
 
   if (!_impl->_has_updated) {
     _impl->_view->ShowAxis();
+    _impl->_canvas->cd();
     auto axis = TAxis3D::GetPadAxis();
     if (axis) {
       axis->SetLabelColor(kBlack);
@@ -376,6 +425,7 @@ canvas canvas::load(const std::string& path,
     file.GetObject(name.c_str(), test);
     if (test) {
       out._impl->_canvas = test;
+      out._impl->reset_view();
     }
     file.Close();
   }

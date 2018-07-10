@@ -75,14 +75,14 @@ track::fit_parameters _guess_track(const full_event& points) {
   const auto vy = dy / dt;
   const auto vz = dz / dt;
 
-  // FIXME: should V be constrained?
+  // NOTE: should V be constrained?
   return {{first_t, first_t.error, 0, 0},
           {first_x, first_x.error, 0, 0},
           {first_y, first_y.error, 0, 0},
           {first_z, first_z.error, 0, 0},
-          {vx, vx.error, -units::speed_of_light, units::speed_of_light},
-          {vy, vy.error, -units::speed_of_light, units::speed_of_light},
-          {vz, vz.error, -units::speed_of_light, units::speed_of_light}};
+          {vx, vx.error, 0, 0},
+          {vy, vy.error, 0, 0},
+          {vz, vz.error, 0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 

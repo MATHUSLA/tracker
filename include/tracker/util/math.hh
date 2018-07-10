@@ -26,8 +26,6 @@
 #define FP_FAST_FMAF
 #define FP_FAST_FMAL
 
-#include <iostream> // TODO: remove
-
 namespace MATHUSLA {
 
 namespace util { namespace math { //////////////////////////////////////////////////////////////

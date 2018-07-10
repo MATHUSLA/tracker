@@ -44,9 +44,7 @@ const geometry::box_volume combine_rpc_volume_pair(const geometry::box_volume& f
 //----------------------------------------------------------------------------------------------
 
 //__Check If RPC Combine Created a Valid Strip Overlap__________________________________________
-constexpr bool was_combine_successful(const geometry::box_volume& combined) {
-  return (combined.min.x || combined.max.x) && (combined.min.y || combined.max.y);
-}
+bool was_combine_successful(const geometry::box_volume& combined);
 //----------------------------------------------------------------------------------------------
 
 //__Construct True Hit from RPC Hit Volumes_____________________________________________________

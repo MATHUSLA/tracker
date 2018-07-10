@@ -255,9 +255,8 @@ constexpr real propagate_product(const real value,
 template<class Range>
 constexpr real propagate_product(const Range& range) {
   real product = 1.0L, ratio_sum_squares = 0.0L;
-  const auto begin = std::cbegin(range);
   const auto end = std::cend(range);
-  for (auto it = begin; it != end; it += 2) {
+  for (auto it = std::cbegin(range); it != end; it += 2) {
     product *= *it;
     const auto ratio = *(it+1) / *it;
     ratio_sum_squares = std::fma(ratio, ratio, ratio_sum_squares);
@@ -268,7 +267,8 @@ constexpr real propagate_product(const Range& range) {
 
 //__Error of Uniform Random Variable____________________________________________________________
 inline real uniform(const real width) {
-  return util::math::abs(width / std::sqrt(12.0L));
+  static const real inv_sqrt12 = 1.0L / std::sqrt(12.0L);
+  return util::math::abs(width * inv_sqrt12);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -879,16 +879,6 @@ private:
   Distribution _type;
 };
 //----------------------------------------------------------------------------------------------
-
-/*
-real gaussian_smear(const real point,
-                    const real error) {
-  static generator _gen{};
-  if (_gen.distribution.error != error)
-    _gen.distribution(normal(0UL, error));
-  return _gen;
-}
-*/
 
 } /* namespace random */ ///////////////////////////////////////////////////////////////////////
 

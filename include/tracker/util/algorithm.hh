@@ -46,8 +46,9 @@ constexpr bool between(const T& value,
 
 //__Reverse Full Range__________________________________________________________________________
 template<class Range>
-constexpr void reverse(Range& range) {
+constexpr Range& reverse(Range& range) {
   std::reverse(std::begin(range), std::end(range));
+  return range;
 }
 //----------------------------------------------------------------------------------------------
 
