@@ -193,7 +193,6 @@ void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
                  plot::histogram_collection& histograms,
                  const reader::tracking_options& options) {
-  histograms["track_count"].insert(tracks.size());
   std::size_t counter{};
   for (const auto& track : tracks) {
     if (track.chi_squared_per_dof() <= 3.0L) {
