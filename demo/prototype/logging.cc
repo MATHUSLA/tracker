@@ -196,7 +196,6 @@ void save_tracks(const analysis::track_vector& tracks,
   histograms["track_count"].insert(tracks.size());
   std::size_t counter{};
   for (const auto& track : tracks) {
-    const auto chi2_per_dof = track.chi_squared_per_dof();
     if (track.chi_squared_per_dof() <= 3.0L) {
       if (track.beta() - 1.0L * track.beta_error() <= 1.0L) {
         track.fill_plots(histograms, track_plotting_keys());
