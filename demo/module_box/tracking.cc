@@ -1,5 +1,5 @@
 /*
- * demo/box/box_tracking.cc
+ * demo/module_box/tracking.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-#include <tracker/analysis.hh>
+#include <tracker/analysis/analysis.hh>
+#include <tracker/analysis/track.hh>
+#include <tracker/core/stat.hh>
+#include <tracker/core/units.hh>
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
-#include <tracker/stat.hh>
-#include <tracker/track.hh>
-#include <tracker/units.hh>
 
 #include "geometry.hh"
 
@@ -36,18 +36,18 @@ namespace reader   = MATHUSLA::TRACKER::reader;
 
 namespace MATHUSLA {
 
-//__Box Tracking Algorithm______________________________________________________________________
-int box_tracking(int argc,
-                 char* argv[]) {
+//__Module Box Tracking Algorithm_______________________________________________________________
+int module_box_tracking(int argc,
+                        char* argv[]) {
   return 1;
 }
 //----------------------------------------------------------------------------------------------
 
 } /* namespace MATHUSLA */
 
-//__Main Function: Box Tracker__________________________________________________________________
+//__Main Function: ModuleBox Tracker____________________________________________________________
 int main(int argc,
          char* argv[]) {
-  return MATHUSLA::box_tracking(argc, argv);
+  return MATHUSLA::module_box_tracking(argc, argv);
 }
 //----------------------------------------------------------------------------------------------

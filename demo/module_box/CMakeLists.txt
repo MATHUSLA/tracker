@@ -1,5 +1,5 @@
 #
-# demo/box/CMakeLists.txt
+# demo/module_box/CMakeLists.txt
 #
 # Copyright 2018 Brandon Gomes
 #
@@ -17,12 +17,12 @@
 
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
-add_executable(box tracking.cc geometry.cc)
-target_compile_features(box PUBLIC cxx_std_14)
+add_executable(module_box tracking.cc geometry.cc)
+target_compile_features(module_box PUBLIC cxx_std_14)
 
-target_link_libraries(box PUBLIC tracker)
-target_include_directories(box PUBLIC
+target_link_libraries(module_box PUBLIC tracker)
+target_include_directories(module_box PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
 
-install(TARGETS box DESTINATION bin)
+install(TARGETS module_box DESTINATION bin)
