@@ -194,17 +194,21 @@ void save_tracks(const analysis::track_vector& tracks,
                  plot::histogram_collection& histograms,
                  const reader::tracking_options& options) {
   histograms["track_count"].insert(tracks.size());
+  std::size_t counter{};
   for (const auto& track : tracks) {
-    track.fill_plots(histograms, track_plotting_keys());
-    const auto beta = track.beta();
-    const auto beta_error = track.beta_error();
-    if (beta - 1.0L * beta_error <= 1.0L)
-      histograms["track_beta_with_cut"].insert(beta);
+    const auto chi2_per_dof = track.chi_squared_per_dof();
+    if (track.chi_squared_per_dof() <= 3.0L) {
+      if (track.beta() - 1.0L * beta_error <= 1.0L) {
+        track.fill_plots(histograms, track_plotting_keys());
+        ++counter;
+      }
+    }
     if (options.verbose_output)
       std::cout << track << "\n";
     if (options.draw_events)
       draw_track(canvas, track);
   }
+  histograms["track_count"].insert(counter);
 }
 //----------------------------------------------------------------------------------------------
 
