@@ -22,6 +22,10 @@
 
 #include <tracker/util/algorithm.hh>
 
+#define FP_FAST_FMA
+#define FP_FAST_FMAF
+#define FP_FAST_FMAL
+
 namespace MATHUSLA {
 
 namespace util { namespace math { //////////////////////////////////////////////////////////////
@@ -38,29 +42,43 @@ constexpr const T fused_product(const T& left,
                                 const Ts&... rest) {
   return std::fma(left, right, fused_product(rest...));
 }
-template<class T, class InputIt1, class InputIt2>
-constexpr const T range_fused_product(InputIt1 first1,
-                                      InputIt1 last1,
-                                      InputIt2 first2,
-                                      T value) {
-  while (first1 != last1) {
-    value = std::fma(*first1, *first2, std::move(value));
-    ++first1;
-    ++first2;
-  }
+template<class T, class Input>
+constexpr const T range_fused_product(Input begin,
+                                      Input end) {
+  T value{*begin * *(++begin)};
+  while (++begin != end)
+    value = std::fma(*begin, *++begin, std::move(value));
   return value;
+}
+template<class Range,
+  typename Value = typename Range::value_type>
+constexpr const Value range_fused_product(const Range& range) {
+  return range_fused_product<Value>(std::cbegin(range), std::cend(range));
 }
 //----------------------------------------------------------------------------------------------
 
 //__Sum of Squares using Fused Multiply-Add_____________________________________________________
 template<class T, class... Ts>
-constexpr const T square(const T& value) {
+constexpr const T sum_squares(const T& value) {
   return value * value;
 }
 template<class T, class... Ts>
-constexpr const T square(const T& value,
-                         const Ts&... rest) {
-  return std::fma(value, value, square(rest...));
+constexpr const T sum_squares(const T& value,
+                              const Ts&... rest) {
+  return std::fma(value, value, sum_squares(rest...));
+}
+template<class T, class Input>
+constexpr const T range_sum_squares(Input begin,
+                                    Input end) {
+  T value{*begin * *begin};
+  while (++begin != end)
+    value = std::fma(*begin, *begin, std::move(value));
+  return value;
+}
+template<class Range,
+  typename Value = typename Range::value_type>
+constexpr const Value range_sum_squares(const Range& range) {
+  return range_sum_squares<Value>(std::cbegin(range), std::cend(range));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -68,14 +86,24 @@ constexpr const T square(const T& value,
 template<class T, class... Ts>
 constexpr const T hypot(const T& value,
                         const Ts&... rest) {
-  return std::sqrt(square(value, rest...));
+  return std::sqrt(sum_squares(value, rest...));
+}
+template<class T, class Input>
+constexpr const T range_hypot(Input begin,
+                              Input end) {
+  return std::sqrt(range_sum_squares<T>(begin, end));
+}
+template<class Range,
+  typename Value = typename Range::value_type>
+constexpr const Value range_hypot(const Range& range) {
+  return range_hypot<Value>(std::cbegin(range), std::cend(range));
 }
 //----------------------------------------------------------------------------------------------
 
 //__Constant Expression Absolute Value__________________________________________________________
 template<class T>
 constexpr const T abs(const T& value) {
-  return std::max(value, -value);
+  return value >= 0 ? value : -value;
 }
 //----------------------------------------------------------------------------------------------
 

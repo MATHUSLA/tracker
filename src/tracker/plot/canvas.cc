@@ -82,26 +82,10 @@ struct _style_equal {
 using _style_point_map = std::unordered_multimap<_style, r3_point, _style_hash, _style_equal>;
 //----------------------------------------------------------------------------------------------
 
-//__Canvas Names________________________________________________________________________________
-std::unordered_map<std::string, size_t> _canvas_names;
-//----------------------------------------------------------------------------------------------
-
-//__Create a Unique Name for Canvas_____________________________________________________________
-const std::string _make_unique_name(const std::string& name) {
-  const auto& search = _canvas_names.find(name);
-  if (search != _canvas_names.end()) {
-    return name + std::to_string(search->second++);
-  } else {
-    _canvas_names.insert({name, 1});
-    return name;
-  }
-}
-//----------------------------------------------------------------------------------------------
-
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Canvas Implementation Definition____________________________________________________________
-struct canvas::canvas_impl {
+struct canvas::impl {
   TCanvas* _canvas;
   TView3D* _view;
   std::vector<TPolyLine3D*> _poly_lines;
@@ -109,22 +93,23 @@ struct canvas::canvas_impl {
   bool _has_updated = false;
 
   void reset_view() {
-    _view = static_cast<TView3D*>(TView::CreateView());
+    _view = dynamic_cast<TView3D*>(TView::CreateView());
     _view->SetAutoRange(true);
   }
 
-  canvas_impl(const std::string& name,
-              const size_t width,
-              const size_t height)
-      : _canvas(new TCanvas(name.c_str(), name.c_str(), width, height)) {
+  impl(const std::string& name,
+       const std::string& title,
+       const size_t width,
+       const size_t height)
+      : _canvas(new TCanvas(name.c_str(), title.c_str(), width, height)) {
     reset_view();
   }
 
-  explicit canvas_impl(const canvas_impl& other) = default;
-  explicit canvas_impl(canvas_impl&& other) = default;
-  canvas_impl& operator=(const canvas_impl& other) = default;
-  canvas_impl& operator=(canvas_impl&& other) = default;
-  ~canvas_impl() = default;
+  impl(const impl& other) = default;
+  impl(impl&& other) = default;
+  impl& operator=(const impl& other) = default;
+  impl& operator=(impl&& other) = default;
+  ~impl() = default;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -132,124 +117,81 @@ struct canvas::canvas_impl {
 canvas::canvas(const std::string& name,
                const size_t width,
                const size_t height)
-    : _impl(std::make_unique<canvas_impl>(_make_unique_name(name), width, height)) {}
+    : canvas(name, name, width, height) {}
+//----------------------------------------------------------------------------------------------
+
+//__Canvas Constructor__________________________________________________________________________
+canvas::canvas(const std::string& name,
+               const std::string& title,
+               const size_t width,
+               const size_t height)
+    : _impl(std::make_unique<impl>(name, title, width, height)) {}
 //----------------------------------------------------------------------------------------------
 
 //__Canvas Destructor___________________________________________________________________________
 canvas::~canvas() = default;
 //----------------------------------------------------------------------------------------------
 
-//__Construct Canvas from File__________________________________________________________________
-canvas canvas::load(const std::string& path,
-                    const std::string& name) {
-  canvas out;
-  TFile file(path.c_str(), "READ");
-  if (!file.IsZombie()) {
-    TCanvas* test = nullptr;
-    file.GetObject(name.c_str(), test);
-    if (test) {
-      out._impl->_canvas = test;
-    }
-    file.Close();
-  }
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Canvas Name_________________________________________________________________________________
+//__Get Canvas Name_____________________________________________________________________________
 const std::string canvas::name() const {
   return _impl->_canvas->GetName();
 }
 //----------------------------------------------------------------------------------------------
 
-//__Canvas Width________________________________________________________________________________
-size_t canvas::width() const {
+//__Get Canvas Title____________________________________________________________________________
+const std::string canvas::title() const {
+  return _impl->_canvas->GetTitle();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Canvas Width____________________________________________________________________________
+std::size_t canvas::width() const {
   return _impl->_canvas->GetWindowWidth();
 }
 //----------------------------------------------------------------------------------------------
 
-//__Canvas Height_______________________________________________________________________________
-size_t canvas::height() const {
+//__Get Canvas Height___________________________________________________________________________
+std::size_t canvas::height() const {
   return _impl->_canvas->GetWindowHeight();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Name_____________________________________________________________________________
+void canvas::name(const std::string& name) {
+  _impl->_canvas->SetName(name.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Title____________________________________________________________________________
+void canvas::title(const std::string& title) {
+  _impl->_canvas->SetTitle(title.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Width____________________________________________________________________________
+void canvas::width(const std::size_t width) {
+  // TODO: check sizing
+  _impl->_canvas->SetCanvasSize(width, height());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Height___________________________________________________________________________
+void canvas::height(const std::size_t height) {
+  // TODO: check sizing
+  _impl->_canvas->SetCanvasSize(width(), height);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Canvas Shape____________________________________________________________________________
+void canvas::set_shape(const std::size_t width,
+                       const std::size_t height) {
+  _impl->_canvas->SetCanvasSize(width, height);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Check if Canvas Has Objects_________________________________________________________________
 bool canvas::empty() const {
   return _impl->_poly_lines.empty() && _impl->_polymarker_map.empty();
-}
-//----------------------------------------------------------------------------------------------
-
-//__Draw Canvas_________________________________________________________________________________
-void canvas::draw() {
-  _impl->_canvas->cd();
-
-  const auto& marker_map = _impl->_polymarker_map;
-  const auto marker_map_size = marker_map.bucket_count();
-  for (size_t i = 0; i < marker_map_size; ++i) {
-    auto polymarker = new TPolyMarker3D(marker_map.bucket_size(i), 20);
-    const auto& begin = marker_map.cbegin(i);
-    const auto& end = marker_map.cend(i);
-    std::for_each(begin, end, [&](const auto& entry) {
-      const auto& point = entry.second;
-      polymarker->SetNextPoint(point.x, point.y, point.z);
-    });
-    if (begin != end) {
-      const auto& style = (*begin).first;
-      polymarker->SetMarkerSize(style.size);
-      polymarker->SetMarkerColor(_to_TColor_id(style.rgb));
-      polymarker->Draw();
-    }
-  }
-
-  for (const auto& poly_line : _impl->_poly_lines)
-    poly_line->Draw();
-
-
-  if (!_impl->_has_updated) {
-    _impl->_view->ShowAxis();
-    auto axis = TAxis3D::GetPadAxis();
-    if (axis) {
-      axis->SetLabelColor(kBlack);
-      axis->SetAxisColor(kBlack);
-      axis->SetTitleOffset(2);
-      axis->SetXTitle("X (mm)");
-      axis->SetYTitle("Y (mm)");
-      axis->SetZTitle("Z (mm)");
-    }
-  }
-
-  _impl->_canvas->Modified();
-  _impl->_canvas->Update();
-  _impl->_has_updated = true;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Clear A Canvas______________________________________________________________________________
-void canvas::clear() {
-  if (_impl->_has_updated) {
-    _impl->_canvas->cd();
-    _impl->_canvas->Clear();
-    _impl->_canvas->Modified();
-    _impl->_canvas->Update();
-    _impl->reset_view();
-    _impl->_polymarker_map.clear();
-    _impl->_poly_lines.clear();
-    _impl->_has_updated = false;
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Save Canvas to ROOT File____________________________________________________________________
-bool canvas::save(const std::string& path) const {
-  TFile file(path.c_str(), "UPDATE");
-  if (!file.IsZombie()) {
-    file.cd();
-    file.WriteTObject(_impl->_canvas->Clone());
-    file.Close();
-    return true;
-  }
-  return false;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -384,7 +326,7 @@ void canvas::add_box(const r3_point& center,
                      const real width_z,
                      const real width,
                      const color& color) {
-  const auto half_widths = r3_point{width_x, width_y, width_z} / 2;
+  const auto half_widths = r3_point{width_x, width_y, width_z} / 2.0L;
   add_box(center - half_widths, center + half_widths, width, color);
 }
 //----------------------------------------------------------------------------------------------
@@ -397,6 +339,97 @@ void canvas::add_box(const r4_point& center,
                      const real width,
                      const color& color) {
   add_box(reduce_to_r3(center), width_x, width_y, width_z, width, color);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw Canvas_________________________________________________________________________________
+void canvas::draw() {
+  _impl->_canvas->cd();
+
+  const auto& marker_map = _impl->_polymarker_map;
+  const auto marker_map_size = marker_map.bucket_count();
+  for (size_t i = 0; i < marker_map_size; ++i) {
+    auto polymarker = new TPolyMarker3D(marker_map.bucket_size(i), 20);
+    const auto& begin = marker_map.cbegin(i);
+    const auto& end = marker_map.cend(i);
+    std::for_each(begin, end, [&](const auto& entry) {
+      const auto& point = entry.second;
+      polymarker->SetNextPoint(point.x, point.y, point.z);
+    });
+    if (begin != end) {
+      const auto& style = (*begin).first;
+      polymarker->SetMarkerSize(style.size);
+      polymarker->SetMarkerColor(_to_TColor_id(style.rgb));
+      polymarker->Draw();
+    }
+  }
+
+  for (const auto& poly_line : _impl->_poly_lines)
+    poly_line->Draw();
+
+  if (!_impl->_has_updated) {
+    _impl->_view->ShowAxis();
+    _impl->_canvas->cd();
+    auto axis = TAxis3D::GetPadAxis();
+    if (axis) {
+      axis->SetLabelColor(kBlack);
+      axis->SetAxisColor(kBlack);
+      axis->SetTitleOffset(2);
+      axis->SetXTitle("X (mm)");
+      axis->SetYTitle("Y (mm)");
+      axis->SetZTitle("Z (mm)");
+    }
+  }
+
+  _impl->_canvas->Modified();
+  _impl->_canvas->Update();
+  _impl->_has_updated = true;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear A Canvas______________________________________________________________________________
+void canvas::clear() {
+  if (_impl->_has_updated) {
+    _impl->_canvas->cd();
+    _impl->_canvas->Clear();
+    _impl->_canvas->Modified();
+    _impl->_canvas->Update();
+    _impl->reset_view();
+    _impl->_polymarker_map.clear();
+    _impl->_poly_lines.clear();
+    _impl->_has_updated = false;
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Save Canvas to ROOT File____________________________________________________________________
+bool canvas::save(const std::string& path) const {
+  TFile file(path.c_str(), "UPDATE");
+  if (!file.IsZombie()) {
+    file.cd();
+    file.WriteTObject(_impl->_canvas->Clone());
+    file.Close();
+    return true;
+  }
+  return false;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Construct Canvas from File__________________________________________________________________
+canvas canvas::load(const std::string& path,
+                    const std::string& name) {
+  canvas out;
+  TFile file(path.c_str(), "READ");
+  if (!file.IsZombie()) {
+    TCanvas* test = nullptr;
+    file.GetObject(name.c_str(), test);
+    if (test) {
+      out._impl->_canvas = test;
+      out._impl->reset_view();
+    }
+    file.Close();
+  }
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 

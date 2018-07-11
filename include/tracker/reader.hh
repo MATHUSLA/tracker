@@ -20,9 +20,11 @@
 #define TRACKER__READER_HH
 #pragma once
 
-#include <tracker/analysis.hh>
+#include <tracker/core/type.hh>
+#include <tracker/core/units.hh>
+#include <tracker/analysis/type.hh>
+#include <tracker/analysis/monte_carlo.hh>
 #include <tracker/geometry.hh>
-#include <tracker/units.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -30,32 +32,46 @@ namespace reader { /////////////////////////////////////////////////////////////
 
 using namespace type;
 
-//__Data File Collection Mode___________________________________________________________________
-enum class CollectionMode { Position, Detector };
-//----------------------------------------------------------------------------------------------
-
 //__Tracking Options Structure__________________________________________________________________
 struct tracking_options {
-  std::string    geometry_file      = "";
-  std::string    geometry_map_file  = "";
-  std::string    geometry_time_file = "";
-  std::string    data_directory     = "";
-  std::string    data_t_key         = "T";
-  std::string    data_x_key         = "X";
-  std::string    data_y_key         = "Y";
-  std::string    data_z_key         = "Z";
-  std::string    data_dt_key        = "dT";
-  std::string    data_dx_key        = "dX";
-  std::string    data_dy_key        = "dY";
-  std::string    data_dz_key        = "dZ";
-  std::string    data_detector_key  = "Detector";
-  CollectionMode mode               = CollectionMode::Detector;
-  real           default_time_error = 2 * units::time;
-  r4_point       collapse_size      = {0, 0, 0, 0};
-  Coordinate     layer_axis         = Coordinate::Z;
-  real           layer_depth        = 50 * units::length;
-  real           line_width         = 1;
-  size_t         seed_size          = 3;
+  std::string  geometry_file              = "";
+  std::string  geometry_map_file          = "";
+  std::string  geometry_time_file         = "";
+  real         default_time_error         = 2 * units::time;
+
+  std::string  data_directory             = "";
+  std::string  data_file_extension        = "root";
+  std::string  data_t_key                 = "";
+  std::string  data_x_key                 = "";
+  std::string  data_y_key                 = "";
+  std::string  data_z_key                 = "";
+  std::string  data_dt_key                = "";
+  std::string  data_dx_key                = "";
+  std::string  data_dy_key                = "";
+  std::string  data_dz_key                = "";
+  std::string  data_detector_key          = "Detector";
+  std::string  data_track_id_key          = "Track";
+  std::string  data_parent_id_key         = "Parent";
+  std::string  data_e_key                 = "";
+  std::string  data_px_key                = "";
+  std::string  data_py_key                = "";
+  std::string  data_pz_key                = "";
+
+  std::string  statistics_directory       = "";
+  std::string  statistics_file_prefix     = "statistics";
+  std::string  statistics_file_extension  = "root";
+
+  bool         time_smearing              = true;
+  Coordinate   layer_axis                 = Coordinate::Z;
+  real         layer_depth                = 0;
+  real         line_width                 = 1;
+  size_t       seed_size                  = 3;
+  real         event_density_limit        = 1;
+  real         event_overload_limit       = 2;
+  real         track_density_limit        = 1;
+
+  bool         verbose_output             = false;
+  bool         draw_events                = false;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -70,7 +86,12 @@ const geometry::time_resolution_map import_time_resolution_map(const std::string
 namespace root { ///////////////////////////////////////////////////////////////////////////////
 
 //__ROOT Directory Search_______________________________________________________________________
-const std::vector<std::string> search_directory(const std::string& path);
+const std::vector<std::string> search_directory(const std::string& path,
+                                                const std::string& ext="root");
+//----------------------------------------------------------------------------------------------
+
+//__Import Mode Type____________________________________________________________________________
+enum class ImportMode { Detector, Widths };
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import___________________________________________________________________________
@@ -87,7 +108,81 @@ const analysis::event_vector import_events(const std::string& path,
                                            const tracking_options& options,
                                            const geometry::detector_map& map);
 const analysis::event_vector import_events(const std::string& path,
-                                           const tracking_options& options);
+                                           const tracking_options& options,
+                                           const ImportMode mode);
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Import______________________________________________________________________
+const analysis::full_event_vector import_full_events(const std::string& path,
+                                                     const std::string& t_key,
+                                                     const std::string& x_key,
+                                                     const std::string& y_key,
+                                                     const std::string& z_key,
+                                                     const std::string& dt_key,
+                                                     const std::string& dx_key,
+                                                     const std::string& dy_key,
+                                                     const std::string& dz_key);
+const analysis::full_event_vector import_full_events(const std::string& path,
+                                                     const std::string& t_key,
+                                                     const std::string& detector_key,
+                                                     const geometry::detector_map& map);
+const analysis::full_event_vector import_full_events(const std::string& path,
+                                                     const tracking_options& options,
+                                                     const geometry::detector_map& map);
+const analysis::full_event_vector import_full_events(const std::string& path,
+                                                     const tracking_options& options,
+                                                     const ImportMode mode);
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+                                                               const std::string& track_key,
+                                                               const std::string& t_key,
+                                                               const std::string& x_key,
+                                                               const std::string& y_key,
+                                                               const std::string& z_key);
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+                                                               const std::string& track_key,
+                                                               const std::string& t_key,
+                                                               const std::string& x_key,
+                                                               const std::string& y_key,
+                                                               const std::string& z_key,
+                                                               const std::string& detector_key,
+                                                               const geometry::detector_map& map);
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+                                                               const tracking_options& options,
+                                                               const geometry::detector_map& map);
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+                                                               const tracking_options& options,
+                                                               const ImportMode mode);
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+                                                                         const std::string& track_key,
+                                                                         const std::string& t_key,
+                                                                         const std::string& x_key,
+                                                                         const std::string& y_key,
+                                                                         const std::string& z_key,
+                                                                         const std::string& dt_key,
+                                                                         const std::string& dx_key,
+                                                                         const std::string& dy_key,
+                                                                         const std::string& dz_key);
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+                                                                         const std::string& track_key,
+                                                                         const std::string& t_key,
+                                                                         const std::string& x_key,
+                                                                         const std::string& y_key,
+                                                                         const std::string& z_key,
+                                                                         const std::string& dt_key,
+                                                                         const std::string& detector_key,
+                                                                         const geometry::detector_map& map);
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+                                                                         const tracking_options& options,
+                                                                         const geometry::detector_map& map);
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+                                                                         const tracking_options& options,
+                                                                         const ImportMode mode);
 //----------------------------------------------------------------------------------------------
 
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////

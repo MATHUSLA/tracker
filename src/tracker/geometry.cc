@@ -26,10 +26,10 @@
 #include <Geant4/G4RunManager.hh>
 #include <Geant4/G4VoxelLimits.hh>
 #include <Geant4/G4AffineTransform.hh>
-#include <Geant4/G4IntersectionSolid.hh>
-#include <Geant4/G4UnionSolid.hh>
+// TODO: use #include <Geant4/G4IntersectionSolid.hh>
+// TODO: use #include <Geant4/G4UnionSolid.hh>
 
-#include <tracker/units.hh>  // TODO: remove this dependency
+#include <tracker/core/units.hh>
 
 #include <tracker/util/algorithm.hh>
 
@@ -59,19 +59,19 @@ struct r3_point_hash {
 thread_local std::string _path;
 thread_local G4RunManager* _manager;
 thread_local G4VPhysicalVolume* _world;
-thread_local std::unordered_map<std::string, _geometric_volume> _geometry;
-thread_local std::vector<std::string> _geometry_insertion_order;
+thread_local std::unordered_map<structure_value, _geometric_volume> _geometry;
+thread_local std::vector<structure_value> _geometry_insertion_order;
 thread_local real _default_time_resolution = 2 * units::time;
-thread_local std::unordered_map<std::string, real> _time_resolution_map;
-thread_local std::unordered_map<r3_point, std::string, r3_point_hash> _name_cache;
-//thread_local std::unordered_map<std::string, box_volume> _box_cache;
+thread_local time_resolution_map _time_resolution_map;
+thread_local std::unordered_map<r3_point, structure_value, r3_point_hash> _name_cache;
+// TODO: use -> thread_local std::unordered_map<std::string, box_volume> _box_cache;
 const G4VoxelLimits _blank_voxels;
 const G4AffineTransform _blank_transform;
 //----------------------------------------------------------------------------------------------
 
 //__Convert From G4ThreeVector to R3_Point______________________________________________________
 const r3_point _to_r3_point(const G4ThreeVector& vector) {
-  return { vector.x(), vector.y(), vector.z() };
+  return r3_point{vector.x(), vector.y(), vector.z()};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ const G4ThreeVector _to_G4ThreeVector(const r3_point& point) {
 //----------------------------------------------------------------------------------------------
 
 //__Safely Get Name of Volume___________________________________________________________________
-const std::string _get_name(const _geometric_volume& gvolume) {
+const structure_value _get_name(const _geometric_volume& gvolume) {
   const auto& volume = gvolume.volume;
   return volume ? volume->GetName() : "";
 }
@@ -160,7 +160,6 @@ bool _in_volume(const r3_point& point,
   const auto& translation = transform.NetTranslation();
   const auto& rotation = transform.NetRotation();
   const auto& position = _to_local_transform(_to_G4ThreeVector(point), translation, rotation);
-  // (rotation.inverse() * _to_G4ThreeVector(point)) - translation;
   return volume->GetLogicalVolume()->GetSolid()->Inside(position);
 }
 //----------------------------------------------------------------------------------------------
@@ -212,7 +211,7 @@ void open(const std::string& path,
   _manager->InitializeGeometry();
   _setup_geometry({_world, G4AffineTransform()});
   _default_time_resolution = default_time_error;
-  // add time_resolution_map
+  _time_resolution_map = map;
   std::cout << _bar << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
@@ -237,8 +236,8 @@ const std::string& current_geometry_path() {
 //----------------------------------------------------------------------------------------------
 
 //__List of all Geometry Volumes________________________________________________________________
-const std::vector<std::string> full_structure() {
-  std::vector<std::string> out;
+const structure_vector full_structure() {
+  structure_vector out;
   out.reserve(_geometry.size());
   std::transform(_geometry.cbegin(), _geometry.cend(), std::back_inserter(out),
     [](const auto& element) { return element.first; });
@@ -247,16 +246,18 @@ const std::vector<std::string> full_structure() {
 //----------------------------------------------------------------------------------------------
 
 //__List of all Geometry Volumes Except those in the List_______________________________________
-const std::vector<std::string> full_structure_except(const std::vector<std::string>& names) {
-  std::vector<std::string> out;
+const structure_vector full_structure_except(const structure_vector& names) {
+  structure_vector out;
   out.reserve(_geometry.size());
   const auto names_begin = names.cbegin();
   const auto names_end = names.cend();
   std::for_each(_geometry.cbegin(), _geometry.cend(),
     [&](const auto& element) {
       const auto& name = element.first;
-      if (std::find(names_begin, names_end, name) == names_end) out.push_back(name);
+      if (std::find(names_begin, names_end, name) == names_end)
+        out.push_back(name);
     });
+  out.shrink_to_fit();
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -268,46 +269,46 @@ real default_time_resolution() {
 //----------------------------------------------------------------------------------------------
 
 //__Volume Hierarchy of a Volume________________________________________________________________
-const std::vector<std::string> volume_hierarchy(const std::string& name) {
+const structure_vector volume_hierarchy(const structure_value& name) {
   // TODO: finish
-  std::vector<std::string> out{};
-  _traverse_geometry([&](const auto&, const auto&) {
-    out.push_back(name);
-    return true;
-  });
+  structure_vector out{};
+  // const auto& search = _geometry.find(name);
+  // if (search != _geometry.cend()) {
+  //   const auto& volume = search->second.volume->GetLogicalVolume();
+  // }
   return out;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Check Volume Containment____________________________________________________________________
 bool is_inside_volume(const r3_point& point,
-                      const std::string& name) {
+                      const structure_value& name) {
   const auto& search = _geometry.find(name);
   return search != _geometry.cend() && _in_volume(point, search->second);
 }
 bool is_inside_volume(const r4_point& point,
-                      const std::string& name) {
+                      const structure_value& name) {
   return is_inside_volume(reduce_to_r3(point), name);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Get Volume Hierarchy________________________________________________________________________
-const std::vector<std::string> volume_hierarchy(const r3_point& point) {
+const structure_vector volume_hierarchy(const r3_point& point) {
   const auto& hierarchy = _get_volume_hierarchy(point);
-  std::vector<std::string> out;
+  structure_vector out;
   std::transform(hierarchy.cbegin(), hierarchy.cend(), std::back_inserter(out), _get_name);
   return out;
 }
-const std::vector<std::string> volume_hierarchy(const r4_point& point) {
+const structure_vector volume_hierarchy(const r4_point& point) {
   return volume_hierarchy(reduce_to_r3(point));
 }
 //----------------------------------------------------------------------------------------------
 
 //__Get Volume Name_____________________________________________________________________________
-const std::string volume(const r3_point& point) {
+const structure_value volume(const r3_point& point) {
   return _get_name(_get_volume(point));
 }
-const std::string volume(const r4_point& point) {
+const structure_value volume(const r4_point& point) {
   return volume(reduce_to_r3(point));
 }
 //----------------------------------------------------------------------------------------------
@@ -375,15 +376,15 @@ const box_volume _calculate_global_extent(const G4VSolid* solid,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Check Volume Limits_________________________________________________________________________
-const box_volume limits_of(const std::string& name) {
+const box_volume limits_of(const structure_value& name) {
   const auto& geometry_search = _geometry.find(name);
   if (geometry_search == _geometry.cend())
-    return {};
+    return box_volume{};
 
   const auto& gvolume = geometry_search->second;
   const auto solid = _get_solid(gvolume);
   if (!solid)
-    return {};
+    return box_volume{};
 
   const auto& transform = gvolume.transform;
   const auto out = _calculate_global_extent(solid, transform.NetTranslation(), transform.NetRotation());
@@ -397,7 +398,7 @@ const box_volume limits_of(const std::string& name) {
 //----------------------------------------------------------------------------------------------
 
 //__Time Error on a Detector Component__________________________________________________________
-real time_resolution_of(const std::string& name) {
+real time_resolution_of(const structure_value& name) {
   const auto search = _time_resolution_map.find(name);
   return search != _time_resolution_map.cend() ? search->second : _default_time_resolution;
 }
@@ -407,7 +408,6 @@ real time_resolution_of(const std::string& name) {
 const box_volume coordinatewise_intersection(const box_volume& first,
                                              const box_volume& second) {
   box_volume out{};
-
   if (!(first.max.x < second.min.x || second.max.x < first.min.x)) {
     out.min.x = std::max(first.min.x, second.min.x);
     out.max.x = std::min(first.max.x, second.max.x);
@@ -428,7 +428,7 @@ const box_volume coordinatewise_intersection(const box_volume& first,
 //__Compute Union of Box Volumes________________________________________________________________
 const box_volume coordinatewise_union(const box_volume& first,
                                       const box_volume& second) {
-  box_volume out{};
+  box_volume out;
   out.min.x = std::min(first.min.x, second.min.x);
   out.max.x = std::max(first.max.x, second.max.x);
   out.min.y = std::min(first.min.y, second.min.y);
@@ -472,14 +472,14 @@ constexpr bool is_inside_volume(const r4_point& point,
 //----------------------------------------------------------------------------------------------
 
 //__Find Center of Geometry around Point________________________________________________________
-const r3_point find_center(const std::string& name) {
+const r3_point find_center(const structure_value& name) {
   return limits_of(name).center;
 }
 const r3_point find_center(const r3_point& point) {
   return limits_of_volume(point).center;
 }
 const r4_point find_center(const r4_point& point) {
-  const auto& center = limits_of_volume(point).center;
+  const auto center = limits_of_volume(point).center;
   return {point.t, center.x, center.y, center.z};
 }
 //----------------------------------------------------------------------------------------------

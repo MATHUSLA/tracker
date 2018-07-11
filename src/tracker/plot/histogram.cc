@@ -31,23 +31,6 @@ namespace plot { ///////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
-//__Histogram and Canvas Name Map_______________________________________________________________
-std::unordered_map<std::string, size_t> _names;
-//----------------------------------------------------------------------------------------------
-
-//__Create a Unique Name________________________________________________________________________
-const std::string _make_unique_name(const std::string& name) {
-  const auto& search = _names.find(name);
-  if (search != _names.end()) {
-    return name + std::to_string(search->second++);
-  } else {
-    const auto new_name = name;
-    _names.insert({new_name, 1});
-    return new_name;
-  }
-}
-//----------------------------------------------------------------------------------------------
-
 //__Build TCanvas_______________________________________________________________________________
 TCanvas* _build_TCanvas(const std::string& name,
                         const std::string& title) {
@@ -68,38 +51,48 @@ TH1D* _build_TH1D(const std::string& name,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Histogram Implementation Definition_________________________________________________________
-struct histogram::histogram_impl {
+struct histogram::impl {
   TCanvas* _canvas;
   TH1D* _hist;
-  bool _has_updated;
+  bool _has_updated = false;
 
   TAxis* x_axis() { return _hist->GetXaxis(); }
   const TAxis* x_axis() const { return _hist->GetXaxis(); }
   TAxis* y_axis() { return _hist->GetYaxis(); }
   const TAxis* y_axis() const { return _hist->GetYaxis(); }
 
-  histogram_impl() {}
+  impl() = default;
 
-  histogram_impl(const std::string& name,
-                 const std::string& title,
-                 const std::string& x_title,
-                 const std::string& y_title,
-                 const size_t bins,
-                 const real min,
-                 const real max) : _has_updated(false) {
-    const auto unique_name = _make_unique_name(name);
-    _canvas = _build_TCanvas(unique_name, title);
-    _hist = _build_TH1D(unique_name, title, bins, min, max);
-    _hist->SetDirectory(0);
+  impl(const std::string& name,
+       const std::string& title,
+       const std::string& x_title,
+       const std::string& y_title,
+       const size_t bins,
+       const real min,
+       const real max)
+    : _canvas(_build_TCanvas(name, title)),
+      _hist(_build_TH1D(name, title, bins, min, max)) {
+    _hist->SetDirectory(nullptr);
     x_axis()->SetTitle(x_title.c_str());
     y_axis()->SetTitle(y_title.c_str());
   }
 
-  explicit histogram_impl(const histogram_impl& other) = default;
-  explicit histogram_impl(histogram_impl&& other) = default;
-  histogram_impl& operator=(const histogram_impl& other) = default;
-  histogram_impl& operator=(histogram_impl&& other) = default;
-  ~histogram_impl() = default;
+  impl(const impl& other)
+      : _canvas(_build_TCanvas(other._hist->GetName(), other._hist->GetTitle())),
+        _hist(dynamic_cast<TH1D*>(other._hist->Clone())) {}
+
+  impl(impl&& other) noexcept = default;
+
+  impl& operator=(const impl& other) {
+    if (this != &other) {
+      _canvas = dynamic_cast<TCanvas*>(other._canvas->Clone());
+      _hist = dynamic_cast<TH1D*>(other._hist->Clone());
+    }
+    return *this;
+  }
+
+  impl& operator=(impl&& other) noexcept = default;
+  ~impl() = default;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -108,7 +101,7 @@ histogram::histogram() : _impl() {}
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Partial Constructor_______________________________________________________________
-histogram::histogram(const std::string& name,
+histogram::histogram(const histogram::name_type& name,
                      const size_t bins,
                      const real min,
                      const real max)
@@ -116,7 +109,7 @@ histogram::histogram(const std::string& name,
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Partial Constructor_______________________________________________________________
-histogram::histogram(const std::string& name,
+histogram::histogram(const histogram::name_type& name,
                      const std::string& title,
                      const size_t bins,
                      const real min,
@@ -125,40 +118,42 @@ histogram::histogram(const std::string& name,
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Full Constructor__________________________________________________________________
-histogram::histogram(const std::string& name,
+histogram::histogram(const histogram::name_type& name,
                      const std::string& title,
                      const std::string& x_title,
                      const std::string& y_title,
                      const size_t bins,
                      const real min,
                      const real max)
-    : _impl(std::make_unique<histogram_impl>(name, title, x_title, y_title, bins, min, max)) {}
+    : _impl(std::make_unique<impl>(name, title, x_title, y_title, bins, min, max)) {}
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Copy Constructor__________________________________________________________________
+histogram::histogram(const histogram& other) : _impl(new impl(*other._impl)) {}
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Move Constructor__________________________________________________________________
+histogram::histogram(histogram&& other) noexcept = default;
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Copy Assignment___________________________________________________________________
+histogram& histogram::operator=(const histogram& other) {
+  if (this != &other)
+    _impl.reset(new impl(*other._impl));
+  return *this;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Histogram Move Assignment___________________________________________________________________
+histogram& histogram::operator=(histogram&& other) noexcept = default;
 //----------------------------------------------------------------------------------------------
 
 //__Histogram Destructor________________________________________________________________________
 histogram::~histogram() = default;
 //----------------------------------------------------------------------------------------------
 
-//__Load Histogram From File____________________________________________________________________
-histogram histogram::load(const std::string& path,
-                          const std::string& name) {
-  histogram out;
-  TFile file(path.c_str(), "READ");
-  if (!file.IsZombie()) {
-    TH1D* test = nullptr;
-    file.GetObject(name.c_str(), test);
-    if (test) {
-      out._impl->_hist = test;
-      out._impl->_canvas = _build_TCanvas(test->GetName(), test->GetTitle());
-    }
-    file.Close();
-  }
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Get Histogram Name__________________________________________________________________________
-const std::string histogram::name() const {
+const histogram::name_type histogram::name() const {
   return _impl->_hist->GetName();
 }
 //----------------------------------------------------------------------------------------------
@@ -181,14 +176,38 @@ const std::string histogram::y_title() const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Set Histogram Name__________________________________________________________________________
+void histogram::name(const histogram::name_type& name) {
+  _impl->_hist->SetName(name.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Histogram Title_________________________________________________________________________
+void histogram::title(const std::string& title) {
+  _impl->_hist->SetTitle(title.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Histogram X-Axis Title__________________________________________________________________
+void histogram::x_title(const std::string& x_title) {
+  _impl->x_axis()->SetTitle(x_title.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Histogram Y-Axis Title__________________________________________________________________
+void histogram::y_title(const std::string& y_title) {
+  _impl->y_axis()->SetTitle(y_title.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
 //__Check If Histogram is Empty_________________________________________________________________
 bool histogram::empty() const {
-  return count() == 0;
+  return size() == 0;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Size of Histogram___________________________________________________________________________
-size_t histogram::count() const {
+size_t histogram::size() const {
   return _impl->_hist->GetEntries();
 }
 //----------------------------------------------------------------------------------------------
@@ -247,17 +266,20 @@ void histogram::scale(const real weight) {
 
 //__Draw Histogram to Canvas____________________________________________________________________
 void histogram::draw() {
-  _impl->_canvas->cd();
-  _impl->_hist->Draw("HIST");
-  _impl->_canvas->Modified();
-  _impl->_canvas->Update();
-  _impl->_has_updated = true;
+  // TODO: think about plot::is_on uses
+  if (plot::is_on()) {
+    _impl->_canvas->cd();
+    _impl->_hist->Draw("HIST");
+    _impl->_canvas->Modified();
+    _impl->_canvas->Update();
+    _impl->_has_updated = true;
+  }
 }
 //----------------------------------------------------------------------------------------------
 
 //__Clear Histogram and Canvas__________________________________________________________________
 void histogram::clear() {
-  if (_impl->_has_updated) {
+  if (plot::is_on() && _impl->_has_updated) {
     _impl->_canvas->cd();
     _impl->_canvas->Clear();
     _impl->_canvas->Modified();
@@ -278,6 +300,24 @@ bool histogram::save(const std::string& path) const {
     return true;
   }
   return false;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Load Histogram From File____________________________________________________________________
+histogram histogram::load(const std::string& path,
+                          const histogram::name_type& name) {
+  histogram out;
+  TFile file(path.c_str(), "READ");
+  if (!file.IsZombie()) {
+    TH1D* test = nullptr;
+    file.GetObject(name.c_str(), test);
+    if (test) {
+      out._impl->_hist = test;
+      out._impl->_canvas = _build_TCanvas(test->GetName(), test->GetTitle());
+    }
+    file.Close();
+  }
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 

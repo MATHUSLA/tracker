@@ -187,15 +187,16 @@ option::option(const char short_name,
       flags(flags), count(0), argument(nullptr) {}
 //----------------------------------------------------------------------------------------------
 
-//__Commmand Line Option Parser_________________________________________________________________
+//__Command Line Option Parser__________________________________________________________________
 size_t parse(char* argv[],
              option_list options) {
-  if (!options.size()) return 0;
+  if (options.empty())
+    return 0UL;
 
   for (auto& option : options)
     option->reset();
 
-  std::vector<size_t> operand_indicies{};
+  std::vector<size_t> operand_indices{};
 
   size_t operand_count = 1;
   size_t expecting = option::empty;
@@ -278,7 +279,7 @@ size_t parse(char* argv[],
 
   // argv[operand_count] = nullptr;
 
-  for (const auto& i : operand_indicies)
+  for (const auto& i : operand_indices)
     std::cout << argv[i] << " ";
   std::cout << "\n";
 

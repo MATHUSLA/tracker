@@ -27,7 +27,7 @@ namespace MATHUSLA {
 
 namespace util { namespace io { ////////////////////////////////////////////////////////////////
 
-//__Hidden Includes To Keep Global Namespace Clean______________________________________________
+//__Enclosed Includes To Keep Global Namespace Clean____________________________________________
 #include <sys/stat.h>
 #if defined(_WIN32)
 #include <windows.h>
@@ -50,9 +50,24 @@ std::ostream& print_range(const Range& range,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Repeat String_______________________________________________________________________________
+inline std::ostream& repeat(const std::size_t count,
+                            const std::string& string,
+                            std::ostream& os=std::cout) {
+  for (std::size_t i{}; i < count; ++i)
+    os << string;
+  return os;
+}
+inline std::ostream& repeat(const std::size_t count,
+                            const char character,
+                            std::ostream& os=std::cout) {
+  return os << std::string(count, character);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Print Newline Characters____________________________________________________________________
-inline std::ostream& newline(const size_t count=1, std::ostream& os=std::cout) {
-  return os << std::string(count, '\n');
+inline std::ostream& newline(const std::size_t count=1, std::ostream& os=std::cout) {
+  return repeat(count, '\n', os);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -91,6 +106,41 @@ inline std::ostream& underline(std::ostream& os=std::cout) {
 }
 inline std::ostream& reset_font(std::ostream& os=std::cout) {
   return escape(os) << "[0m";
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Failbit of Stream_______________________________________________________________________
+inline std::ostream& set_failbit(std::ostream& os=std::cout) {
+  os.setstate(std::ios_base::failbit);
+  return os;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear Stream________________________________________________________________________________
+inline std::ostream& clear(std::ostream& os=std::cout) {
+  os.clear();
+  return os;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Swap Buffer of Stream_______________________________________________________________________
+inline std::ostream& swap_buffer(std::ostream& os,
+                                 std::streambuf* buffer,
+                                 std::streambuf* previous) {
+  previous = os.rdbuf(buffer);
+  return os;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Remove Buffers from Stream__________________________________________________________________
+inline void remove_buffer(std::ostream& os) {
+  swap_buffer(os, nullptr, nullptr);
+}
+template<class ...Stream>
+void remove_buffer(std::ostream& os,
+                   Stream& ...oss) {
+  remove_buffer(os);
+  remove_buffer(oss...);
 }
 //----------------------------------------------------------------------------------------------
 
