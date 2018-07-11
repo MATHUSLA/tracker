@@ -141,10 +141,10 @@ plot::histogram_collection generate_histograms() {
   static const auto length_unit = "(" + units::length_string + ")";
   static const auto velocity_unit = "(" + units::velocity_string + ")";
   return plot::histogram_collection({
-    {track.t0, "Track T0 Distribution", "t0 " + time_unit,     "Track Count", 200,  250, 450},
-    {track.x0, "Track X0 Distribution", "x0 " + length_unit,   "Track Count", 200, -600, 600},
-    {track.y0, "Track Y0 Distribution", "y0 " + length_unit,   "Track Count", 200, -600, 600},
-    {track.z0, "Track Z0 Distribution", "z0 " + length_unit,   "Track Count", 200, -600, 600},
+    {track.t0, "Track T0 Distribution", "t0 " + time_unit,     "Track Count", 200,  300, 400},
+    {track.x0, "Track X0 Distribution", "x0 " + length_unit,   "Track Count", 400, -600, 600},
+    {track.y0, "Track Y0 Distribution", "y0 " + length_unit,   "Track Count", 400, -600, 600},
+    {track.z0, "Track Z0 Distribution", "z0 " + length_unit,   "Track Count", 600, -600,   0},
     {track.vx, "Track VX Distribution", "vx " + velocity_unit, "Track Count", 200,  -35,  35},
     {track.vy, "Track VY Distribution", "vy " + velocity_unit, "Track Count", 200,  -35,  35},
     {track.vz, "Track VZ Distribution", "vz " + velocity_unit, "Track Count", 200,  -35,  35},
@@ -161,14 +161,14 @@ plot::histogram_collection generate_histograms() {
     {track.beta,                "Track Beta Distribution",                  "#beta",        "Track Count",  200,  0,     2   },
     {"track_beta_with_cut",     "Track Beta Distribution With 1#sigma Cut", "#beta",        "Track Count",  200,  0,     2   },
     {track.beta_error,          "Track Beta Error Distribution",            "#beta error",  "Track Count",  200,  0,     2   },
-    {track.angle,               "Track Angular Distribution",               "#theta",       "Track Count",  200, -6.28,  6.28},
+    {track.angle,               "Track Angular Distribution",               "#theta",       "Track Count",  200,  0,     6.28},
     {track.angle_error,         "Track Angular Error Distribution",         "#theta error", "Track Count",  200,  0,     1   },
     {track.size,                "Track Size Distribution",                  "Hit Count",    "Track Count",   40,  0,    40   },
 
     {vertex.t, "Vertex T Distribution", "t " + time_unit,   "Vertex Count", 100,  300, 400},
     {vertex.x, "Vertex X Distribution", "x " + length_unit, "Vertex Count", 300, -100, 100},
     {vertex.y, "Vertex Y Distribution", "y " + length_unit, "Vertex Count", 300, -100, 100},
-    {vertex.z, "Vertex Z Distribution", "z " + length_unit, "Vertex Count", 300, -600,  10},
+    {vertex.z, "Vertex Z Distribution", "z " + length_unit, "Vertex Count", 300, -600, 100},
 
     {vertex.t_error, "Vertex T Error Distribution", "t error " + time_unit,   "Vertex Count", 100, 0, 20},
     {vertex.x_error, "Vertex X Error Distribution", "x error " + length_unit, "Vertex Count", 100, 0, 20},
