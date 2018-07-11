@@ -1,5 +1,5 @@
 /*
- * demo/prototype/prototype_tracking.cc
+ * demo/prototype/tracking.cc
  *
  * Copyright 2018 Brandon Gomes
  *
