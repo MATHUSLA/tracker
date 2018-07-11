@@ -198,11 +198,7 @@ void save_tracks(const analysis::track_vector& tracks,
   for (const auto& track : tracks) {
     const auto chi2_per_dof = track.chi_squared_per_dof();
     if (track.chi_squared_per_dof() <= 3.0L) {
-<<<<<<< HEAD
       if (track.beta() - 1.0L * track.beta_error() <= 1.0L) {
-=======
-      if (track.beta() - 1.0L * beta_error <= 1.0L) {
->>>>>>> f8575b0d6a3500af5ea92b15792aed83b5bdd04f
         track.fill_plots(histograms, track_plotting_keys());
         ++counter;
       }
