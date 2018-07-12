@@ -27,32 +27,33 @@ namespace analysis { ///////////////////////////////////////////////////////////
 
 //__Analysis Data Tree Implementation___________________________________________________________
 struct tree::impl {
-  TTree* _tree;
+  struct TTreeType : public TTree {
+    TTreeType() : TTree() {}
+    TTreeType(const char* name, const char* title) : TTree(name, title) {}
+    using TTree::BranchImp;
+    using TTree::BranchImpRef;
+  };
+
+  TTreeType* _tree;
 
   impl() = default;
-
   impl(const std::string& name,
-       const std::string& title) : _tree(new TTree(name.c_str(), title.c_str())) {}
-
-  impl(const impl& other) : _tree(other._tree->CloneTree()) {}
-
+       const std::string& title) : _tree(new TTreeType(name.c_str(), title.c_str())) {}
+  impl(const impl& other) : _tree(dynamic_cast<TTreeType*>(other._tree->CloneTree())) {}
   impl(impl&& other) noexcept = default;
+  ~impl() = default;
 
   impl& operator=(const impl& other) {
-    if (this != &other) {
-      _tree = other._tree->CloneTree();
-    }
+    if (this != &other)
+      _tree = dynamic_cast<TTreeType*>(other._tree->CloneTree());
     return *this;
   }
-
   impl& operator=(impl&& other) noexcept = default;
-
-  ~impl() = default;
 };
 //----------------------------------------------------------------------------------------------
 
 //__Analysis Data Tree Default Constructor______________________________________________________
-tree::tree() : _impl() {}
+tree::tree() : _impl(std::make_unique<impl>()) {}
 //----------------------------------------------------------------------------------------------
 
 //__Analysis Data Tree Named Constructor________________________________________________________
@@ -112,6 +113,29 @@ void tree::title(const std::string& title) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Draw Tree Branches__________________________________________________________________________
+void tree::draw(const key_type& key) const {
+  _impl->_tree->Draw(key.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw Tree Branches__________________________________________________________________________
+void tree::draw(std::initializer_list<key_type> keys) const {
+  std::string combined_key;
+  auto begin = keys.begin();
+  const auto end = keys.end();
+  if (end == begin)
+    return;
+
+  combined_key.reserve(64UL * (end - begin));
+  while (begin != end - 1)
+    combined_key.append(*begin++ + ":");
+  combined_key.append(*begin);
+
+  draw(combined_key);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Save Tree to File___________________________________________________________________________
 bool tree::save(const std::string& path) const {
   TFile file(path.c_str(), "UPDATE");
@@ -131,14 +155,59 @@ tree tree::load(const std::string& path,
   tree out;
   TFile file(path.c_str(), "READ");
   if (!file.IsZombie()) {
-    TTree* test = nullptr;
-    file.GetObject(name.c_str(), test);
+    auto test = static_cast<TTree*>(file.Get(name.c_str()));
     if (test) {
-      out._impl->_tree = test;
+      test->SetDirectory(nullptr);
+      out._impl->_tree = static_cast<impl::TTreeType*>(test);
     }
     file.Close();
   }
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Branch to Tree__________________________________________________________________________
+void* tree::create_memory_slot(const key_type& key,
+                               void* memory,
+                               const std::type_info& info) {
+  const auto classtype = TBuffer::GetClass(info);
+  const auto datatype = TDataType::GetType(info);
+  _impl->_tree->BranchImpRef(key.c_str(), classtype, datatype, memory, 32000, 99);
+  return memory;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Branch Memory from Tree_________________________________________________________________
+void* tree::load_memory_slot(const key_type& key,
+                             void* memory) {
+  _impl->_tree->SetBranchAddress(key.c_str(), memory);
+  return memory;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Entry from Tree_________________________________________________________________________
+void tree::operator[](const std::size_t index) const {
+  _impl->_tree->GetEntry(index);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Size of Tree____________________________________________________________________________
+std::size_t tree::size() const {
+  const auto out = _impl->_tree->GetEntries();
+  return out <= 0 ? 0UL : static_cast<std::size_t>(out);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Count of Key____________________________________________________________________________
+std::size_t tree::count(const key_type& key) const {
+  // TODO: implement
+  return 0;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fill Tree___________________________________________________________________________________
+void tree::fill() {
+  _impl->_tree->Fill();
 }
 //----------------------------------------------------------------------------------------------
 
