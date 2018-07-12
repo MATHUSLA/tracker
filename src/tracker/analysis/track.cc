@@ -769,10 +769,11 @@ track::tree::tree(const std::string& name,
       beta_error(new_dynamic_branch<branch_value_type>("beta_error")),
       angle(new_dynamic_branch<branch_value_type>("angle")),
       angle_error(new_dynamic_branch<branch_value_type>("angle_error")),
-      _branches({t0, x0, y0, z0, vx, vy, vz,
-                 t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
-                 chi_squared, chi_squared_per_dof, chi_squared_p_value,
-                 size, beta, beta_error, angle, angle_error}) {}
+      _count(new_dynamic_branch<decltype(_count)::value_type>("N")),
+      _vector_branches({t0, x0, y0, z0, vx, vy, vz,
+                        t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
+                        chi_squared, chi_squared_per_dof, chi_squared_p_value,
+                        size, beta, beta_error, angle, angle_error}) {}
 //----------------------------------------------------------------------------------------------
 
 //__Track Data Tree Insertion___________________________________________________________________
@@ -799,19 +800,21 @@ void track::tree::insert(const track& track) {
   beta_error.get().push_back(track.beta_error());
   angle.get().push_back(track.angle());
   angle_error.get().push_back(track.angle_error());
+  ++_count;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Clear Track Data Tree_______________________________________________________________________
 void track::tree::clear() {
-  for (auto& entry : _branches)
+  _count = 0UL;
+  for (auto& entry : _vector_branches)
     entry.get().get().clear();
 }
 //----------------------------------------------------------------------------------------------
 
 //__Reserve Space for Track Data Tree___________________________________________________________
 void track::tree::reserve(std::size_t capacity) {
-  for (auto& entry : _branches)
+  for (auto& entry : _vector_branches)
     entry.get().get().reserve(capacity);
 }
 //----------------------------------------------------------------------------------------------

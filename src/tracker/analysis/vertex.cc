@@ -406,10 +406,11 @@ vertex::tree::tree(const std::string& name,
       chi_squared_per_dof(new_dynamic_branch<branch_value_type>("chi_squared_per_dof")),
       chi_squared_p_value(new_dynamic_branch<branch_value_type>("chi_squared_p_value")),
       size(new_dynamic_branch<branch_value_type>("size")),
-      _branches({t, x, y, z,
-                 t_error, x_error, y_error, z_error,
-                 chi_squared, chi_squared_per_dof, chi_squared_p_value,
-                 size}) {}
+      _count(new_dynamic_branch<decltype(_count)::value_type>("N")),
+      _vector_branches({t, x, y, z,
+                        t_error, x_error, y_error, z_error,
+                        chi_squared, chi_squared_per_dof, chi_squared_p_value,
+                        size}) {}
 //----------------------------------------------------------------------------------------------
 
 //__Track Data Tree Insertion___________________________________________________________________
@@ -426,19 +427,21 @@ void vertex::tree::insert(const vertex& vertex) {
   chi_squared_per_dof.get().push_back(vertex.chi_squared_per_dof());
   chi_squared_p_value.get().push_back(vertex.chi_squared_p_value());
   size.get().push_back(vertex.size());
+  ++_count;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Clear Vertex Data Tree______________________________________________________________________
 void vertex::tree::clear() {
-  for (auto& entry : _branches)
+  _count = 0UL;
+  for (auto& entry : _vector_branches)
     entry.get().get().clear();
 }
 //----------------------------------------------------------------------------------------------
 
 //__Reserve Space for Vertex Data Tree__________________________________________________________
 void vertex::tree::reserve(std::size_t capacity) {
-  for (auto& entry : _branches)
+  for (auto& entry : _vector_branches)
     entry.get().get().reserve(capacity);
 }
 //----------------------------------------------------------------------------------------------

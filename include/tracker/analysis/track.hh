@@ -238,7 +238,8 @@ public:
   void reserve(std::size_t capacity);
 
 private:
-  std::vector<std::reference_wrapper<branch_type>> _branches;
+  branch<uint_fast64_t> _count;
+  std::vector<std::reference_wrapper<branch_type>> _vector_branches;
 };
 //----------------------------------------------------------------------------------------------
 
