@@ -21,9 +21,6 @@
 #include <tracker/analysis/track.hh>
 #include <tracker/analysis/vertex.hh>
 
-// TODO: remove
-#include <tracker/analysis/tree.hh>
-
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
@@ -143,6 +140,8 @@ int prototype_tracking(int argc,
 
     const auto mc_imported_events = event_bundle.true_events;
 
+    analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
+    analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
     auto histograms = generate_histograms();
     for (std::uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
@@ -179,10 +178,22 @@ int prototype_tracking(int argc,
                     std::make_move_iterator(secondary_tracks.cbegin()),
                     std::make_move_iterator(secondary_tracks.cend()));
       */
+
+      track_tree.clear();
+      track_tree.reserve(tracks.size());
+      for (const auto& t : tracks)
+        track_tree.insert(t);
+      track_tree.fill();
+
       save_tracks(tracks, canvas, histograms, options);
       print_tracking_summary(event, tracks);
 
-      save_vertex(analysis::vertex(tracks), canvas, histograms, options);
+      auto vertex = analysis::vertex(tracks);
+      save_vertex(vertex, canvas, histograms, options);
+      vertex_tree.clear();
+      vertex_tree.reserve(1);
+      vertex_tree.insert(vertex);
+      vertex_tree.fill();
 
       canvas.draw();
     }
@@ -190,6 +201,8 @@ int prototype_tracking(int argc,
     plot::value_tag event_tag("EVENTS", std::to_string(import_size));
     histograms.draw_all();
     plot::save_all(statistics_save_path, histograms, filetype_tag, project_tag, input_tag, event_tag);
+    track_tree.save(statistics_save_path);
+    vertex_tree.save(statistics_save_path);
   }
 
   print_bar();

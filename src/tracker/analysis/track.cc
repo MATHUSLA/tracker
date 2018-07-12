@@ -498,6 +498,12 @@ real track::chi_squared_per_dof() const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Chi-Squared P-Value_________________________________________________________________________
+real track::chi_squared_p_value() const {
+  return stat::chi_squared_p_value(chi_squared(), degrees_of_freedom());
+}
+//----------------------------------------------------------------------------------------------
+
 //__Get Variance of a Track Parameter___________________________________________________________
 real track::variance(const track::parameter p) const {
   return covariance(p, p);
@@ -732,6 +738,84 @@ void track::reparameterize(const Coordinate direction) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Track Data Tree Constructor_________________________________________________________________
+track::tree::tree(const std::string& name)
+    : tree(name, name) {}
+//----------------------------------------------------------------------------------------------
+
+//__Track Data Tree Constructor_________________________________________________________________
+track::tree::tree(const std::string& name,
+                  const std::string& title)
+    : analysis::tree(name, title),
+      t0(new_dynamic_branch<branch_value_type>("t0")),
+      x0(new_dynamic_branch<branch_value_type>("x0")),
+      y0(new_dynamic_branch<branch_value_type>("y0")),
+      z0(new_dynamic_branch<branch_value_type>("z0")),
+      vx(new_dynamic_branch<branch_value_type>("vx")),
+      vy(new_dynamic_branch<branch_value_type>("vy")),
+      vz(new_dynamic_branch<branch_value_type>("vz")),
+      t0_error(new_dynamic_branch<branch_value_type>("t0_error")),
+      x0_error(new_dynamic_branch<branch_value_type>("x0_error")),
+      y0_error(new_dynamic_branch<branch_value_type>("y0_error")),
+      z0_error(new_dynamic_branch<branch_value_type>("z0_error")),
+      vx_error(new_dynamic_branch<branch_value_type>("vx_error")),
+      vy_error(new_dynamic_branch<branch_value_type>("vy_error")),
+      vz_error(new_dynamic_branch<branch_value_type>("vz_error")),
+      chi_squared(new_dynamic_branch<branch_value_type>("chi_squared")),
+      chi_squared_per_dof(new_dynamic_branch<branch_value_type>("chi_squared_per_dof")),
+      chi_squared_p_value(new_dynamic_branch<branch_value_type>("chi_squared_p_value")),
+      size(new_dynamic_branch<branch_value_type>("size")),
+      beta(new_dynamic_branch<branch_value_type>("beta")),
+      beta_error(new_dynamic_branch<branch_value_type>("beta_error")),
+      angle(new_dynamic_branch<branch_value_type>("angle")),
+      angle_error(new_dynamic_branch<branch_value_type>("angle_error")),
+      _branches({t0, x0, y0, z0, vx, vy, vz,
+                 t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
+                 chi_squared, chi_squared_per_dof, chi_squared_p_value,
+                 size, beta, beta_error, angle, angle_error}) {}
+//----------------------------------------------------------------------------------------------
+
+//__Track Data Tree Insertion___________________________________________________________________
+void track::tree::insert(const track& track) {
+  t0.get().push_back(track.t0_value() / units::time);
+  x0.get().push_back(track.x0_value() / units::length);
+  y0.get().push_back(track.y0_value() / units::length);
+  z0.get().push_back(track.z0_value() / units::length);
+  vx.get().push_back(track.vx_value() / units::velocity);
+  vy.get().push_back(track.vy_value() / units::velocity);
+  vz.get().push_back(track.vz_value() / units::velocity);
+  t0_error.get().push_back(track.t0_error() / units::time);
+  x0_error.get().push_back(track.x0_error() / units::length);
+  y0_error.get().push_back(track.y0_error() / units::length);
+  z0_error.get().push_back(track.z0_error() / units::length);
+  vx_error.get().push_back(track.vx_error() / units::velocity);
+  vy_error.get().push_back(track.vy_error() / units::velocity);
+  vz_error.get().push_back(track.vz_error() / units::velocity);
+  chi_squared.get().push_back(track.chi_squared());
+  chi_squared_per_dof.get().push_back(track.chi_squared_per_dof());
+  chi_squared_p_value.get().push_back(track.chi_squared_p_value());
+  size.get().push_back(track.size());
+  beta.get().push_back(track.beta());
+  beta_error.get().push_back(track.beta_error());
+  angle.get().push_back(track.angle());
+  angle_error.get().push_back(track.angle_error());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear Track Data Tree_______________________________________________________________________
+void track::tree::clear() {
+  for (auto& entry : _branches)
+    entry.get().get().clear();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reserve Space for Track Data Tree___________________________________________________________
+void track::tree::reserve(std::size_t capacity) {
+  for (auto& entry : _branches)
+    entry.get().get().reserve(capacity);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Fill Plots with Tracking Variables__________________________________________________________
 void track::fill_plots(plot::histogram_collection& collection,
                        const track::plotting_keys& keys) const {
@@ -820,11 +904,11 @@ std::ostream& operator<<(std::ostream& os,
 
     os.precision(7);
     os << "* Statistics: \n"
-       << "    dof:      " << track.degrees_of_freedom()               << "\n"
+       << "    dof:      " << track.degrees_of_freedom()             << "\n"
        << "    chi2:     " << track.chi_squared() << " = ";
-    util::io::print_range(track.chi_squared_vector(), " + ", "", os)   << "\n";
-    os << "    chi2/dof: " << track.chi_squared_per_dof()              << "\n"
-       << "    p-value:  " << stat::chi_squared_p_value(track)         << "\n"
+    util::io::print_range(track.chi_squared_vector(), " + ", "", os) << "\n";
+    os << "    chi2/dof: " << track.chi_squared_per_dof()            << "\n"
+       << "    p-value:  " << track.chi_squared_p_value()            << "\n"
        << "    cov mat:  | ";
     const auto matrix = track.covariance_matrix();
     for (size_t i = 0; i < 6; ++i) {

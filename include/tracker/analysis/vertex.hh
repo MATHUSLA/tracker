@@ -30,6 +30,7 @@ namespace analysis { ///////////////////////////////////////////////////////////
 //__Vertex Object_______________________________________________________________________________
 class vertex {
 public:
+  class tree;
   enum class parameter { T, X, Y, Z };
   struct fit_parameters { fit_parameter t, x, y, z; };
 
@@ -77,6 +78,7 @@ public:
   real chi_squared() const;
   std::size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
+  real chi_squared_p_value() const;
   const real_vector& chi_squared_vector() const { return _delta_chi2; }
 
   real variance(const parameter p) const;
@@ -149,6 +151,30 @@ constexpr bool operator!=(const vertex::fit_parameters& left,
                           const vertex::fit_parameters& right) {
   return !(left == right);
 }
+//----------------------------------------------------------------------------------------------
+
+//__Track Data Tree Specialization______________________________________________________________
+class vertex::tree : public analysis::tree {
+public:
+  using branch_value_type = std::vector<double>;
+  using branch_type = branch<branch_value_type>;
+
+  tree(const std::string& name);
+  tree(const std::string& name,
+       const std::string& title);
+
+  branch_type t, x, y, z,
+              t_error, x_error, y_error, z_error,
+              chi_squared, chi_squared_per_dof, chi_squared_p_value,
+              size;
+
+  void insert(const vertex& vertex);
+  void clear();
+  void reserve(std::size_t capacity);
+
+private:
+  std::vector<std::reference_wrapper<branch_type>> _branches;
+};
 //----------------------------------------------------------------------------------------------
 
 //__Vertex Output Stream Operator_______________________________________________________________

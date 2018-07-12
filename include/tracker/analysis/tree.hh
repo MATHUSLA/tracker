@@ -67,6 +67,7 @@ public:
     return branch<T>(*this, key, value);
   }
 
+  // FIXME: warning memory leak!! switch to unique_ptr inside of branch<T>
   template<class T, class ...Args>
   branch<T> new_dynamic_branch(const key_type& key,
                                Args&& ...args) {
@@ -187,10 +188,11 @@ public:
     return *this;
   }
 
-  tree& base() { return _base; }
-  const tree& base() const { return _base; }
+  tree& base() { return *_base; }
+  const tree& base() const { return *_base; }
 
 protected:
+  // TODO: allow branch to be default constructed or at least map to tree base
   branch() = default;
   branch(tree& base,
          const tree::key_type& key)

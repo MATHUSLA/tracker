@@ -21,6 +21,7 @@
 #pragma once
 
 #include <tracker/analysis/type.hh>
+#include <tracker/analysis/tree.hh>
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 
@@ -31,6 +32,7 @@ namespace analysis { ///////////////////////////////////////////////////////////
 //__Track Object________________________________________________________________________________
 class track {
 public:
+  class tree;
   enum class parameter { T0, X0, Y0, Z0, VX, VY, VZ };
   struct fit_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 
@@ -111,6 +113,7 @@ public:
   real chi_squared() const;
   std::size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
+  real chi_squared_p_value() const;
   const real_vector& chi_squared_vector() const { return _delta_chi2; }
 
   real variance(const parameter p) const;
@@ -162,7 +165,7 @@ public:
   struct plotting_keys {
     plot::histogram::name_type t0, x0, y0, z0, vx, vy, vz,
       t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
-      chi_squared_per_dof,
+      chi_squared, chi_squared_per_dof, chi_squared_p_value,
       size,
       beta, beta_error,
       angle, angle_error;
@@ -213,6 +216,30 @@ constexpr bool operator!=(const track::fit_parameters& left,
                           const track::fit_parameters& right) {
   return !(left == right);
 }
+//----------------------------------------------------------------------------------------------
+
+//__Track Data Tree Specialization______________________________________________________________
+class track::tree : public analysis::tree {
+public:
+  using branch_value_type = std::vector<double>;
+  using branch_type = branch<branch_value_type>;
+
+  tree(const std::string& name);
+  tree(const std::string& name,
+       const std::string& title);
+
+  branch_type t0, x0, y0, z0, vx, vy, vz,
+              t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
+              chi_squared, chi_squared_per_dof, chi_squared_p_value,
+              size, beta, beta_error, angle, angle_error;
+
+  void insert(const track& track);
+  void clear();
+  void reserve(std::size_t capacity);
+
+private:
+  std::vector<std::reference_wrapper<branch_type>> _branches;
+};
 //----------------------------------------------------------------------------------------------
 
 //__Track Output Stream Operator________________________________________________________________
