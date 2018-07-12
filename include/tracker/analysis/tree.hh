@@ -25,8 +25,6 @@
 
 #include <tracker/analysis/type.hh>
 
-#include <iostream>
-
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
@@ -62,20 +60,20 @@ public:
   void fill();
 
   template<class T>
-  branch<T> new_branch(const key_type& key,
-                       T* value) {
+  branch<T> insert_branch(const key_type& key,
+                          T* value) {
     return branch<T>(*this, key, value);
   }
 
   template<class T, class ...Args>
-  branch<T> new_dynamic_branch(const key_type& key,
-                               Args&& ...args) {
+  branch<T> emplace_branch(const key_type& key,
+                           Args&& ...args) {
     return branch<T>::dynamic(*this, key, std::forward<Args>(args)...);
   }
 
   template<class T>
   branch<T> get_branch(const key_type& key,
-                             T* value) {
+                       T* value) {
     return branch<T>::load(*this, key, value);
   }
 
@@ -138,7 +136,7 @@ public:
   branch(tree& base,
          const tree::key_type& key,
          T* value)
-      : branch(key, base, value, empty_delete<T>{}) {
+      : branch(key, base, value) {
     create_memory_slot(value);
   }
 
@@ -154,13 +152,14 @@ public:
                         Args&& ...args) {
     branch out(key, base, new T(std::forward<Args>(args)...));
     out.create_memory_slot(out._ptr.get());
+    out._ptr.get_deleter().delete_switch = true;
     return out;
   }
 
   static branch load(tree& base,
                      const tree::key_type& key,
                      T* value) {
-    branch out(key, base, value, empty_delete<T>{});
+    branch out(key, base, value);
     out.load_memory_slot(value);
     return out;
   }
@@ -171,6 +170,7 @@ public:
                              Args&& ...args) {
     branch out(key, base, new T(std::forward<Args>(args)...));
     out.load_memory_slot(out._ptr.get());
+    out._ptr.get_deleter().delete_switch = true;
     return out;
   }
 
@@ -198,17 +198,17 @@ protected:
   branch() = default;
 
   template<class U>
-  struct empty_delete {
-    empty_delete() = default;
-    void operator()(U*) {}
+  struct switch_delete {
+    switch_delete() = default;
+    switch_delete(bool b) : delete_switch(b) {}
+    void operator()(U* u) { if (delete_switch) delete u; }
+    bool delete_switch = false;
   };
 
-  template<class Deleter=std::default_delete<T>>
   branch(const tree::key_type& key,
          tree& base,
-         T* ptr,
-         Deleter deleter={})
-      : _ptr(ptr, deleter), _base(&base), _key(key) {}
+         T* ptr)
+      : _ptr(ptr, switch_delete<T>{}), _base(&base), _key(key) {}
 
   T* create_memory_slot(T* memory) {
     return static_cast<T*>(_base->create_memory_slot(_key, memory, typeid(T)));
@@ -218,7 +218,7 @@ protected:
     return static_cast<T*>(_base->load_memory_slot(_key, memory));
   }
 
-  std::unique_ptr<T> _ptr;
+  std::unique_ptr<T, switch_delete<T>> _ptr;
   tree* _base;
   tree::key_type _key;
 };
