@@ -61,16 +61,28 @@ public:
   void operator[](const std::size_t index) const;
   void fill();
 
-  template<class T, class ...Args>
-  branch<T> add_branch(const key_type& key,
-                       Args&& ...args) {
-    return branch<T>(*this, key, std::forward<Args>(args)...);
+  template<class T>
+  branch<T> new_branch(const key_type& key,
+                       T* value) {
+    return branch<T>(*this, key, value);
   }
 
   template<class T, class ...Args>
+  branch<T> new_dynamic_branch(const key_type& key,
+                               Args&& ...args) {
+    return branch<T>::dynamic(*this, key, std::forward<Args>(args)...);
+  }
+
+  template<class T>
   branch<T> get_branch(const key_type& key,
-                       Args&& ...args) {
-    return branch<T>::load(*this, key, std::forward<Args>(args)...);
+                             T* value) {
+    return branch<T>::load(*this, key, value);
+  }
+
+  template<class T, class ...Args>
+  branch<T> get_dynamic_branch(const key_type& key,
+                               Args&& ...args) {
+    return branch<T>::load_dynamic(*this, key, std::forward<Args>(args)...);
   }
 
   template<class NullaryFunction>
@@ -123,40 +135,65 @@ class tree::branch {
 public:
   using value_type = T;
 
-  template<class ...Args>
   branch(tree& base,
          const tree::key_type& key,
-         Args&& ...args)
-      : branch(key, base) {
-    create_memory_slot(new T(std::forward<Args>(args)...));
+         T* value)
+      : branch(base, key) {
+    create_memory_slot(value);
   }
 
+  branch(const branch&) = delete;
+  branch(branch&&) noexcept = default;
+  branch& operator=(const branch&) = delete;
+  branch& operator=(branch&&) noexcept = default;
+  ~branch() = default;
+
   template<class ...Args>
+  static branch dynamic(tree& base,
+                        const tree::key_type& key,
+                        Args&& ...args) {
+    return branch(base, key, new T(std::forward<Args>(args)...));
+  }
+
   static branch load(tree& base,
                      const tree::key_type& key,
-                     Args&& ...args) {
-    branch out(key, base);
-    out.load_memory_slot(new T(std::forward<Args>(args)...));
+                     T* value) {
+    branch out(base, key);
+    out.load_memory_slot(value);
     return out;
   }
 
-  branch(branch&& other) noexcept = default;
-  branch& operator=(branch&& other) noexcept = default;
-  ~branch() = default;
+  template<class ...Args>
+  static branch load_dynamic(tree& base,
+                             const tree::key_type& key,
+                             Args&& ...args) {
+    return load(base, key, new T(std::forward<Args>(args)...));
+  }
 
   T& get() { return *_ptr; }
   const T& get() const { return *_ptr; }
   void set(const T& t) { *_ptr = t; }
+  void move(T&& t) { *_ptr = std::move(t); }
 
+  operator T() const { return *_ptr; }
   operator const T&() const { return *_ptr; }
+  operator T&() { return *_ptr; }
+  branch& operator=(const T& value) {
+    *_ptr = value;
+    return *this;
+  }
+  branch& operator=(T&& value) {
+    *_ptr = value;
+    return *this;
+  }
 
   tree& base() { return _base; }
   const tree& base() const { return _base; }
 
 protected:
   branch() = default;
-  branch(const tree::key_type& key,
-         tree& base)
+  branch(tree& base,
+         const tree::key_type& key)
       : _base(&base), _key(key) {}
 
   T* create_memory_slot(T* memory) {
