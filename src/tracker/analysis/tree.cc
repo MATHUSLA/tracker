@@ -18,8 +18,8 @@
 
 #include <tracker/analysis/tree.hh>
 
-#include "../helper/analysis.hh"
-#include "../helper/root.hh"
+#include <ROOT/TFile.h>
+#include <ROOT/TTree.h>
 
 namespace MATHUSLA { namespace TRACKER {
 
