@@ -20,6 +20,10 @@
 #include <tracker/analysis/monte_carlo.hh>
 #include <tracker/analysis/track.hh>
 #include <tracker/analysis/vertex.hh>
+
+// TODO: remove
+#include <tracker/analysis/tree.hh>
+
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
