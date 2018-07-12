@@ -67,7 +67,6 @@ public:
     return branch<T>(*this, key, value);
   }
 
-  // FIXME: warning memory leak!! switch to unique_ptr inside of branch<T>
   template<class T, class ...Args>
   branch<T> new_dynamic_branch(const key_type& key,
                                Args&& ...args) {
@@ -139,7 +138,7 @@ public:
   branch(tree& base,
          const tree::key_type& key,
          T* value)
-      : branch(base, key) {
+      : branch(key, base, value, empty_delete<T>{}) {
     create_memory_slot(value);
   }
 
@@ -153,13 +152,15 @@ public:
   static branch dynamic(tree& base,
                         const tree::key_type& key,
                         Args&& ...args) {
-    return branch(base, key, new T(std::forward<Args>(args)...));
+    branch out(key, base, new T(std::forward<Args>(args)...));
+    out.create_memory_slot(out._ptr.get());
+    return out;
   }
 
   static branch load(tree& base,
                      const tree::key_type& key,
                      T* value) {
-    branch out(base, key);
+    branch out(key, base, value, empty_delete<T>{});
     out.load_memory_slot(value);
     return out;
   }
@@ -168,7 +169,9 @@ public:
   static branch load_dynamic(tree& base,
                              const tree::key_type& key,
                              Args&& ...args) {
-    return load(base, key, new T(std::forward<Args>(args)...));
+    branch out(key, base, new T(std::forward<Args>(args)...));
+    out.load_memory_slot(out._ptr.get());
+    return out;
   }
 
   T& get() { return *_ptr; }
@@ -192,21 +195,30 @@ public:
   const tree& base() const { return *_base; }
 
 protected:
-  // TODO: allow branch to be default constructed or at least map to tree base
   branch() = default;
-  branch(tree& base,
-         const tree::key_type& key)
-      : _base(&base), _key(key) {}
+
+  template<class U>
+  struct empty_delete {
+    empty_delete() = default;
+    void operator()(U*) {}
+  };
+
+  template<class Deleter=std::default_delete<T>>
+  branch(const tree::key_type& key,
+         tree& base,
+         T* ptr,
+         Deleter deleter={})
+      : _ptr(ptr, deleter), _base(&base), _key(key) {}
 
   T* create_memory_slot(T* memory) {
-    return _ptr = static_cast<T*>(_base->create_memory_slot(_key, memory, typeid(T)));
+    return static_cast<T*>(_base->create_memory_slot(_key, memory, typeid(T)));
   }
 
   T* load_memory_slot(T* memory) {
-    return _ptr = static_cast<T*>(_base->load_memory_slot(_key, memory));
+    return static_cast<T*>(_base->load_memory_slot(_key, memory));
   }
 
-  T* _ptr;
+  std::unique_ptr<T> _ptr;
   tree* _base;
   tree::key_type _key;
 };
