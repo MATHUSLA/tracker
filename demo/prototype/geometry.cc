@@ -20,7 +20,7 @@
 
 #include <tracker/core/stat.hh>
 #include <tracker/core/units.hh>
-#include <tracker/analysis/analysis.hh>
+#include <tracker/analysis.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
@@ -76,7 +76,7 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
 
   static const type::real z_lower = 24.0L * units::length;
   static const type::real z_upper = 45.0L * units::length;
-  static const type::real time_threshold = 4.0L * units::time;
+  static const type::real time_threshold = 3.0L * units::time;
 
   using namespace util::math;
 

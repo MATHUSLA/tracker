@@ -27,8 +27,10 @@ find_package(ROOT   REQUIRED COMPONENTS MathCore Minuit)
 include(${Geant4_USE_FILE})
 
 add_library(tracker SHARED
-    src/tracker/analysis/analysis.cc
+    src/tracker/analysis/event.cc
+    src/tracker/analysis/join.cc
     src/tracker/analysis/monte_carlo.cc
+    src/tracker/analysis/seed.cc
     src/tracker/analysis/track.cc
     src/tracker/analysis/tree.cc
     src/tracker/analysis/vertex.cc

@@ -44,12 +44,7 @@ void draw_track(plot::canvas& canvas,
                    {brightness, brightness, brightness});
     brightness += step;
   }
-  track.draw(canvas, 1.1, plot::color::RED);
-  /*
-  for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
-    canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLACK);
-  }
-  */
+  track.draw(canvas, 2, plot::color::RED);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -128,7 +123,9 @@ const analysis::vertex::plotting_keys& vertex_plotting_keys() {
     "vertex_z_error",
     "vertex_distance",
     "vertex_distance_error",
+    "vertex_chi_squared",
     "vertex_chi_squared_per_dof",
+    "vertex_chi_squared_p_value",
     "vertex_size",
   };
   return _keys;
@@ -193,37 +190,30 @@ plot::histogram_collection generate_histograms() {
 //__Show and Add Tracks to Statistics___________________________________________________________
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
-                 plot::histogram_collection& histograms,
+                 analysis::track::tree& tree,
                  const reader::tracking_options& options) {
-  std::size_t counter{};
   for (const auto& track : tracks) {
-    if (track.chi_squared_per_dof() <= 3.0L) {
-      if (track.beta() - 1.0L * track.beta_error() <= 1.0L) {
-        track.fill_plots(histograms, track_plotting_keys());
-        ++counter;
-      }
-    }
     if (options.verbose_output)
       std::cout << track << "\n";
     if (options.draw_events)
       draw_track(canvas, track);
   }
-  histograms["track_count"].insert(counter);
+  tree.fill(tracks);
 }
 //----------------------------------------------------------------------------------------------
 
-//__Show and Add Vertex to Statistics___________________________________________________________
-void save_vertex(const analysis::vertex& vertex,
-                 plot::canvas& canvas,
-                 plot::histogram_collection& histograms,
-                 const reader::tracking_options& options) {
-  if (vertex.size() != 2)
-    return;
-  vertex.fill_plots(histograms, vertex_plotting_keys());
-  if (options.verbose_output)
-    std::cout << vertex << "\n";
-  if (options.draw_events)
-    draw_vertex_and_guess(canvas, vertex);
+//__Show and Add Vertices to Statistics_________________________________________________________
+void save_vertices(const analysis::vertex_vector& vertices,
+                   plot::canvas& canvas,
+                   analysis::vertex::tree& tree,
+                   const reader::tracking_options& options) {
+  for (const auto& vertex : vertices) {
+    if (options.verbose_output)
+      std::cout << vertex << "\n";
+    if (options.draw_events)
+      draw_vertex_and_guess(canvas, vertex);
+  }
+  tree.fill(vertices);
 }
 //----------------------------------------------------------------------------------------------
 

@@ -218,6 +218,10 @@ constexpr bool operator!=(const track::fit_parameters& left,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Vector of Tracks____________________________________________________________________________
+using track_vector = std::vector<track>;
+//----------------------------------------------------------------------------------------------
+
 //__Track Data Tree Specialization______________________________________________________________
 class track::tree : public analysis::tree {
 public:
@@ -237,6 +241,8 @@ public:
   void clear();
   void reserve(std::size_t capacity);
 
+  void fill(const track_vector& tracks);
+
 private:
   branch<uint_fast64_t> _count;
   std::vector<std::reference_wrapper<branch_type>> _vector_branches;
@@ -246,10 +252,6 @@ private:
 //__Track Output Stream Operator________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const track& track);
-//----------------------------------------------------------------------------------------------
-
-//__Vector of Tracks____________________________________________________________________________
-using track_vector = std::vector<track>;
 //----------------------------------------------------------------------------------------------
 
 //__Fit all Seeds to Tracks_____________________________________________________________________

@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#include <tracker/analysis/analysis.hh>
-#include <tracker/analysis/track.hh>
+#include <tracker/analysis.hh>
+
 #include <tracker/core/stat.hh>
 #include <tracker/core/units.hh>
 #include <tracker/geometry.hh>

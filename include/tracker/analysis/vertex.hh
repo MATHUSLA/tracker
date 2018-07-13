@@ -111,7 +111,7 @@ public:
     plot::histogram::name_type t, x, y, z,
       t_error, x_error, y_error, z_error,
       distance, distance_error,
-      chi_squared_per_dof,
+      chi_squared, chi_squared_per_dof, chi_squared_p_value,
       size;
   };
 
@@ -153,6 +153,10 @@ constexpr bool operator!=(const vertex::fit_parameters& left,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Vector of Vertices__________________________________________________________________________
+using vertex_vector = std::vector<vertex>;
+//----------------------------------------------------------------------------------------------
+
 //__Track Data Tree Specialization______________________________________________________________
 class vertex::tree : public analysis::tree {
 public:
@@ -171,6 +175,7 @@ public:
   void insert(const vertex& vertex);
   void clear();
   void reserve(std::size_t capacity);
+  void fill(const vertex_vector& vertices);
 
 private:
   branch<uint_fast64_t> _count;
@@ -181,10 +186,6 @@ private:
 //__Vertex Output Stream Operator_______________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const vertex& vertex);
-//----------------------------------------------------------------------------------------------
-
-//__Vector of Vertices__________________________________________________________________________
-using vertex_vector = std::vector<vertex>;
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////

@@ -16,10 +16,7 @@
  * limitations under the License.
  */
 
-#include <tracker/analysis/analysis.hh>
-#include <tracker/analysis/monte_carlo.hh>
-#include <tracker/analysis/track.hh>
-#include <tracker/analysis/vertex.hh>
+#include <tracker/analysis.hh>
 
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
@@ -44,12 +41,20 @@ namespace MATHUSLA {
 //__Find Primary Tracks for Prototype___________________________________________________________
 const analysis::track_vector find_primary_tracks(const analysis::event& event,
                                                  const reader::tracking_options& options,
+                                                 plot::canvas& canvas,
                                                  analysis::event& non_track_points) {
   analysis::event combined_rpc_hits;
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
   const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
+
+  for (const auto seed : seeds) {
+    for (std::size_t i{}; i < seed.size() - 1; ++i) {
+      canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
+    }
+  }
+
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
   const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 1UL);
 
@@ -112,17 +117,18 @@ int prototype_tracking(int argc,
                        char* argv[]) {
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
-  const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
 
   plot::init(options.draw_events);
-  geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
+  geometry::open(options.geometry_file,
+                 options.default_time_error,
+                 reader::import_time_resolution_map(options.geometry_time_file));
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
   const plot::value_tag filetype_tag("FILETYPE", "MATHUSLA TRACKING STATFILE");
   const plot::value_tag project_tag("PROJECT", "Prototype");
 
-  std::uint_fast64_t path_counter{};
+  std::size_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
     const auto path_counter_string = std::to_string(path_counter++);
     const auto statistics_save_path = statistics_path_prefix
@@ -142,8 +148,8 @@ int prototype_tracking(int argc,
 
     analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
     analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
-    auto histograms = generate_histograms();
-    for (std::uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
+
+    for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -168,7 +174,7 @@ int prototype_tracking(int argc,
       }
 
       analysis::event non_primary_track_points, non_secondary_track_points;
-      auto tracks = find_primary_tracks(compressed_event, options, non_primary_track_points);
+      auto tracks = find_primary_tracks(compressed_event, options, canvas, non_primary_track_points);
       /*
       auto secondary_tracks = find_secondary_tracks(non_primary_track_points,
                                                     options,
@@ -179,28 +185,16 @@ int prototype_tracking(int argc,
                     std::make_move_iterator(secondary_tracks.cend()));
       */
 
-      track_tree.clear();
-      track_tree.reserve(tracks.size());
-      for (const auto& t : tracks)
-        track_tree.insert(t);
-      track_tree.fill();
-
-      save_tracks(tracks, canvas, histograms, options);
+      save_tracks(tracks, canvas, track_tree, options);
       print_tracking_summary(event, tracks);
 
-      auto vertex = analysis::vertex(tracks);
-      save_vertex(vertex, canvas, histograms, options);
-      vertex_tree.clear();
-      vertex_tree.reserve(1);
-      vertex_tree.insert(vertex);
-      vertex_tree.fill();
+      // save_vertices({analysis::vertex(tracks)}, canvas, vertex_tree, options);
 
       canvas.draw();
     }
     plot::value_tag input_tag("DATAPATH", path);
     plot::value_tag event_tag("EVENTS", std::to_string(import_size));
-    histograms.draw_all();
-    plot::save_all(statistics_save_path, histograms, filetype_tag, project_tag, input_tag, event_tag);
+    plot::save_all(statistics_save_path, filetype_tag, project_tag, input_tag, event_tag);
     track_tree.save(statistics_save_path);
     vertex_tree.save(statistics_save_path);
   }

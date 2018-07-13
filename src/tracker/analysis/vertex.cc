@@ -446,6 +446,16 @@ void vertex::tree::reserve(std::size_t capacity) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Fill Tree With Vertex Vector________________________________________________________________
+void vertex::tree::fill(const vertex_vector& vertices) {
+  clear();
+  reserve(vertices.size());
+  for (const auto& vertex : vertices)
+    insert(vertex);
+  analysis::tree::fill();
+}
+//----------------------------------------------------------------------------------------------
+
 //__Fill Plots with Vertexing Variables_________________________________________________________
 void vertex::fill_plots(plot::histogram_collection& collection,
                         const vertex::plotting_keys& keys) const {
@@ -469,7 +479,9 @@ void vertex::fill_plots(plot::histogram_collection& collection,
       distance_error_histogram.insert(distance_error / units::length);
   }
 
+  if (collection.count(keys.chi_squared)) collection[keys.chi_squared].insert(chi_squared());
   if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
+  if (collection.count(keys.chi_squared_p_value)) collection[keys.chi_squared_p_value].insert(chi_squared_p_value());
   if (collection.count(keys.size)) collection[keys.size].insert(size());
 }
 //----------------------------------------------------------------------------------------------

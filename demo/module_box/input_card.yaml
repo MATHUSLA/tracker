@@ -1,0 +1,32 @@
+### MATHUSLA ModuleBox TRACKING INPUT CARD ###
+
+verbose-output: true
+draw-events: false
+
+# Thresholds and Settings
+time-smearing:        true
+layer-axis:           Z
+layer-depth:          0
+line-width:           0
+seed-size:            3
+event-density-limit:  0
+
+# Data Setup
+data-directory:
+data-file-extension:      root
+data-position-keys:       Time, X, Y, Z
+data-position-error-keys: dT, dX, dY, dZ
+data-detector-key:        Detector
+data-track-id-key:        Track
+data-parent-id-key:       Parent
+data-momentum-keys:       E, PX, PY, PZ
+
+# Statistics Setup
+statistics-directory:      
+statistics-file-prefix:    statistics
+statistics-file-extension: root
+
+# Geometry Setup
+geometry-file:               demo/module_box/resources/
+geometry-map-file:           demo/module_box/resources/
+geometry-default-time-error: 2

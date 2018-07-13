@@ -21,7 +21,6 @@
 #pragma once
 
 #include <iostream>
-#include <string>
 
 #include <tracker/analysis/monte_carlo.hh>
 #include <tracker/analysis/track.hh>
@@ -71,15 +70,15 @@ plot::histogram_collection generate_histograms();
 //__Show and Add Tracks to Statistics___________________________________________________________
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
-                 plot::histogram_collection& histograms,
+                 analysis::track::tree& tree,
                  const reader::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
-//__Show and Add Vertex to Statistics___________________________________________________________
-void save_vertex(const analysis::vertex& vertex,
-                 plot::canvas& canvas,
-                 plot::histogram_collection& histograms,
-                 const reader::tracking_options& options);
+//__Show and Add Vertices to Statistics_________________________________________________________
+void save_vertices(const analysis::vertex_vector& vertices,
+                   plot::canvas& canvas,
+                   analysis::vertex::tree& tree,
+                   const reader::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
 //__Print Bar___________________________________________________________________________________

@@ -21,6 +21,9 @@
 #include <ROOT/TFile.h>
 #include <ROOT/TTree.h>
 
+// TODO: improve this dependency
+#include "../helper/root.hh"
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
@@ -28,8 +31,9 @@ namespace analysis { ///////////////////////////////////////////////////////////
 //__Analysis Data Tree Implementation___________________________________________________________
 struct tree::impl {
   struct TTreeType : public TTree {
-    TTreeType() : TTree() {}
-    TTreeType(const char* name, const char* title) : TTree(name, title) {}
+    TTreeType() : TTree() { root::helper::init(); }
+    TTreeType(const char* name,
+              const char* title) : TTree(name, title) { root::helper::init(); }
     using TTree::BranchImp;
     using TTree::BranchImpRef;
   };

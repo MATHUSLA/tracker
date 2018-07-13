@@ -819,6 +819,16 @@ void track::tree::reserve(std::size_t capacity) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Fill Tree With Track Vector_________________________________________________________________
+void track::tree::fill(const track_vector& tracks) {
+  clear();
+  reserve(tracks.size());
+  for (const auto& track : tracks)
+    insert(track);
+  analysis::tree::fill();
+}
+//----------------------------------------------------------------------------------------------
+
 //__Fill Plots with Tracking Variables__________________________________________________________
 void track::fill_plots(plot::histogram_collection& collection,
                        const track::plotting_keys& keys) const {
@@ -836,7 +846,9 @@ void track::fill_plots(plot::histogram_collection& collection,
   if (collection.count(keys.vx_error)) collection[keys.vx_error].insert(vx_error() / units::velocity);
   if (collection.count(keys.vy_error)) collection[keys.vy_error].insert(vy_error() / units::velocity);
   if (collection.count(keys.vz_error)) collection[keys.vz_error].insert(vz_error() / units::velocity);
+  if (collection.count(keys.chi_squared)) collection[keys.chi_squared].insert(chi_squared());
   if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
+  if (collection.count(keys.chi_squared_p_value)) collection[keys.chi_squared_p_value].insert(chi_squared_p_value());
   if (collection.count(keys.size)) collection[keys.size].insert(size());
   if (collection.count(keys.beta)) collection[keys.beta].insert(beta());
   if (collection.count(keys.beta_error)) collection[keys.beta_error].insert(beta_error());
