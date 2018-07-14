@@ -22,61 +22,234 @@
 
 #include <tracker/analysis/event.hh>
 
+#include <tracker/util/bit_vector.hh>
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
-//__Fast Check if Points Form a Line____________________________________________________________
-bool is_linear(const event& points,
-               const real threshold,
-               const Coordinate x1,
-               const Coordinate x2);
-bool is_linear(const full_event& points,
-               const real threshold,
-               const Coordinate x1,
-               const Coordinate x2);
-bool is_linear(const event& points,
-               const real threshold,
-               const Coordinate x1,
-               const Coordinate x2,
-               const Coordinate x3);
-bool is_linear(const full_event& points,
-               const real threshold,
-               const Coordinate x1,
-               const Coordinate x2,
-               const Coordinate x3);
+namespace topology { ///////////////////////////////////////////////////////////////////////////
+
+//__Check if Points are Monotonic in One Coordinate_____________________________________________
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+bool is_monotonic(const Event& points,
+                  const Coordinate c) {
+  if (points.size() <= 2)
+    return true;
+
+  if (select_r1(points.front(), c) <= select_r1(points.back(), c)) {
+    return std::is_sorted(points.cbegin(), points.cend(),
+      [&](const auto& left, const auto& right) { return select_r1(left, c) < select_r1(right, c); });
+  } else {
+    return std::is_sorted(points.crbegin(), points.crend(),
+      [&](const auto& left, const auto& right) { return select_r1(left, c) < select_r1(right, c); });
+  }
+}
 //----------------------------------------------------------------------------------------------
 
 //__Check if Points are Monotonic in One Coordinate_____________________________________________
-bool is_monotonic(const event& points,
-                  const Coordinate c);
-bool is_monotonic(const full_event& points,
-                  const Coordinate c);
+template<Coordinate C, class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+bool is_monotonic(const Event& points) {
+  if (points.size() <= 2)
+    return true;
+
+  if (select_r1(points.front(), C) <= select_r1(points.back(), C)) {
+    return std::is_sorted(points.cbegin(), points.cend(),
+      [&](const auto& left, const auto& right) { return select_r1(left, C) < select_r1(right, C); });
+  } else {
+    return std::is_sorted(points.crbegin(), points.crend(),
+      [&](const auto& left, const auto& right) { return select_r1(left, C) < select_r1(right, C); });
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fast Check if Points Form a Line____________________________________________________________
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+bool is_linear(const Event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2) {
+  const auto& line_begin = points.front();
+  const auto& line_end = points.back();
+  return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,
+    [&](const auto max, const auto& point) {
+        return std::max(max, point_line_distance(point, line_begin, line_end, x1, x2)); });
+}
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+bool is_linear(const Event& points,
+               const real threshold,
+               const Coordinate x1,
+               const Coordinate x2,
+               const Coordinate x3) {
+  const auto& line_begin = points.front();
+  const auto& line_end = points.back();
+  return threshold >= std::accumulate(points.cbegin() + 1, points.cend() - 1, threshold,
+    [&](const auto max, const auto& point) {
+        return std::max(max, point_line_distance(point, line_begin, line_end, x1, x2, x3)); });
+}
+//----------------------------------------------------------------------------------------------
+
+//__Disjunction Topology Type___________________________________________________________________
+template<class T, class ...Ts>
+struct any : T, any<Ts...> {
+  template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    return T::operator()(points) || any<Ts...>::operator()(points);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Conjuction Topology Type____________________________________________________________________
+template<class T, class ...Ts>
+struct all : T, all<Ts...> {
+  template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    return T::operator()(points) && all<Ts...>::operator()(points);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Binary Disjunction Topology Type____________________________________________________________
+template<class A, class B>
+using either = any<A, B>;
+//----------------------------------------------------------------------------------------------
+
+//__Binary Conjuction Topology Type_____________________________________________________________
+template<class A, class B>
+using both = all<A, B>;
+//----------------------------------------------------------------------------------------------
+
+//__Time-Ordered Topology Type__________________________________________________________________
+struct time_ordered {
+  template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    return is_monotonic<Coordinate::T>(points);
+  }
+};
 //----------------------------------------------------------------------------------------------
 
 //__Cylinder Topology Type______________________________________________________________________
-struct cylinder {
-  cylinder(const real radius);
-  bool operator()(const event& points);
-  bool operator()(const full_event& points);
+struct cylinder : time_ordered {
+  real radius;
+  Coordinate c1, c2, c3;
+  cylinder(const real r,
+           const Coordinate x1=Coordinate::X,
+           const Coordinate x2=Coordinate::Y,
+           const Coordinate x3=Coordinate::Z)
+      : radius(r), c1(x1), c2(x2), c3(x3) {}
+
+  template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    if (!time_ordered::operator()(points)) return false;
+    if (points.size() == 2UL) return true;
+    const auto end = points.cend();
+    for (auto iter = points.cbegin(); iter != end; ++iter)
+      if (radius > point_line_distance(*iter, points.front(), points.back(), c1, c2, c3))
+        return false;
+    return true;
+  }
 };
 //----------------------------------------------------------------------------------------------
 
 //__Double Cone Topology Type___________________________________________________________________
-struct double_cone {
-  double_cone(const real radius);
-  bool operator()(const event& points);
-  bool operator()(const full_event& points);
+struct double_cone : time_ordered {
+  real radius;
+  Coordinate c1, c2, c3;
+  double_cone(const real r,
+              const Coordinate x1=Coordinate::X,
+              const Coordinate x2=Coordinate::Y,
+              const Coordinate x3=Coordinate::Z)
+      : radius(r), c1(x1), c2(x2), c3(x3) {}
+
+  template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    if (!time_ordered::operator()(points)) return false;
+    if (points.size() == 2UL) return true;
+
+    const auto front = select_r3(points.front(), c1, c2, c3);
+    const auto back = select_r3(points.back(), c1, c2, c3);
+    const auto twice_radius = 2.0L * radius;
+    const auto scale_factor = twice_radius / std::hypot(twice_radius, norm(back - front));
+
+    const auto end = points.cend();
+    for (auto iter = points.cbegin(); iter != end; ++iter) {
+      const auto point = select_r3(*iter, c1, c2, c3);
+      if (std::min(norm(point - front),
+                   norm(point - back)) * scale_factor
+            < point_line_distance(point, front, back, c1, c2, c3))
+        return false;
+    }
+    return true;
+  }
 };
 //----------------------------------------------------------------------------------------------
 
+} /* namespace topology */ /////////////////////////////////////////////////////////////////////
+
+namespace detail { /////////////////////////////////////////////////////////////////////////////
 //__Seeding Algorithm___________________________________________________________________________
+template<class SeedTopology, class EventPartition,
+  typename EventVector = typename EventPartition::parts,
+  typename Event = typename EventVector::value_type,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const EventVector seed(const std::size_t n,
+                       const EventPartition& partition,
+                       SeedTopology topo) {
+  if (n <= 1)
+    return EventVector{};
+
+  const auto& layers = partition.parts;
+  const auto layer_count = layers.size();
+
+  // FIXME: unsure what to do here
+  if (layer_count < n)
+    return EventVector{};
+
+  // FIXME: find a close upper bound for out.reserve
+  EventVector out{};
+
+  util::bit_vector_sequence layer_sequence;
+  for (const auto& layer : layers)
+    layer_sequence.emplace_back(1, layer.size());
+
+  util::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
+    Event tuple;
+    tuple.reserve(n);
+    for (std::size_t index{}; index < layer_count; ++index)
+      if (chooser[index])
+        layer_sequence[index].set_conditional_push_back(layers[index], tuple);
+
+    if (topo(tuple))
+      out.push_back(t_sort(tuple));
+  });
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+} /* namespace detail */ ///////////////////////////////////////////////////////////////////////
+
+//__Seeding Algorithm___________________________________________________________________________
+template<class SeedTopology>
 const event_vector seed(const std::size_t n,
                         const event_partition& partition,
-                        const real line_threshold);
+                        SeedTopology topo) {
+  return detail::seed<SeedTopology, event_partition, event_vector>(n, partition, topo);
+}
+template<class SeedTopology>
 const full_event_vector seed(const std::size_t n,
                              const full_event_partition& partition,
-                             const real line_threshold);
+                             SeedTopology topo) {
+  return detail::seed<SeedTopology, full_event_partition, full_event_vector>(n, partition, topo);
+}
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////

@@ -32,8 +32,8 @@ const r4_point event_density(const full_event& points);
 //----------------------------------------------------------------------------------------------
 
 //__Calculate Number of Hits per unit Volume____________________________________________________
-// real event_volume_density(const event& points);
-// real event_volume_density(const full_event& points);
+// TODO: real event_volume_density(const event& points);
+// TODO: real event_volume_density(const full_event& points);
 //----------------------------------------------------------------------------------------------
 
 //__Calculate Number of Hits per Geometric Element______________________________________________
@@ -74,9 +74,14 @@ const full_event_partition repartition(const full_event_partition& previous,
                                        const real interval);
 //----------------------------------------------------------------------------------------------
 
+//__Reduce Event Partition to Events____________________________________________________________
+const event reduce_partition(const event_partition& previous);
+const full_event reduce_partition(const full_event_partition& previous);
+//----------------------------------------------------------------------------------------------
+
 //__Calculate Density of Partition______________________________________________________________
-// real partition_density(const event_partition& points);
-// real partition_density(const full_event_partition& points);
+// TODO: real partition_density(const event_partition& points);
+// TODO: real partition_density(const full_event_partition& points);
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////

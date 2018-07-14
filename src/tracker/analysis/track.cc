@@ -402,7 +402,7 @@ real track::error(const track::parameter p) const {
 
 //__Check if Track Fit Diverged_________________________________________________________________
 bool track::fit_diverged() const noexcept {
-  return _guess != _final && _final == track::fit_parameters{};
+  return _final == track::fit_parameters{};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -606,24 +606,37 @@ std::size_t track::reset(const analysis::event& points) {
 //__Reset Track_________________________________________________________________________________
 std::size_t track::reset(const analysis::full_event& points) {
   _full_event = points;
-  _guess = _guess_track(_full_event);
-  _final = _guess;
-  if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
-    const auto& full_event_begin = _full_event.cbegin();
-    const auto& full_event_end = _full_event.cend();
+  const auto begin = _full_event.cbegin();
+  const auto end = _full_event.cend();
+  const auto new_size = size();
 
-    std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi2),
-      [&](const auto& point) {
-        return _track_squared_residual(
-          t0_value(), x0_value(), y0_value(), z0_value(), vx_value(), vy_value(), vz_value(), point);
-      });
+  _delta_chi2.clear();
+  _detectors.clear();
+  _delta_chi2.reserve(new_size);
+  _detectors.reserve(new_size);
 
-    std::transform(full_event_begin, full_event_end, std::back_inserter(_detectors),
-      [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
+  std::transform(begin, end, std::back_inserter(_detectors),
+    [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
+
+  if (new_size > 1) {
+    _guess = _guess_track(_full_event);
+    _final = _guess;
+    if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
+      std::transform(begin, end, std::back_inserter(_delta_chi2),
+        [&](const auto& point) {
+          return _track_squared_residual(
+            t0_value(), x0_value(), y0_value(), z0_value(), vx_value(), vy_value(), vz_value(), point);
+        });
+      return new_size;
+    }
   } else {
-    _final = {};
+    _guess = {};
   }
-  return size();
+
+  _final = {};
+  _covariance = {};
+  _delta_chi2.resize(new_size, 0.0L);
+  return new_size;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -703,16 +716,21 @@ std::size_t track::remove(const std::size_t index) {
 //__Remove Hits from Track and Refit____________________________________________________________
 std::size_t track::remove(const std::vector<std::size_t>& indices) {
   const auto sorted = util::algorithm::copy_sort_range(indices);
+  const auto sorted_size = sorted.size();
   const auto s = size();
+  if (sorted_size == 0UL)
+    return s;
+
   analysis::full_event saved_hits;
   saved_hits.reserve(s);
-  for (std::size_t hit_index{}, removal_index{}; hit_index < s; ++hit_index) {
-    if (sorted[removal_index] == hit_index) {
-      ++removal_index;
-    } else {
-      saved_hits.push_back(_full_event[hit_index]);
-    }
+  std::size_t i{};
+  for (std::size_t removal_index{}; i < s && removal_index < sorted_size; ++i) {
+    if (i == sorted[removal_index]) ++removal_index;
+    else saved_hits.push_back(_full_event[i]);
   }
+  for (; i < s; ++i)
+    saved_hits.push_back(_full_event[i]);
+
   saved_hits.shrink_to_fit();
   return reset(saved_hits);
 }
@@ -723,10 +741,9 @@ std::size_t track::prune_on_chi_squared(const real max_chi_squared) {
   const auto s = size();
   std::vector<std::size_t> indices;
   indices.reserve(s);
-  for (std::size_t i{}; i < s; ++i) {
+  for (std::size_t i{}; i < s; ++i)
     if (chi_squared_vector()[i] > max_chi_squared)
       indices.push_back(i);
-  }
   return remove(indices);
 }
 //----------------------------------------------------------------------------------------------
@@ -884,6 +901,7 @@ std::ostream& operator<<(std::ostream& os,
   os << bar << "\n";
 
   if (track.fit_diverged()) {
+
     os << "* Track Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n";
     const auto guess = track.guess_fit();
     os << "* Guess Parameters: \n"
@@ -894,7 +912,17 @@ std::ostream& operator<<(std::ostream& os,
        << "    VX: " << guess.vx.value << "  (+/- " << guess.vx.error << ")\n"
        << "    VY: " << guess.vy.value << "  (+/- " << guess.vy.error << ")\n"
        << "    VZ: " << guess.vz.value << "  (+/- " << guess.vz.error << ")\n";
+
+    os.precision(6);
+    os << "* Event: \n";
+    const auto points = track.event();
+    const auto& detectors = track.detectors();
+    const auto size = points.size();
+    for (size_t i = 0; i < size; ++i)
+      os << "    " << detectors[i] << " " << points[i] << "\n";
+
   } else {
+
     os << "* Track Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n";
 
     os.precision(7);
@@ -1057,7 +1085,7 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
   out.reserve(size);
 
   const auto sorted_seeds = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
-  const auto track_buffer = independent_fit_seeds(sorted_seeds, direction);
+  auto track_buffer = independent_fit_seeds(sorted_seeds, direction);
 
   util::index_vector<> track_indices(size);
   /* FIXME: what to do here?

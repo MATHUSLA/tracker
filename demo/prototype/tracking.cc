@@ -47,21 +47,23 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
-  const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
+  const auto seeds           = analysis::seed(options.seed_size, layers, analysis::topology::double_cone{options.line_width});
 
+  /*
   for (const auto seed : seeds) {
     for (std::size_t i{}; i < seed.size() - 1; ++i) {
       canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
     }
   }
+  */
 
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-  const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 1UL);
+  auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 1UL);
 
   // TODO: improve efficiency
   const auto size = event.size();
   util::bit_vector save_list(size);
-  for (const auto& track : out) {
+  for (auto& track : out) {
     for (const auto& point : track.event()) {
       const auto search = util::algorithm::range_binary_find_first(event,
                                                                    point,
@@ -87,7 +89,7 @@ const analysis::track_vector find_secondary_tracks(const analysis::event& event,
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
-  const auto seeds           = analysis::seed(2UL, layers, options.line_width);
+  const auto seeds           = analysis::seed(2UL, layers, analysis::topology::cylinder{options.line_width});
   const auto tracking_vector = reset_seeds(seeds, combined_rpc_hits, original_rpc_hits);
   const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 0UL);
 
@@ -188,7 +190,7 @@ int prototype_tracking(int argc,
       save_tracks(tracks, canvas, track_tree, options);
       print_tracking_summary(event, tracks);
 
-      // save_vertices({analysis::vertex(tracks)}, canvas, vertex_tree, options);
+      save_vertices({analysis::vertex(tracks)}, canvas, vertex_tree, options);
 
       canvas.draw();
     }

@@ -235,15 +235,7 @@ template<class EventPartition,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const EventPartition repartition(const EventPartition& previous,
                                  const real interval) {
-  const auto& parts = previous.parts;
-  Event reset_parts;
-  reset_parts.reserve(std::accumulate(parts.cbegin(), parts.cend(), 0ULL,
-    [](const auto size, const auto& event) { return size + event.size(); }));
-
-  for (const auto& event : parts)
-    reset_parts.insert(reset_parts.cend(), event.cbegin(), event.cend());
-
-  return partition(reset_parts, previous.coordinate, interval);
+  return partition(reduce_partition(previous), previous.coordinate, interval);
 }
 const event_partition repartition(const event_partition& previous,
                                   const real interval) {
@@ -252,6 +244,28 @@ const event_partition repartition(const event_partition& previous,
 const full_event_partition repartition(const full_event_partition& previous,
                                        const real interval) {
   return repartition<full_event_partition, full_event>(previous, interval);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reduce Event Partition to Events____________________________________________________________
+template<class EventPartition,
+  typename Event = typename EventPartition::parts::value_type,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const Event reduce_partition(const EventPartition& previous) {
+  const auto& parts = previous.parts;
+  Event out;
+  out.reserve(std::accumulate(parts.cbegin(), parts.cend(), 0ULL,
+    [](const auto size, const auto& event) { return size + event.size(); }));
+
+  for (const auto& event : parts)
+    out.insert(out.cend(), event.cbegin(), event.cend());
+  return out;
+}
+const event reduce_partition(const event_partition& previous) {
+  return reduce_partition<event_partition, event>(previous);
+}
+const full_event reduce_partition(const full_event_partition& previous) {
+  return reduce_partition<full_event_partition, full_event>(previous);
 }
 //----------------------------------------------------------------------------------------------
 

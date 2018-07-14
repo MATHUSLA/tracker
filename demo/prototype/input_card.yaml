@@ -7,7 +7,7 @@ draw-events: false
 time-smearing:        true
 layer-axis:           Z
 layer-depth:          50
-line-width:           20
+line-width:           19
 seed-size:            3
 event-overload-limit: 2   # unused
 event-density-limit:  0.22

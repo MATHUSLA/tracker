@@ -35,7 +35,10 @@ void draw_detector_centers(plot::canvas& canvas) {
 void draw_track(plot::canvas& canvas,
                 const analysis::track& track) {
   const auto& full_event = track.full_event();
-  uint_fast8_t brightness = 0, step = 230 / full_event.size();
+  const auto size = full_event.size();
+  if (size == 0)
+    return;
+  uint_fast8_t brightness = 0, step = 230 / size;
   for (const auto& point : full_event) {
     const auto center = type::reduce_to_r3(point);
     canvas.add_box(center,
@@ -44,7 +47,7 @@ void draw_track(plot::canvas& canvas,
                    {brightness, brightness, brightness});
     brightness += step;
   }
-  track.draw(canvas, 2, plot::color::RED);
+  track.draw(canvas, 1.8, plot::color::RED);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -75,8 +78,16 @@ void draw_mc_tracks(plot::canvas& canvas,
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________
 void draw_vertex_and_guess(plot::canvas& canvas,
                            const analysis::vertex& vertex) {
-  vertex.draw(canvas, 1.5, plot::color::GREEN);
-  vertex.draw_guess(canvas, 1.5, plot::color::RED);
+  vertex.draw(canvas, 1.2, plot::color::GREEN);
+  vertex.draw_guess(canvas, 1.2, plot::color::RED);
+
+  if (vertex.fit_converged()) {
+    const auto point = vertex.point();
+    for (const auto& track : vertex.tracks()) {
+      canvas.add_line(track.at_t(point.t), point, 2, plot::color::GREEN);
+    }
+  }
+
 }
 //----------------------------------------------------------------------------------------------
 

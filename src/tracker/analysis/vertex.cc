@@ -218,7 +218,7 @@ real vertex::error(const vertex::parameter p) const {
 
 //__Check if Track Fit Converged________________________________________________________________
 bool vertex::fit_diverged() const noexcept {
-  return _guess != _final && _final == vertex::fit_parameters{};
+  return _final == vertex::fit_parameters{};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -295,7 +295,11 @@ real vertex::covariance(const vertex::parameter p,
 //__Reset Vertex with Given Tracks______________________________________________________________
 std::size_t vertex::reset(const track_vector& tracks) {
   _tracks = tracks;
-  const auto new_size = _tracks.size();
+  const auto new_size = size();
+
+  _delta_chi2.clear();
+  _delta_chi2.reserve(new_size);
+
   if (new_size > 1) {
     _guess = _guess_vertex(_tracks);
     _final = _guess;
@@ -304,13 +308,16 @@ std::size_t vertex::reset(const track_vector& tracks) {
         [&](const auto& track) {
           return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track);
         });
-      return size();
+      return new_size;
     }
+  } else {
+    _guess = {};
   }
-  _delta_chi2.resize(new_size, 0);
+
   _final = {};
   _covariance = {};
-  return new_size;
+  _delta_chi2.resize(new_size, 0);
+  return size();
 }
 //----------------------------------------------------------------------------------------------
 
@@ -517,6 +524,7 @@ std::ostream& operator<<(std::ostream& os,
   os << bar << "\n";
 
   if (vertex.fit_diverged()) {
+
     os << "* Vertex Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n";
     const auto guess = vertex.guess_fit();
     os << "* Guess Parameters:\n"
@@ -524,7 +532,20 @@ std::ostream& operator<<(std::ostream& os,
        << "    X: " << guess.x.value << "  (+/- " << guess.x.error << ")\n"
        << "    Y: " << guess.y.value << "  (+/- " << guess.y.error << ")\n"
        << "    Z: " << guess.z.value << "  (+/- " << guess.z.error << ")\n";
+
+    os << "* Tracks: \n";
+    for (const auto& track : vertex.tracks()) {
+      os << "    (" << track.t0_value() << ", "
+                    << track.x0_value() << ", "
+                    << track.y0_value() << ", "
+                    << track.z0_value() << ", "
+                    << track.vx_value() << ", "
+                    << track.vy_value() << ", "
+                    << track.vz_value() << ")\n";
+    }
+
   } else {
+
     os << "* Vertex Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n";
     os << "* Parameters:\n"
        << "    T: " << vertex.t_value() << "  (+/- " << vertex.t_error() << ")\n"
