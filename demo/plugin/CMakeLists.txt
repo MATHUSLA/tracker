@@ -1,5 +1,5 @@
 #
-# demo/CMakeLists.txt
+# demo/plugin/CMakeLists.txt
 #
 # Copyright 2018 Brandon Gomes
 #
@@ -17,8 +17,15 @@
 
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
-# TODO: add_subdirectory(plugin)
+add_library(plugin SHARED
+  src/
+)
 
-add_subdirectory(box)
-add_subdirectory(module_box)
-add_subdirectory(prototype)
+target_compile_features(plugin PUBLIC cxx_std_14)
+
+target_link_libraries(plugin PUBLIC tracker)
+target_include_directories(plugin PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
+
+install(TARGETS plugin DESTINATION lib)

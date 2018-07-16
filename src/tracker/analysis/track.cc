@@ -134,17 +134,10 @@ bool _fit_event_minuit(const full_event& points,
   }
 
   if (points.size() == 2) {
-    // FIXME: error handling for -> execute(minuit, _gaussian_nll_two_hit_track);
     if (execute(minuit, _gaussian_nll_two_hit_track) == error::diverged)
       return false;
-    vz.value = _vz_from_c(vx.value, vy.value);
-    vz.error = stat::error::propagate(
-      real_array<2>{-vx.value / vz.value, -vy.value / vz.value},
-      real_array<4>{vx.error * vx.error, vx.error * vy.error,
-                    vx.error * vy.error, vy.error * vy.error});
   } else {
     set_parameters(minuit, 6UL, "VZ", vz);
-    // FIXME: error handling for -> execute(minuit, _gaussian_nll);
     if (execute(minuit, _gaussian_nll) == error::diverged)
       return false;
     get_parameters(minuit, 6UL, vz);
@@ -154,10 +147,17 @@ bool _fit_event_minuit(const full_event& points,
   get_covariance<track::free_parameter_count>(minuit, covariance_matrix);
 
   if (points.size() == 2) {
+    vz.value = _vz_from_c(vx.value, vy.value);
+
     for (std::size_t i{}; i < 5UL; ++i) {
       covariance_matrix[30UL + i] = 0.0L;
       covariance_matrix[6UL * i + 5UL] = 0.0L;
     }
+
+    vz.error = stat::error::propagate(
+      real_array<2>{-vx.value / vz.value, -vy.value / vz.value},
+      real_array<4>{vx.error * vx.error, covariance_matrix[22UL],
+                    covariance_matrix[22UL], vy.error * vy.error});
     covariance_matrix[35UL] = vz.error * vz.error;
   }
 
@@ -755,6 +755,174 @@ void track::reparameterize(const Coordinate direction) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Fill Plots with Tracking Variables__________________________________________________________
+void track::fill_plots(plot::histogram_collection& collection,
+                       const track::plotting_keys& keys) const {
+  if (collection.count(keys.t0)) collection[keys.t0].insert(t0_value() / units::time);
+  if (collection.count(keys.x0)) collection[keys.x0].insert(x0_value() / units::length);
+  if (collection.count(keys.y0)) collection[keys.y0].insert(y0_value() / units::length);
+  if (collection.count(keys.z0)) collection[keys.z0].insert(z0_value() / units::length);
+  if (collection.count(keys.vx)) collection[keys.vx].insert(vx_value() / units::velocity);
+  if (collection.count(keys.vy)) collection[keys.vy].insert(vy_value() / units::velocity);
+  if (collection.count(keys.vz)) collection[keys.vz].insert(vz_value() / units::velocity);
+  if (collection.count(keys.t0_error)) collection[keys.t0_error].insert(t0_error() / units::time);
+  if (collection.count(keys.x0_error)) collection[keys.x0_error].insert(x0_error() / units::length);
+  if (collection.count(keys.y0_error)) collection[keys.y0_error].insert(y0_error() / units::length);
+  if (collection.count(keys.z0_error)) collection[keys.z0_error].insert(z0_error() / units::length);
+  if (collection.count(keys.vx_error)) collection[keys.vx_error].insert(vx_error() / units::velocity);
+  if (collection.count(keys.vy_error)) collection[keys.vy_error].insert(vy_error() / units::velocity);
+  if (collection.count(keys.vz_error)) collection[keys.vz_error].insert(vz_error() / units::velocity);
+  if (collection.count(keys.chi_squared)) collection[keys.chi_squared].insert(chi_squared());
+  if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
+  if (collection.count(keys.chi_squared_p_value)) collection[keys.chi_squared_p_value].insert(chi_squared_p_value());
+  if (collection.count(keys.size)) collection[keys.size].insert(size());
+  if (collection.count(keys.beta)) collection[keys.beta].insert(beta());
+  if (collection.count(keys.beta_error)) collection[keys.beta_error].insert(beta_error());
+  if (collection.count(keys.angle)) collection[keys.angle].insert(angle());
+  if (collection.count(keys.angle_error)) collection[keys.angle_error].insert(angle_error());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw Fit Track______________________________________________________________________________
+void track::draw(plot::canvas& canvas,
+                 const real size,
+                 const plot::color color,
+                 const bool with_errors) const {
+  if (fit_converged()) {
+    canvas.add_line(front(), back(), size, color);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw Guess Track____________________________________________________________________________
+void track::draw_guess(plot::canvas& canvas,
+                       const real size,
+                       const plot::color color,
+                       const bool with_errors) const {
+  // TODO: finish
+}
+//----------------------------------------------------------------------------------------------
+
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+//__Print Track Parameters with Units___________________________________________________________
+std::ostream& _print_track_parameters(std::ostream& os,
+                                      const track::fit_parameters& parameters,
+                                      std::size_t prefix_count) {
+  return os
+    << std::string(prefix_count, ' ')
+      << "T0: " << std::setw(10) << parameters.t0.value / units::time
+                << "  (+/- " << std::setw(10) << parameters.t0.error / units::time     << ")  "
+                << units::time_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "X0: " << std::setw(10) << parameters.x0.value / units::length
+                << "  (+/- " << std::setw(10) << parameters.x0.error / units::length   << ")  "
+                << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "Y0: " << std::setw(10) << parameters.y0.value / units::length
+                << "  (+/- " << std::setw(10) << parameters.y0.error / units::length   << ")  "
+                << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "Z0: " << std::setw(10) << parameters.z0.value / units::length
+                << "  (+/- " << std::setw(10) << parameters.z0.error / units::length   << ")  "
+                << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "VX: " << std::setw(10) << parameters.vx.value / units::velocity
+                << "  (+/- " << std::setw(10) << parameters.vx.error / units::velocity << ")  "
+                << units::velocity_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "VY: " << std::setw(10) << parameters.vy.value / units::velocity
+                << "  (+/- " << std::setw(10) << parameters.vy.error / units::velocity << ")  "
+                << units::velocity_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "VZ: " << std::setw(10) << parameters.vz.value / units::velocity
+                << "  (+/- " << std::setw(10) << parameters.vz.error / units::velocity << ")  "
+                << units::velocity_string << "\n";
+}
+//----------------------------------------------------------------------------------------------
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Track Output Stream Operator________________________________________________________________
+std::ostream& operator<<(std::ostream& os,
+                         const track& track) {
+  static const std::string bar(80, '-');
+  os << bar << "\n";
+  os.precision(6);
+
+  if (track.fit_diverged()) {
+
+    os << "* Track Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n"
+       << "* Guess Parameters: \n";
+    _print_track_parameters(os, track.guess_fit(), 4);
+
+    os << "* Event: \n";
+    const auto points = track.event();
+    const auto& detectors = track.detectors();
+    const auto size = points.size();
+    for (size_t i = 0; i < size; ++i)
+      os << "    " << detectors[i] << " " << units::scale_r4_length(points[i]) << "\n";
+
+  } else {
+
+    os << "* Track Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n"
+       << "* Parameters: \n";
+    _print_track_parameters(os, track.final_fit(), 4);
+
+    os << "* Event: \n";
+    os << "    front: " << units::scale_r4_length(track.front()) << "\n\n";
+    const auto points = track.event();
+    const auto& detectors = track.detectors();
+    const auto size = points.size();
+    for (std::size_t i{}; i < size; ++i)
+      os << "      " << detectors[i] << " " << units::scale_r4_length(points[i]) << "\n";
+    os << "\n    back:  " << units::scale_r4_length(track.back())  << "\n";
+
+    os << "* Statistics: \n"
+       << "    dof:      " << track.degrees_of_freedom()             << "\n"
+       << "    chi2:     " << track.chi_squared() << " = ";
+    util::io::print_range(track.chi_squared_vector(), " + ", "", os) << "\n";
+    os << "    chi2/dof: " << track.chi_squared_per_dof()            << "\n"
+       << "    p-value:  " << track.chi_squared_p_value()            << "\n"
+       << "    cov mat:  | ";
+    const auto matrix = track.covariance_matrix();
+    os << std::right;
+    for (size_t i = 0; i < 6; ++i) {
+      if (i > 0) os << "              | ";
+      for (size_t j = 0; j < 6; ++j) {
+        const auto cell = matrix[6*i+j];
+        real cell_unit{1.0L};
+
+        if (i == 0) cell_unit *= units::time;
+        else if (i > 2) cell_unit *= units::velocity;
+        else cell_unit *= units::length;
+
+        if (j == 0) cell_unit *= units::time;
+        else if (j > 2) cell_unit *= units::velocity;
+        else cell_unit *= units::length;
+
+        if (i == j) {
+          os << util::io::bold << std::setw(14)
+             << cell / cell_unit << util::io::reset_font << " ";
+        } else {
+          os << std::setw(14) << cell / cell_unit << " ";
+        }
+      }
+      os << "|\n";
+    }
+
+    os << "* Dynamics: \n"
+       << "    beta:  " << track.beta()
+                        << "  (+/- " << track.beta_error() << ")\n"
+       << "    unit:  " << track.unit()
+                        << "  (+/- " << track.unit_error() << ")\n"
+       << "    angle: " << track.angle() / units::angle
+                        << "  (+/- " << track.angle_error() / units::angle << ")  "
+                        << units::angle_string << "\n";
+  }
+
+  return os << bar;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Track Data Tree Constructor_________________________________________________________________
 track::tree::tree(const std::string& name)
     : tree(name, name) {}
@@ -843,139 +1011,6 @@ void track::tree::fill(const track_vector& tracks) {
   for (const auto& track : tracks)
     insert(track);
   analysis::tree::fill();
-}
-//----------------------------------------------------------------------------------------------
-
-//__Fill Plots with Tracking Variables__________________________________________________________
-void track::fill_plots(plot::histogram_collection& collection,
-                       const track::plotting_keys& keys) const {
-  if (collection.count(keys.t0)) collection[keys.t0].insert(t0_value() / units::time);
-  if (collection.count(keys.x0)) collection[keys.x0].insert(x0_value() / units::length);
-  if (collection.count(keys.y0)) collection[keys.y0].insert(y0_value() / units::length);
-  if (collection.count(keys.z0)) collection[keys.z0].insert(z0_value() / units::length);
-  if (collection.count(keys.vx)) collection[keys.vx].insert(vx_value() / units::velocity);
-  if (collection.count(keys.vy)) collection[keys.vy].insert(vy_value() / units::velocity);
-  if (collection.count(keys.vz)) collection[keys.vz].insert(vz_value() / units::velocity);
-  if (collection.count(keys.t0_error)) collection[keys.t0_error].insert(t0_error() / units::time);
-  if (collection.count(keys.x0_error)) collection[keys.x0_error].insert(x0_error() / units::length);
-  if (collection.count(keys.y0_error)) collection[keys.y0_error].insert(y0_error() / units::length);
-  if (collection.count(keys.z0_error)) collection[keys.z0_error].insert(z0_error() / units::length);
-  if (collection.count(keys.vx_error)) collection[keys.vx_error].insert(vx_error() / units::velocity);
-  if (collection.count(keys.vy_error)) collection[keys.vy_error].insert(vy_error() / units::velocity);
-  if (collection.count(keys.vz_error)) collection[keys.vz_error].insert(vz_error() / units::velocity);
-  if (collection.count(keys.chi_squared)) collection[keys.chi_squared].insert(chi_squared());
-  if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
-  if (collection.count(keys.chi_squared_p_value)) collection[keys.chi_squared_p_value].insert(chi_squared_p_value());
-  if (collection.count(keys.size)) collection[keys.size].insert(size());
-  if (collection.count(keys.beta)) collection[keys.beta].insert(beta());
-  if (collection.count(keys.beta_error)) collection[keys.beta_error].insert(beta_error());
-  if (collection.count(keys.angle)) collection[keys.angle].insert(angle());
-  if (collection.count(keys.angle_error)) collection[keys.angle_error].insert(angle_error());
-}
-//----------------------------------------------------------------------------------------------
-
-//__Draw Fit Track______________________________________________________________________________
-void track::draw(plot::canvas& canvas,
-                 const real size,
-                 const plot::color color,
-                 const bool with_errors) const {
-  if (fit_converged()) {
-    canvas.add_line(front(), back(), size, color);
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Draw Guess Track____________________________________________________________________________
-void track::draw_guess(plot::canvas& canvas,
-                       const real size,
-                       const plot::color color,
-                       const bool with_errors) const {
-  // TODO: finish
-}
-//----------------------------------------------------------------------------------------------
-
-//__Track Output Stream Operator________________________________________________________________
-std::ostream& operator<<(std::ostream& os,
-                         const track& track) {
-  static const std::string bar(80, '-');
-  os << bar << "\n";
-
-  if (track.fit_diverged()) {
-
-    os << "* Track Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n";
-    const auto guess = track.guess_fit();
-    os << "* Guess Parameters: \n"
-       << "    T0: " << guess.t0.value << "  (+/- " << guess.t0.error << ")\n"
-       << "    X0: " << guess.x0.value << "  (+/- " << guess.x0.error << ")\n"
-       << "    Y0: " << guess.y0.value << "  (+/- " << guess.y0.error << ")\n"
-       << "    Z0: " << guess.z0.value << "  (+/- " << guess.z0.error << ")\n"
-       << "    VX: " << guess.vx.value << "  (+/- " << guess.vx.error << ")\n"
-       << "    VY: " << guess.vy.value << "  (+/- " << guess.vy.error << ")\n"
-       << "    VZ: " << guess.vz.value << "  (+/- " << guess.vz.error << ")\n";
-
-    os.precision(6);
-    os << "* Event: \n";
-    const auto points = track.event();
-    const auto& detectors = track.detectors();
-    const auto size = points.size();
-    for (size_t i = 0; i < size; ++i)
-      os << "    " << detectors[i] << " " << points[i] << "\n";
-
-  } else {
-
-    os << "* Track Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n";
-
-    os.precision(7);
-    os << "* Parameters: \n"
-       << "    T0: " << track.t0_value() << "  (+/- " << track.t0_error() << ")\n"
-       << "    X0: " << track.x0_value() << "  (+/- " << track.x0_error() << ")\n"
-       << "    Y0: " << track.y0_value() << "  (+/- " << track.y0_error() << ")\n"
-       << "    Z0: " << track.z0_value() << "  (+/- " << track.z0_error() << ")\n"
-       << "    VX: " << track.vx_value() << "  (+/- " << track.vx_error() << ")\n"
-       << "    VY: " << track.vy_value() << "  (+/- " << track.vy_error() << ")\n"
-       << "    VZ: " << track.vz_value() << "  (+/- " << track.vz_error() << ")\n";
-
-    os.precision(6);
-    os << "* Event: \n";
-    os << "    front: " << track.front() << "\n\n";
-    const auto points = track.event();
-    const auto& detectors = track.detectors();
-    const auto size = points.size();
-    for (size_t i = 0; i < size; ++i)
-      os << "      " << detectors[i] << " " << points[i] << "\n";
-    os << "\n    back:  " << track.back()  << "\n";
-
-    os.precision(7);
-    os << "* Statistics: \n"
-       << "    dof:      " << track.degrees_of_freedom()             << "\n"
-       << "    chi2:     " << track.chi_squared() << " = ";
-    util::io::print_range(track.chi_squared_vector(), " + ", "", os) << "\n";
-    os << "    chi2/dof: " << track.chi_squared_per_dof()            << "\n"
-       << "    p-value:  " << track.chi_squared_p_value()            << "\n"
-       << "    cov mat:  | ";
-    const auto matrix = track.covariance_matrix();
-    for (size_t i = 0; i < 6; ++i) {
-      if (i > 0) os << "              | ";
-      for (size_t j = 0; j < 6; ++j) {
-        const auto cell = matrix[6*i+j];
-        if (i == j) {
-          os << util::io::bold << util::io::underline
-             << cell << util::io::reset_font << " ";
-        } else {
-          os << cell << " ";
-        }
-      }
-      os << "|\n";
-    }
-
-    os.precision(6);
-    os << "* Dynamics: \n"
-       << "    beta:  " << track.beta()  << "  (+/- " << track.beta_error()  << ")\n"
-       << "    unit:  " << track.unit()  << "  (+/- " << track.unit_error()  << ")\n"
-       << "    angle: " << track.angle() << "  (+/- " << track.angle_error() << ")\n";
-  }
-
-  return os << bar;
 }
 //----------------------------------------------------------------------------------------------
 

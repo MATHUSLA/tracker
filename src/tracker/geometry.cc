@@ -323,7 +323,9 @@ const structure_value volume(const r4_point& point) {
 //__Box Volume Stream Overload__________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const box_volume& box) {
-  return os << "[" << box.min << "..." << box.center << "..." << box.max << "]";
+  return os << "[" << units::scale_r3_length(box.min)    << "..."
+                   << units::scale_r3_length(box.center) << "..."
+                   << units::scale_r3_length(box.max)    << "]";
 }
 //----------------------------------------------------------------------------------------------
 

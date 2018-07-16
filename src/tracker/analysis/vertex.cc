@@ -392,6 +392,167 @@ std::size_t vertex::prune_on_chi_squared(const real max_chi_squared) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Fill Plots with Vertexing Variables_________________________________________________________
+void vertex::fill_plots(plot::histogram_collection& collection,
+                        const vertex::plotting_keys& keys) const {
+  if (collection.count(keys.t)) collection[keys.t].insert(t_value() / units::time);
+  if (collection.count(keys.x)) collection[keys.x].insert(x_value() / units::length);
+  if (collection.count(keys.y)) collection[keys.y].insert(y_value() / units::length);
+  if (collection.count(keys.z)) collection[keys.z].insert(z_value() / units::length);
+  if (collection.count(keys.t_error)) collection[keys.t_error].insert(t_error() / units::time);
+  if (collection.count(keys.x_error)) collection[keys.x_error].insert(x_error() / units::length);
+  if (collection.count(keys.y_error)) collection[keys.y_error].insert(y_error() / units::length);
+  if (collection.count(keys.z_error)) collection[keys.z_error].insert(z_error() / units::length);
+
+  if (collection.count(keys.distance)) {
+    auto& distance_histogram = collection[keys.distance];
+    for (const auto& distance : distances())
+      distance_histogram.insert(distance / units::length);
+  }
+  if (collection.count(keys.distance_error)) {
+    auto& distance_error_histogram = collection[keys.distance_error];
+    for (const auto& distance_error : distance_errors())
+      distance_error_histogram.insert(distance_error / units::length);
+  }
+
+  if (collection.count(keys.chi_squared)) collection[keys.chi_squared].insert(chi_squared());
+  if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
+  if (collection.count(keys.chi_squared_p_value)) collection[keys.chi_squared_p_value].insert(chi_squared_p_value());
+  if (collection.count(keys.size)) collection[keys.size].insert(size());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw Fit Vertex_____________________________________________________________________________
+void vertex::draw(plot::canvas& canvas,
+                  const real size,
+                  const plot::color color,
+                  const bool with_errors) const {
+  // TODO: decide what to do with convergence
+  if (fit_converged()) {
+    canvas.add_point(point(), size, color);
+    if (with_errors)
+      canvas.add_box(point(), point_error().x, point_error().y, point_error().z, size, color);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Draw Guess Vertex___________________________________________________________________________
+void vertex::draw_guess(plot::canvas& canvas,
+                        const real size,
+                        const plot::color color,
+                        const bool with_errors) const {
+  // TODO: add with_errors argument
+  canvas.add_point(r3_point{guess_fit().x.value, guess_fit().y.value, guess_fit().z.value}, size, color);
+}
+//----------------------------------------------------------------------------------------------
+
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+//__Print Vertex Parameters with Units__________________________________________________________
+std::ostream& _print_vertex_parameters(std::ostream& os,
+                                       const vertex::fit_parameters& parameters,
+                                       std::size_t prefix_count) {
+  return os
+    << std::string(prefix_count, ' ')
+      << "T: " << std::setw(10) << parameters.t.value / units::time
+               << "  (+/- " << std::setw(10) << parameters.t.error / units::time     << ")  "
+               << units::time_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "X: " << std::setw(10) << parameters.x.value / units::length
+               << "  (+/- " << std::setw(10) << parameters.x.error / units::length   << ")  "
+               << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "Y: " << std::setw(10) << parameters.y.value / units::length
+               << "  (+/- " << std::setw(10) << parameters.y.error / units::length   << ")  "
+               << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "Z: " << std::setw(10) << parameters.z.value / units::length
+               << "  (+/- " << std::setw(10) << parameters.z.error / units::length   << ")  "
+               << units::length_string << "\n";
+}
+//----------------------------------------------------------------------------------------------
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Vertex Output Stream Operator_______________________________________________________________
+std::ostream& operator<<(std::ostream& os,
+                         const vertex& vertex) {
+  static const std::string bar(80, '-');
+  os << bar << "\n";
+  os.precision(6);
+
+  if (vertex.fit_diverged()) {
+
+    os << "* Vertex Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n"
+       << "* Guess Parameters:\n";
+    _print_vertex_parameters(os, vertex.guess_fit(), 4);
+
+    os << "* Tracks: \n";
+    for (const auto& track : vertex.tracks()) {
+      os << "    (" << track.t0_value() / units::time     << ", "
+                    << track.x0_value() / units::length   << ", "
+                    << track.y0_value() / units::length   << ", "
+                    << track.z0_value() / units::length   << ", "
+                    << track.vx_value() / units::velocity << ", "
+                    << track.vy_value() / units::velocity << ", "
+                    << track.vz_value() / units::velocity << ")\n";
+    }
+
+  } else {
+
+    os << "* Vertex Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n"
+       << "* Parameters:\n";
+    _print_vertex_parameters(os, vertex.final_fit(), 4);
+
+    os << "* Tracks: \n";
+    const auto size = vertex.size();
+    const auto& tracks = vertex.tracks();
+    const auto& distances = vertex.distances();
+    const auto& errors = vertex.distance_errors();
+    for (std::size_t i{}; i < size; ++i) {
+      const auto& track = tracks[i];
+      os << "    " << distances[i] / units::length << "  (+/- " << errors[i] / units::length
+         << ")\n      from (" << track.t0_value() / units::time     << ", "
+                              << track.x0_value() / units::length   << ", "
+                              << track.y0_value() / units::length   << ", "
+                              << track.z0_value() / units::length   << ", "
+                              << track.vx_value() / units::velocity << ", "
+                              << track.vy_value() / units::velocity << ", "
+                              << track.vz_value() / units::velocity << ")\n";
+    }
+
+    os << "* Statistics: \n"
+       << "    dof:      " << vertex.degrees_of_freedom()             << "\n"
+       << "    chi2:     " << vertex.chi_squared() << " = ";
+    util::io::print_range(vertex.chi_squared_vector(), " + ", "", os) << "\n";
+    os << "    chi2/dof: " << vertex.chi_squared_per_dof()            << "\n"
+       << "    p-value:  " << vertex.chi_squared_p_value()            << "\n"
+       << "    cov mat:  | ";
+    const auto matrix = vertex.covariance_matrix();
+    os << std::right;
+    for (size_t i = 0; i < 4; ++i) {
+      if (i > 0) os << "              | ";
+      for (size_t j = 0; j < 4; ++j) {
+        const auto cell = matrix[4*i+j];
+        real cell_unit{1.0L};
+        if (i == 0) cell_unit *= units::time;
+        else cell_unit *= units::length;
+        if (j == 0) cell_unit *= units::time;
+        else cell_unit *= units::length;
+
+        if (i == j) {
+          os << util::io::bold << std::setw(14)
+             << cell / cell_unit << util::io::reset_font << " ";
+        } else {
+          os << std::setw(14) << cell / cell_unit << " ";
+        }
+      }
+      os << "|\n";
+    }
+  }
+
+  return os << bar;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Vertex Data Tree Constructor________________________________________________________________
 vertex::tree::tree(const std::string& name)
     : tree(name, name) {}
@@ -460,141 +621,6 @@ void vertex::tree::fill(const vertex_vector& vertices) {
   for (const auto& vertex : vertices)
     insert(vertex);
   analysis::tree::fill();
-}
-//----------------------------------------------------------------------------------------------
-
-//__Fill Plots with Vertexing Variables_________________________________________________________
-void vertex::fill_plots(plot::histogram_collection& collection,
-                        const vertex::plotting_keys& keys) const {
-  if (collection.count(keys.t)) collection[keys.t].insert(t_value() / units::time);
-  if (collection.count(keys.x)) collection[keys.x].insert(x_value() / units::length);
-  if (collection.count(keys.y)) collection[keys.y].insert(y_value() / units::length);
-  if (collection.count(keys.z)) collection[keys.z].insert(z_value() / units::length);
-  if (collection.count(keys.t_error)) collection[keys.t_error].insert(t_error() / units::time);
-  if (collection.count(keys.x_error)) collection[keys.x_error].insert(x_error() / units::length);
-  if (collection.count(keys.y_error)) collection[keys.y_error].insert(y_error() / units::length);
-  if (collection.count(keys.z_error)) collection[keys.z_error].insert(z_error() / units::length);
-
-  if (collection.count(keys.distance)) {
-    auto& distance_histogram = collection[keys.distance];
-    for (const auto& distance : distances())
-      distance_histogram.insert(distance / units::length);
-  }
-  if (collection.count(keys.distance_error)) {
-    auto& distance_error_histogram = collection[keys.distance_error];
-    for (const auto& distance_error : distance_errors())
-      distance_error_histogram.insert(distance_error / units::length);
-  }
-
-  if (collection.count(keys.chi_squared)) collection[keys.chi_squared].insert(chi_squared());
-  if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
-  if (collection.count(keys.chi_squared_p_value)) collection[keys.chi_squared_p_value].insert(chi_squared_p_value());
-  if (collection.count(keys.size)) collection[keys.size].insert(size());
-}
-//----------------------------------------------------------------------------------------------
-
-//__Draw Fit Vertex_____________________________________________________________________________
-void vertex::draw(plot::canvas& canvas,
-                  const real size,
-                  const plot::color color,
-                  const bool with_errors) const {
-  // TODO: decide what to do with convergence
-  if (fit_converged()) {
-    canvas.add_point(point(), size, color);
-    if (with_errors)
-      canvas.add_box(point(), point_error().x, point_error().y, point_error().z, size, color);
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Draw Guess Vertex___________________________________________________________________________
-void vertex::draw_guess(plot::canvas& canvas,
-                        const real size,
-                        const plot::color color,
-                        const bool with_errors) const {
-  // TODO: add with_errors argument
-  canvas.add_point(r3_point{guess_fit().x.value, guess_fit().y.value, guess_fit().z.value}, size, color);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Vertex Output Stream Operator_______________________________________________________________
-std::ostream& operator<<(std::ostream& os,
-                         const vertex& vertex) {
-  static const std::string bar(80, '-');
-  os << bar << "\n";
-
-  if (vertex.fit_diverged()) {
-
-    os << "* Vertex Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n";
-    const auto guess = vertex.guess_fit();
-    os << "* Guess Parameters:\n"
-       << "    T: " << guess.t.value << "  (+/- " << guess.t.error << ")\n"
-       << "    X: " << guess.x.value << "  (+/- " << guess.x.error << ")\n"
-       << "    Y: " << guess.y.value << "  (+/- " << guess.y.error << ")\n"
-       << "    Z: " << guess.z.value << "  (+/- " << guess.z.error << ")\n";
-
-    os << "* Tracks: \n";
-    for (const auto& track : vertex.tracks()) {
-      os << "    (" << track.t0_value() << ", "
-                    << track.x0_value() << ", "
-                    << track.y0_value() << ", "
-                    << track.z0_value() << ", "
-                    << track.vx_value() << ", "
-                    << track.vy_value() << ", "
-                    << track.vz_value() << ")\n";
-    }
-
-  } else {
-
-    os << "* Vertex Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n";
-    os << "* Parameters:\n"
-       << "    T: " << vertex.t_value() << "  (+/- " << vertex.t_error() << ")\n"
-       << "    X: " << vertex.x_value() << "  (+/- " << vertex.x_error() << ")\n"
-       << "    Y: " << vertex.y_value() << "  (+/- " << vertex.y_error() << ")\n"
-       << "    Z: " << vertex.z_value() << "  (+/- " << vertex.z_error() << ")\n";
-
-    os << "* Tracks: \n";
-    const auto size = vertex.size();
-    const auto& tracks = vertex.tracks();
-    const auto& distances = vertex.distances();
-    const auto& errors = vertex.distance_errors();
-    for (std::size_t i{}; i < size; ++i) {
-      const auto& track = tracks[i];
-      os << "    " << distances[i] << "  (+/- " << errors[i]
-         << ")\n      from (" << track.t0_value() << ", "
-                              << track.x0_value() << ", "
-                              << track.y0_value() << ", "
-                              << track.z0_value() << ", "
-                              << track.vx_value() << ", "
-                              << track.vy_value() << ", "
-                              << track.vz_value() << ")\n";
-    }
-
-    os.precision(7);
-    os << "* Statistics: \n"
-       << "    dof:      " << vertex.degrees_of_freedom()             << "\n"
-       << "    chi2:     " << vertex.chi_squared() << " = ";
-    util::io::print_range(vertex.chi_squared_vector(), " + ", "", os) << "\n";
-    os << "    chi2/dof: " << vertex.chi_squared_per_dof()            << "\n"
-       << "    p-value:  " << vertex.chi_squared_p_value()            << "\n"
-       << "    cov mat:  | ";
-    const auto matrix = vertex.covariance_matrix();
-    for (size_t i = 0; i < 4; ++i) {
-      if (i > 0) os << "              | ";
-      for (size_t j = 0; j < 4; ++j) {
-        const auto cell = matrix[4*i+j];
-        if (i == j) {
-          os << util::io::bold << util::io::underline
-             << cell << util::io::reset_font << " ";
-        } else {
-          os << cell << " ";
-        }
-      }
-      os << "|\n";
-    }
-  }
-
-  return os << bar;
 }
 //----------------------------------------------------------------------------------------------
 

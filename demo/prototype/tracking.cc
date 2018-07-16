@@ -64,6 +64,8 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
   const auto size = event.size();
   util::bit_vector save_list(size);
   for (auto& track : out) {
+    if (track.fit_diverged())
+      continue;
     for (const auto& point : track.event()) {
       const auto search = util::algorithm::range_binary_find_first(event,
                                                                    point,
@@ -89,7 +91,7 @@ const analysis::track_vector find_secondary_tracks(const analysis::event& event,
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
-  const auto seeds           = analysis::seed(2UL, layers, analysis::topology::cylinder{options.line_width});
+  const auto seeds           = analysis::seed(2UL, layers, analysis::topology::double_cone{options.line_width});
   const auto tracking_vector = reset_seeds(seeds, combined_rpc_hits, original_rpc_hits);
   const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 0UL);
 
@@ -97,6 +99,8 @@ const analysis::track_vector find_secondary_tracks(const analysis::event& event,
   const auto size = event.size();
   util::bit_vector save_list(size);
   for (const auto& track : out) {
+    if (track.fit_diverged())
+      continue;
     for (const auto& point : track.event()) {
       const auto search = util::algorithm::range_binary_find_first(event,
                                                                    point,
@@ -151,7 +155,7 @@ int prototype_tracking(int argc,
     analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
     analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
 
-    for (std::size_t event_counter{}; event_counter < 2/*import_size*/; ++event_counter) {
+    for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -177,7 +181,7 @@ int prototype_tracking(int argc,
 
       analysis::event non_primary_track_points, non_secondary_track_points;
       auto tracks = find_primary_tracks(compressed_event, options, canvas, non_primary_track_points);
-      /*
+
       auto secondary_tracks = find_secondary_tracks(non_primary_track_points,
                                                     options,
                                                     non_secondary_track_points);
@@ -185,7 +189,7 @@ int prototype_tracking(int argc,
       tracks.insert(tracks.cend(),
                     std::make_move_iterator(secondary_tracks.cbegin()),
                     std::make_move_iterator(secondary_tracks.cend()));
-      */
+
 
       save_tracks(tracks, canvas, track_tree, options);
       print_tracking_summary(event, tracks);
@@ -194,6 +198,7 @@ int prototype_tracking(int argc,
 
       canvas.draw();
     }
+
     plot::save_all(statistics_save_path,
       filetype_tag,
       project_tag,

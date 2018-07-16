@@ -21,6 +21,7 @@
 #pragma once
 
 #include <tracker/core/type.hh>
+#include <tracker/core/units.hh>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -47,8 +48,11 @@ struct fit_parameter { real value, error, min, max; };
 //__Full Hit Stream Operator Overload___________________________________________________________
 inline std::ostream& operator<<(std::ostream& os,
                                 const full_hit& point) {
-  return os << "[(" << point.t << ", " << point.x << ", " << point.y << ", " << point.z
-            << ") +/- " << point.width << "]";
+  return os << "[(" << point.t / units::time   << ", "
+                    << point.x / units::length << ", "
+                    << point.y / units::length << ", "
+                    << point.z / units::length
+            << ") +/- " << units::scale_r4_length(point.width) << "]";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -57,21 +61,6 @@ constexpr bool operator==(const full_hit& left,
                           const full_hit& right) {
   return left.t == right.t && left.x == right.x && left.y == right.y && left.z == right.z
       && left.width == right.width;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Fitting Parameter Stream Operator Overload__________________________________________________
-inline std::ostream& operator<<(std::ostream& os,
-                                const fit_parameter& parameter) {
-  if (parameter.min == 0.0L && parameter.max == 0.0L) {
-    return os << "[" << parameter.value << " (+/- " << parameter.error << ")]";
-  } else {
-    return os << "[" << parameter.min
-                     << " <= "
-                     << parameter.value << " (+/- " << parameter.error
-                     << ") <= "
-                     << parameter.max << "]";
-  }
 }
 //----------------------------------------------------------------------------------------------
 

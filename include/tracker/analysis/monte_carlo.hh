@@ -79,7 +79,10 @@ private:
 inline std::ostream& operator<<(std::ostream& os,
                                 const hit& point) {
   return os << "[" << point.track_id << " : ("
-            << point.t << ", " << point.x << ", " << point.y << ", " << point.z << ")]";
+            << point.t / units::time   << ", "
+            << point.x / units::length << ", "
+            << point.y / units::length << ", "
+            << point.z / units::length << ")]";
 }
 //----------------------------------------------------------------------------------------------
 
