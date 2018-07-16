@@ -33,7 +33,6 @@ statistics-directory:      .temp/root_data_stat
 statistics-file-prefix:    statistics
 statistics-file-extension: root
 # TODO: add stat keys
-# TODO: transform to TTree storage model
 
 # Geometry Setup
 geometry-file:               demo/prototype/resources/world.prototype.gdml

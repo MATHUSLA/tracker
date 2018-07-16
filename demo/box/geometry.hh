@@ -20,9 +20,28 @@
 #define TRACKER__BOX__GEOMETRY_HH
 #pragma once
 
+#include <tracker/analysis/type.hh>
+#include <tracker/geometry.hh>
+
+//__Namespace Alias_____________________________________________________________________________
+namespace analysis = MATHUSLA::TRACKER::analysis;
+namespace geometry = MATHUSLA::TRACKER::geometry;
+//----------------------------------------------------------------------------------------------
+
 namespace MATHUSLA {
 
-// TODO: implement geometry modifier and coordinate calculator
+//__Total Geometry of the Box Detector__________________________________________________________
+const geometry::structure_vector box_geometry();
+//----------------------------------------------------------------------------------------------
+
+//__Hits per Total Geometry_____________________________________________________________________
+type::real modified_geometry_event_density(const analysis::event& event);
+//----------------------------------------------------------------------------------------------
+
+//__Limits of Point_____________________________________________________________________________
+const geometry::box_volume limits_of(const type::r3_point point);
+const geometry::box_volume limits_of(const type::r4_point point);
+//----------------------------------------------------------------------------------------------
 
 } /* namespace MATHUSLA */
 

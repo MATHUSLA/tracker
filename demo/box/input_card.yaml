@@ -22,7 +22,7 @@ data-parent-id-key:       Parent
 data-momentum-keys:       E, PX, PY, PZ
 
 # Statistics Setup
-statistics-directory:      
+statistics-directory:
 statistics-file-prefix:    statistics
 statistics-file-extension: root
 

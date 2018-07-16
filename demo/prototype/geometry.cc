@@ -33,7 +33,7 @@ namespace MATHUSLA {
 
 //__Total Geometry of the Prototype Detector____________________________________________________
 const geometry::structure_vector prototype_geometry() {
-  return geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"});
+  return geometry::full_structure_except({"World", "Sandstone", "Marl", "Mix", "Earth"});
 }
 //----------------------------------------------------------------------------------------------
 

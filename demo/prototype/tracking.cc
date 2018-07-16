@@ -151,7 +151,7 @@ int prototype_tracking(int argc,
     analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
     analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
 
-    for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
+    for (std::size_t event_counter{}; event_counter < 2/*import_size*/; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -159,7 +159,7 @@ int prototype_tracking(int argc,
       const auto compressed_event = analysis::compress(event, options.time_smearing);
       const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
-      if (event.empty() || compression_size == event_size)
+      if (event_size == 0 || compression_size == event_size)
         continue;
 
       const auto event_density = modified_geometry_event_density(compressed_event);
@@ -194,9 +194,11 @@ int prototype_tracking(int argc,
 
       canvas.draw();
     }
-    plot::value_tag input_tag("DATAPATH", path);
-    plot::value_tag event_tag("EVENTS", std::to_string(import_size));
-    plot::save_all(statistics_save_path, filetype_tag, project_tag, input_tag, event_tag);
+    plot::save_all(statistics_save_path,
+      filetype_tag,
+      project_tag,
+      plot::value_tag{"DATAPATH", path},
+      plot::value_tag{"EVENTS", std::to_string(import_size)});
     track_tree.save(statistics_save_path);
     vertex_tree.save(statistics_save_path);
   }

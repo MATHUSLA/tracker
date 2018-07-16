@@ -89,7 +89,7 @@ inline void print_bar(const size_t count=99,
 //----------------------------------------------------------------------------------------------
 
 //__Print Event Summary_________________________________________________________________________
-inline void print_event_summary(const std::uint_fast64_t event_counter,
+inline void print_event_summary(const std::size_t event_counter,
                                 const std::size_t event_size,
                                 const type::real compression_size,
                                 const type::real event_density) {
