@@ -44,7 +44,7 @@ type::real modified_geometry_event_density(const analysis::event& event) {
 //----------------------------------------------------------------------------------------------
 
 //__Check If Volume is NOT RPC__________________________________________________________________
-constexpr bool is_not_rpc(const geometry::structure_value& name) {
+const bool is_not_rpc(const geometry::structure_value& name) {
   return name[0] == 'A' || name[1] == 'B';
 }
 //----------------------------------------------------------------------------------------------

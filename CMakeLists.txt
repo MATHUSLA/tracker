@@ -50,7 +50,10 @@ add_library(tracker SHARED
 )
 
 target_compile_features(tracker PUBLIC cxx_std_14)
-target_compile_options(tracker PUBLIC -Wno-missing-braces -Wno-unused-value -Wno-unused-parameter)
+target_compile_options(tracker PUBLIC -Wno-missing-braces
+                                      -Wno-unused-value
+                                      -Wno-unused-parameter
+                                      -Wno-unused-but-set-parameter)
 
 set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 
