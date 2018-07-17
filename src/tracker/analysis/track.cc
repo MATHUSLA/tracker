@@ -647,7 +647,7 @@ std::size_t track::reset(const analysis::full_event& points) {
     _final = _guess;
     if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
       std::transform(begin, end, std::back_inserter(_delta_chi2),
-        [&](const auto& point) {
+        [&, this](const auto& point) {
           return _track_squared_residual(
             t0_value(), x0_value(), y0_value(), z0_value(), vx_value(), vy_value(), vz_value(), point);
         });
