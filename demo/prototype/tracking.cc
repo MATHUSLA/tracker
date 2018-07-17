@@ -43,11 +43,13 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
                                                  const reader::tracking_options& options,
                                                  plot::canvas& canvas,
                                                  analysis::event& non_track_points) {
+  namespace ash = analysis::seed_heuristic;
+
   analysis::event combined_rpc_hits;
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
-  const auto seeds           = analysis::seed(options.seed_size, layers, analysis::topology::double_cone{options.line_width});
+  const auto seeds           = analysis::seed(options.seed_size, layers, ash::double_cone{options.line_width});
 
   /*
   for (const auto seed : seeds) {
@@ -58,27 +60,13 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
   */
 
   const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-  auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 1UL);
+  auto first_tracks = analysis::independent_fit_seeds(tracking_vector, options.layer_axis);
 
-  // TODO: improve efficiency
-  const auto size = event.size();
-  util::bit_vector save_list(size);
-  for (auto& track : out) {
-    if (track.fit_diverged())
-      continue;
-    for (const auto& point : track.event()) {
-      const auto search = util::algorithm::range_binary_find_first(event,
-                                                                   point,
-                                                                   type::t_ordered<analysis::hit>{});
-      if (search != event.cend())
-        save_list.set(static_cast<std::size_t>(search - event.cbegin()));
-    }
-  }
+  for (auto& track : first_tracks)
+    track.prune_on_chi_squared(10.0L);
 
-  non_track_points.clear();
-  non_track_points.reserve(size - save_list.count());
-  save_list.unset_conditional_push_back(event, non_track_points);
-
+  const auto out = analysis::overlap_fit_tracks(first_tracks, 2UL);
+  non_track_points = analysis::non_tracked_points(event, out, true);
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -86,34 +74,28 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
 //__Find Secondary Tracks for Prototype_________________________________________________________
 const analysis::track_vector find_secondary_tracks(const analysis::event& event,
                                                    const reader::tracking_options& options,
+                                                   plot::canvas& canvas,
                                                    analysis::event& non_track_points) {
   analysis::event combined_rpc_hits;
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
-  const auto seeds           = analysis::seed(2UL, layers, analysis::topology::double_cone{options.line_width});
-  const auto tracking_vector = reset_seeds(seeds, combined_rpc_hits, original_rpc_hits);
-  const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 0UL);
+  const auto seeds           = analysis::seed(options.seed_size, layers, analysis::seed_heuristic::cylinder{options.line_width});
 
-  // TODO: improve efficiency
-  const auto size = event.size();
-  util::bit_vector save_list(size);
-  for (const auto& track : out) {
-    if (track.fit_diverged())
-      continue;
-    for (const auto& point : track.event()) {
-      const auto search = util::algorithm::range_binary_find_first(event,
-                                                                   point,
-                                                                   type::t_ordered<analysis::hit>{});
-      if (search != event.cend())
-        save_list.set(static_cast<std::size_t>(search - event.cbegin()));
+  for (const auto seed : seeds) {
+    for (std::size_t i{}; i < seed.size() - 1; ++i) {
+      canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
     }
   }
 
-  non_track_points.clear();
-  non_track_points.reserve(size - save_list.count());
-  save_list.unset_conditional_push_back(event, non_track_points);
+  const auto tracking_vector = reset_seeds(seeds, combined_rpc_hits, original_rpc_hits);
+  auto first_tracks = analysis::independent_fit_seeds(tracking_vector, options.layer_axis);
 
+  for (auto& track : first_tracks)
+    track.prune_on_chi_squared(6.0L);
+
+  const auto out = analysis::overlap_fit_tracks(first_tracks, 0UL);
+  non_track_points = analysis::non_tracked_points(event, out, true);
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -182,19 +164,29 @@ int prototype_tracking(int argc,
       analysis::event non_primary_track_points, non_secondary_track_points;
       auto tracks = find_primary_tracks(compressed_event, options, canvas, non_primary_track_points);
 
+      /*
       auto secondary_tracks = find_secondary_tracks(non_primary_track_points,
                                                     options,
+                                                    canvas,
                                                     non_secondary_track_points);
       tracks.reserve(tracks.size() + secondary_tracks.size());
       tracks.insert(tracks.cend(),
                     std::make_move_iterator(secondary_tracks.cbegin()),
                     std::make_move_iterator(secondary_tracks.cend()));
-
+      */
 
       save_tracks(tracks, canvas, track_tree, options);
       print_tracking_summary(event, tracks);
 
-      save_vertices({analysis::vertex(tracks)}, canvas, vertex_tree, options);
+      analysis::track_vector converged_tracks;
+      converged_tracks.reserve(tracks.size());
+      std::copy_if(std::make_move_iterator(tracks.begin()),
+                   std::make_move_iterator(tracks.end()),
+                   std::back_inserter(converged_tracks),
+                   [](const auto& track) { return track.fit_converged(); });
+
+      save_vertices({analysis::vertex(converged_tracks, false)}, canvas, vertex_tree, options);
+      save_vertices({analysis::vertex(converged_tracks, true)}, canvas, vertex_tree, options);
 
       canvas.draw();
     }

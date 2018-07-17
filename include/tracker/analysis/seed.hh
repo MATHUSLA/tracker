@@ -28,14 +28,14 @@ namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
-namespace topology { ///////////////////////////////////////////////////////////////////////////
+namespace seed_heuristic { /////////////////////////////////////////////////////////////////////
 
 //__Check if Points are Monotonic in One Coordinate_____________________________________________
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 bool is_monotonic(const Event& points,
                   const Coordinate c) {
-  if (points.size() <= 2)
+  if (points.size() <= 2UL)
     return true;
 
   if (select_r1(points.front(), c) <= select_r1(points.back(), c)) {
@@ -52,15 +52,13 @@ bool is_monotonic(const Event& points,
 template<Coordinate C, class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 bool is_monotonic(const Event& points) {
-  if (points.size() <= 2)
+  if (points.size() <= 2UL)
     return true;
 
   if (select_r1(points.front(), C) <= select_r1(points.back(), C)) {
-    return std::is_sorted(points.cbegin(), points.cend(),
-      [&](const auto& left, const auto& right) { return select_r1(left, C) < select_r1(right, C); });
+    return std::is_sorted(points.cbegin(), points.cend(), coordinate_ordered<C, Event>{});
   } else {
-    return std::is_sorted(points.crbegin(), points.crend(),
-      [&](const auto& left, const auto& right) { return select_r1(left, C) < select_r1(right, C); });
+    return std::is_sorted(points.crbegin(), points.crend(), coordinate_ordered<C, Event>{});
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -93,9 +91,17 @@ bool is_linear(const Event& points,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Disjunction Topology Type___________________________________________________________________
+//__Disjunction Heuristic Type__________________________________________________________________
+template<class ...Ts>
+struct any {
+  template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event&) { return true; }
+};
 template<class T, class ...Ts>
-struct any : T, any<Ts...> {
+struct any<T, Ts...> : T, any<Ts...> {
+  any(T&& t,
+      Ts&& ...ts) : T(std::forward<T>(t)), any<Ts...>(std::forward<Ts>(ts)...) {}
   template<class Event,
     typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
   bool operator()(const Event& points) {
@@ -104,9 +110,17 @@ struct any : T, any<Ts...> {
 };
 //----------------------------------------------------------------------------------------------
 
-//__Conjuction Topology Type____________________________________________________________________
+//__Conjuction Heuristic Type___________________________________________________________________
+template<class ...Ts>
+struct all {
+  template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event&) { return true; }
+};
 template<class T, class ...Ts>
-struct all : T, all<Ts...> {
+struct all<T, Ts...> : T, all<Ts...> {
+  all(T&& t,
+      Ts&& ...ts) : T(std::forward<T>(t)), all<Ts...>(std::forward<Ts>(ts)...) {}
   template<class Event,
     typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
   bool operator()(const Event& points) {
@@ -115,28 +129,26 @@ struct all : T, all<Ts...> {
 };
 //----------------------------------------------------------------------------------------------
 
-//__Binary Disjunction Topology Type____________________________________________________________
+//__Binary Disjunction Heuristic Type___________________________________________________________
 template<class A, class B>
 using either = any<A, B>;
 //----------------------------------------------------------------------------------------------
 
-//__Binary Conjuction Topology Type_____________________________________________________________
+//__Binary Conjuction Heuristic Type____________________________________________________________
 template<class A, class B>
 using both = all<A, B>;
 //----------------------------------------------------------------------------------------------
 
-//__Time-Ordered Topology Type__________________________________________________________________
+//__Time-Ordered Heuristic Type_________________________________________________________________
 struct time_ordered {
   template<class Event,
     typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-  bool operator()(const Event& points) {
-    return is_monotonic<Coordinate::T>(points);
-  }
+  bool operator()(const Event& points) { return is_monotonic<Coordinate::T>(points); }
 };
 //----------------------------------------------------------------------------------------------
 
-//__Cylinder Topology Type______________________________________________________________________
-struct cylinder : time_ordered {
+//__Cylinder Heuristic Type_____________________________________________________________________
+struct cylinder {
   real radius;
   Coordinate c1, c2, c3;
   cylinder(const real r,
@@ -148,10 +160,9 @@ struct cylinder : time_ordered {
   template<class Event,
     typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
   bool operator()(const Event& points) {
-    if (!time_ordered::operator()(points)) return false;
-    if (points.size() == 2UL) return true;
-    const auto end = points.cend();
-    for (auto iter = points.cbegin(); iter != end; ++iter)
+    if (points.size() <= 2UL) return true;
+    const auto end = points.cend() - 1;
+    for (auto iter = points.cbegin() + 1; iter != end; ++iter)
       if (radius > point_line_distance(*iter, points.front(), points.back(), c1, c2, c3))
         return false;
     return true;
@@ -159,8 +170,8 @@ struct cylinder : time_ordered {
 };
 //----------------------------------------------------------------------------------------------
 
-//__Double Cone Topology Type___________________________________________________________________
-struct double_cone : time_ordered {
+//__Double Cone Heuristic Type__________________________________________________________________
+struct double_cone {
   real radius;
   Coordinate c1, c2, c3;
   double_cone(const real r,
@@ -172,16 +183,15 @@ struct double_cone : time_ordered {
   template<class Event,
     typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
   bool operator()(const Event& points) {
-    if (!time_ordered::operator()(points)) return false;
-    if (points.size() == 2UL) return true;
+    if (points.size() <= 2UL) return true;
 
     const auto front = select_r3(points.front(), c1, c2, c3);
     const auto back = select_r3(points.back(), c1, c2, c3);
     const auto twice_radius = 2.0L * radius;
     const auto scale_factor = twice_radius / std::hypot(twice_radius, norm(back - front));
 
-    const auto end = points.cend();
-    for (auto iter = points.cbegin(); iter != end; ++iter) {
+    const auto end = points.cend() - 1;
+    for (auto iter = points.cbegin() + 1; iter != end; ++iter) {
       const auto point = select_r3(*iter, c1, c2, c3);
       if (std::min(norm(point - front),
                    norm(point - back)) * scale_factor
@@ -193,33 +203,32 @@ struct double_cone : time_ordered {
 };
 //----------------------------------------------------------------------------------------------
 
-} /* namespace topology */ /////////////////////////////////////////////////////////////////////
+} /* namespace seed_heuristic */ ///////////////////////////////////////////////////////////////
 
 namespace detail { /////////////////////////////////////////////////////////////////////////////
 //__Seeding Algorithm___________________________________________________________________________
-template<class SeedTopology, class EventPartition,
+template<class SeedHeuristic, class EventPartition,
   typename EventVector = typename EventPartition::parts,
   typename Event = typename EventVector::value_type,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const EventVector seed(const std::size_t n,
                        const EventPartition& partition,
-                       SeedTopology topo) {
-  if (n <= 1)
+                       SeedHeuristic heuristic) {
+  if (n <= 1UL)
     return EventVector{};
 
   const auto& layers = partition.parts;
   const auto layer_count = layers.size();
 
-  // FIXME: unsure what to do here
   if (layer_count < n)
     return EventVector{};
 
-  // FIXME: find a close upper bound for out.reserve
+  // TODO: find a close upper bound for EventVector::reserve
   EventVector out{};
 
   util::bit_vector_sequence layer_sequence;
   for (const auto& layer : layers)
-    layer_sequence.emplace_back(1, layer.size());
+    layer_sequence.emplace_back(1UL, layer.size());
 
   util::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
     Event tuple;
@@ -228,7 +237,7 @@ const EventVector seed(const std::size_t n,
       if (chooser[index])
         layer_sequence[index].set_conditional_push_back(layers[index], tuple);
 
-    if (topo(tuple))
+    if (heuristic(tuple))
       out.push_back(t_sort(tuple));
   });
 
@@ -238,17 +247,17 @@ const EventVector seed(const std::size_t n,
 } /* namespace detail */ ///////////////////////////////////////////////////////////////////////
 
 //__Seeding Algorithm___________________________________________________________________________
-template<class SeedTopology>
+template<class SeedHeuristic>
 const event_vector seed(const std::size_t n,
                         const event_partition& partition,
-                        SeedTopology topo) {
-  return detail::seed<SeedTopology, event_partition, event_vector>(n, partition, topo);
+                        SeedHeuristic heuristic) {
+  return detail::seed<SeedHeuristic, event_partition, event_vector>(n, partition, heuristic);
 }
-template<class SeedTopology>
+template<class SeedHeuristic>
 const full_event_vector seed(const std::size_t n,
                              const full_event_partition& partition,
-                             SeedTopology topo) {
-  return detail::seed<SeedTopology, full_event_partition, full_event_vector>(n, partition, topo);
+                             SeedHeuristic heuristic) {
+  return detail::seed<SeedHeuristic, full_event_partition, full_event_vector>(n, partition, heuristic);
 }
 //----------------------------------------------------------------------------------------------
 

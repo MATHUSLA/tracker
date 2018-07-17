@@ -47,7 +47,7 @@ void draw_track(plot::canvas& canvas,
                    {brightness, brightness, brightness});
     brightness += step;
   }
-  track.draw(canvas, 1.8, plot::color::RED);
+  track.draw(canvas, 2, plot::color::RED);
 }
 //----------------------------------------------------------------------------------------------
 

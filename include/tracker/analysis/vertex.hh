@@ -37,7 +37,7 @@ public:
   static constexpr std::size_t free_parameter_count = 4UL;
   using covariance_matrix_type = real_array<free_parameter_count * free_parameter_count>;
 
-  vertex(const track_vector& tracks);
+  vertex(const track_vector& tracks, const bool two_stage_minimization=false);
   vertex(track_vector&& tracks);
 
   vertex(const vertex& rhs) = default;
@@ -136,6 +136,7 @@ protected:
   track_vector _tracks;
   real_vector _delta_chi2;
   covariance_matrix_type _covariance;
+  bool _two_stage;
 };
 //----------------------------------------------------------------------------------------------
 

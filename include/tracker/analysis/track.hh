@@ -33,6 +33,7 @@ namespace analysis { ///////////////////////////////////////////////////////////
 class track {
 public:
   class tree;
+  // TODO: class graph;
   enum class parameter { T0, X0, Y0, Z0, VX, VY, VZ };
   struct fit_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 
@@ -51,6 +52,11 @@ public:
   track& operator=(track&& rhs) noexcept = default;
 
   const r4_point operator()(const real p) const;
+
+  const r4_point origin() const;
+  const r3_point ray() const;
+  const r4_point origin_error() const;
+  const r3_point ray_error() const;
 
   const r4_point point(const real t) const;
   const r4_point point_error(const real t) const;
@@ -269,6 +275,23 @@ const track_vector overlap_fit_seeds(const full_event_vector& seeds,
                                      const Coordinate direction=Coordinate::Z,
                                      const std::size_t min_overlap=2UL);
 //----------------------------------------------------------------------------------------------
+
+//__Remove Overlaps from Tracks_________________________________________________________________
+const track_vector overlap_fit_tracks(const track_vector& tracks,
+                                      const std::size_t min_overlap=2UL);
+//----------------------------------------------------------------------------------------------
+
+//__Collect Points Which are Untracked__________________________________________________________
+const event non_tracked_points(const event& points,
+                               const track_vector& tracks,
+                               const bool ignore_diverged=false);
+const full_event non_tracked_points(const full_event& points,
+                                    const track_vector& tracks,
+                                    const bool ignore_diverged=false);
+//----------------------------------------------------------------------------------------------
+
+// TODO: implement
+// class track::graph {};
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
 

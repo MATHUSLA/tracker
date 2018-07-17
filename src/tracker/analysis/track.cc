@@ -191,6 +191,30 @@ const r4_point track::operator()(const real p) const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get Origin of Track_________________________________________________________________________
+const r4_point track::origin() const {
+  return r4_point{t0_value(), x0_value(), y0_value(), z0_value()};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Ray of Track____________________________________________________________________________
+const r3_point track::ray() const {
+  return r3_point{vx_value(), vy_value(), vz_value()};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Error in Origin of Track________________________________________________________________
+const r4_point track::origin_error() const {
+  return r4_point{t0_error(), x0_error(), y0_error(), z0_error()};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Error in Ray of Track___________________________________________________________________
+const r3_point track::ray_error() const {
+  return r3_point{vx_error(), vy_error(), vz_error()};
+}
+//----------------------------------------------------------------------------------------------
+
 //__Get Position of Track at Fixed T____________________________________________________________
 const r4_point track::point(const real t) const {
   return at_t(t);
@@ -789,7 +813,20 @@ void track::draw(plot::canvas& canvas,
                  const plot::color color,
                  const bool with_errors) const {
   if (fit_converged()) {
-    canvas.add_line(front(), back(), size, color);
+    const auto z_sorted = util::algorithm::copy_sort_range(_full_event, z_ordered<analysis::full_hit>{});
+    canvas.add_line(at_z(z_sorted.front().z), at_z(z_sorted.back().z), size, color);
+    if (with_errors) {
+      for (const auto& point : z_sorted) {
+        const auto z = point.z;
+        const auto error = error_at_z(z);
+        canvas.add_box(at_z(z),
+                       error.x,
+                       error.y,
+                       stat::error::uniform(point.width.z),
+                       size,
+                       color);
+      }
+    }
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -1035,6 +1072,29 @@ const track_vector independent_fit_seeds(const full_event_vector& seeds,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Fit all Seeds to Tracks using Overlaps______________________________________________________
+template<class EventVector,
+  typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
+const track_vector overlap_fit_seeds(const EventVector& seeds,
+                                     const Coordinate direction,
+                                     const std::size_t min_overlap) {
+  const auto size = seeds.size();
+  if (size == 0UL) return track_vector{};
+  if (size == 1UL) return independent_fit_seeds(seeds, direction);
+  return overlap_fit_tracks(independent_fit_seeds(seeds, direction), min_overlap);
+}
+const track_vector overlap_fit_seeds(const event_vector& seeds,
+                                     const Coordinate direction,
+                                     const std::size_t min_overlap) {
+  return overlap_fit_seeds<>(seeds, direction, min_overlap);
+}
+const track_vector overlap_fit_seeds(const full_event_vector& seeds,
+                                     const Coordinate direction,
+                                     const std::size_t min_overlap) {
+  return overlap_fit_seeds<>(seeds, direction, min_overlap);
+}
+//----------------------------------------------------------------------------------------------
+
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Overlap Size between Events_________________________________________________________________
@@ -1103,29 +1163,23 @@ std::size_t _time_ordered_overlap_size(const Event& first,
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
-//__Fit all Seeds to Tracks using Overlaps______________________________________________________
-template<class EventVector,
-  typename Event = typename EventVector::value_type,
-  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-const track_vector overlap_fit_seeds(const EventVector& seeds,
-                                     const Coordinate direction,
-                                     const std::size_t min_overlap) {
-  const auto size = seeds.size();
-  if (size == 0UL)
-    return track_vector{};
-  else if (size == 1UL)
-    return independent_fit_seeds(seeds, direction);
+//__Remove Overlaps from Tracks_________________________________________________________________
+const track_vector overlap_fit_tracks(const track_vector& tracks,
+                                      const std::size_t min_overlap) {
+  const auto size = tracks.size();
+  if (size <= 1UL)
+    return tracks;
 
   track_vector out;
   out.reserve(size);
 
-  const auto sorted_seeds = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
-  auto track_buffer = independent_fit_seeds(sorted_seeds, direction);
-
   util::index_vector<> track_indices(size);
+  util::algorithm::sort_range(track_indices,
+    [&](const auto left, const auto right) { return tracks[left].size() > tracks[right].size(); });
+
   /* FIXME: what to do here?
   util::algorithm::stable_sort_range(track_indices, [&](const auto left, const auto right) {
-    return track_buffer[left].chi_squared_per_dof() > track_buffer[right].chi_squared_per_dof();
+    return tracks[left].chi_squared_per_dof() > tracks[right].chi_squared_per_dof();
   });
   */
 
@@ -1136,35 +1190,68 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
     bottom_index = visited.first_unset(bottom_index);
     const auto top_track_index = track_indices[top_index];
     if (bottom_index == size) {
-      out.push_back(track_buffer[top_track_index]);
+      out.push_back(tracks[top_track_index]);
       visited.set(top_index);
-      top_index = visited.first_unset(1 + top_index);
-      bottom_index = 1 + top_index;
+      top_index = visited.first_unset(1UL + top_index);
+      bottom_index = 1UL + top_index;
       continue;
     }
-    if (min_overlap <= _time_ordered_overlap_size(sorted_seeds[top_track_index],
-                                                  sorted_seeds[track_indices[bottom_index]])) {
+    if (min_overlap <= _time_ordered_overlap_size(tracks[top_track_index].full_event(),
+                                                  tracks[track_indices[bottom_index]].full_event())) {
       visited.set(bottom_index);
     }
     ++bottom_index;
   }
 
-  for (std::size_t i = 0; i < size; ++i)
+  for (std::size_t i{}; i < size; ++i)
     if (!visited[i])
-      out.push_back(track_buffer[track_indices[i]]);
+      out.push_back(tracks[track_indices[i]]);
 
   out.shrink_to_fit();
   return out;
 }
-const track_vector overlap_fit_seeds(const event_vector& seeds,
-                                     const Coordinate direction,
-                                     const std::size_t min_overlap) {
-  return overlap_fit_seeds<>(seeds, direction, min_overlap);
+//----------------------------------------------------------------------------------------------
+
+//__Collect Points Which are Untracked__________________________________________________________
+template<class Event,
+  typename Hit = typename Event::value_type,
+  typename = std::enable_if_t<is_r4_type_v<Hit>>>
+const Event non_tracked_points(const Event& points,
+                               const track_vector& tracks,
+                               const bool ignore_diverged) {
+  const auto size = points.size();
+  if (size == 0)
+    return Event{};
+
+  util::bit_vector save_list(size);
+
+  for (const auto& track : tracks) {
+    if (ignore_diverged && track.fit_diverged())
+      continue;
+    for (const auto& point : track.event()) {
+      const auto search = util::algorithm::range_binary_find_first(points, point,
+        [](const auto left, const auto right) { return left.t < right.t;});
+      if (search != points.cend())
+        save_list.set(static_cast<std::size_t>(search - points.cbegin()));
+    }
+    if (save_list.count() == size)
+      break;
+  }
+
+  Event out;
+  out.reserve(size - save_list.count());
+  save_list.unset_conditional_push_back(points, out);
+  return out;
 }
-const track_vector overlap_fit_seeds(const full_event_vector& seeds,
-                                     const Coordinate direction,
-                                     const std::size_t min_overlap) {
-  return overlap_fit_seeds<>(seeds, direction, min_overlap);
+const event non_tracked_points(const event& points,
+                               const track_vector& tracks,
+                               const bool ignore_diverged) {
+  return non_tracked_points<>(points, tracks, ignore_diverged);
+}
+const full_event non_tracked_points(const full_event& points,
+                                    const track_vector& tracks,
+                                    const bool ignore_diverged) {
+  return non_tracked_points<>(points, tracks, ignore_diverged);
 }
 //----------------------------------------------------------------------------------------------
 

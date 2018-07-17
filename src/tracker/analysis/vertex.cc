@@ -28,11 +28,34 @@
 
 #include "../helper/analysis.hh"
 
+#include <ROOT/TCanvas.h>
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
+
+//__Calculate Pairwise Closest Approach for Tracks in R3________________________________________
+r3_point _pairwise_track_r3_closest_approach(const track& first,
+                                             const track& second) {
+  const auto x0 = reduce_to_r3(first.origin());
+  const auto x1 = reduce_to_r3(second.origin());
+  const auto v0 = first.ray();
+  const auto v1 = second.ray();
+  const auto v0v0 = v0 * v0;
+  const auto v1v1 = v1 * v1;
+  const auto v0v1 = v0 * v1;
+  const auto v1v0 = v1 * v0;
+  const auto n1 = v0 * v1v1 - v1 * v1v0;
+  const auto n0 = v1 * v0v0 - v0 * v0v1;
+  const auto diff = x1 - x0;
+  // const auto c0 = x0 + (diff * n1 / (v0v0 * v1v1 - v1v0 * v1v0)) * v0;
+  // const auto c1 = x1 - (diff * n0 / (v1v1 * v0v0 - v0v1 * v0v1)) * v1;
+  return 0.5L * ((x1 - (diff * n0 / (v1v1 * v0v0 - v0v1 * v0v1)) * v1)
+               + (x0 + (diff * n1 / (v0v0 * v1v1 - v1v0 * v1v0)) * v0));
+}
+//----------------------------------------------------------------------------------------------
 
 //__Calculate Distance from Vertex to Track at Fixed Time_______________________________________
 real _vertex_track_r3_distance(const real t,
@@ -99,12 +122,11 @@ vertex::fit_parameters _guess_vertex(const track_vector& tracks) {
   std::vector<full_hit> track_fronts;
   track_fronts.reserve(size);
   util::algorithm::back_insert_transform(tracks, track_fronts, [](const auto& track) {
-    const auto front = track.full_front();
-    const auto front_t = front.t;
+    const auto front_t = track.t0_value();
     const auto point = track.at_t(front_t);
     const auto error = track.error_at_t(front_t);
     return full_hit{point.t, point.x, point.y, point.z,
-             r4_point{front.width.t, error.x, error.y, error.z}};
+             r4_point{track.t0_error(), error.x, error.y, error.z}};
   });
 
   real_vector t_errors, x_errors, y_errors, z_errors;
@@ -138,31 +160,79 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
     [&](const auto sum, const auto& track) {
       const auto distance = _vertex_track_r3_distance_with_error(x[0], x[1], x[2], x[3], track);
+      // std::cout << "distance: " << distance.value << " error: " << distance.error << "\n";
       return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
     });
+  // std::cout << "(" << x[0] << ", " << x[1] << ", " << x[2] << ", " << x[3] << ")\n";
+  // std::cout << "NLL: " << out << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
 
 //__MINUIT Gaussian Fitter______________________________________________________________________
 bool _fit_tracks_minuit(const track_vector& tracks,
                         vertex::fit_parameters& parameters,
-                        vertex::covariance_matrix_type& covariance_matrix) {
+                        vertex::covariance_matrix_type& covariance_matrix,
+                        const bool two_stage_minimization=false) {
   using namespace helper::minuit;
   auto& t = parameters.t;
   auto& x = parameters.x;
   auto& y = parameters.y;
   auto& z = parameters.z;
   _nll_fit_tracks = tracks;
+  for (const auto& track : tracks)
+    if (track.empty() || track.fit_diverged())
+      return false;
 
   TMinuit minuit;
   initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
 
-  // FIXME: error handling for -> execute(minuit, _gaussian_nll);
-  if (execute(minuit, _gaussian_nll) == error::diverged)
-    return false;
+  std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
+
+  if (two_stage_minimization) {
+    minuit.FixParameter(1);
+    minuit.FixParameter(2);
+    execute(minuit, _gaussian_nll);
+    minuit.Release(1);
+    minuit.Release(2);
+    get_parameters(minuit, t, x, y, z);
+    std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
+    set_parameters(minuit, "T", t, "X", x, "Y", y, "Z", z);
+
+    execute(minuit, _gaussian_nll);
+
+    minuit.FixParameter(1);
+    minuit.FixParameter(2);
+    execute(minuit, _gaussian_nll);
+    minuit.Release(1);
+    minuit.Release(2);
+    get_parameters(minuit, t, x, y, z);
+    std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
+    set_parameters(minuit, "T", t, "X", x, "Y", y, "Z", z);
+
+    execute(minuit, _gaussian_nll);
+
+    minuit.FixParameter(1);
+    minuit.FixParameter(2);
+    execute(minuit, _gaussian_nll);
+    minuit.Release(1);
+    minuit.Release(2);
+    get_parameters(minuit, t, x, y, z);
+    std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
+    set_parameters(minuit, "T", t, "X", x, "Y", y, "Z", z);
+  }
+
+  execute(minuit, _gaussian_nll);
 
   get_parameters(minuit, t, x, y, z);
+  std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
   get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
+
+  std::cout << "NLL: " << std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
+    [&](const auto sum, const auto& track) {
+      const auto distance = _vertex_track_r3_distance_with_error(t.value, x.value, y.value, z.value, track);
+      return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
+  }) << "\n";
+
   return true;
 }
 //----------------------------------------------------------------------------------------------
@@ -170,7 +240,8 @@ bool _fit_tracks_minuit(const track_vector& tracks,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Vertex Constructor__________________________________________________________________________
-vertex::vertex(const track_vector& tracks) {
+vertex::vertex(const track_vector& tracks, const bool two_stage_minimization) {
+  _two_stage = two_stage_minimization;
   reset(tracks);
 }
 //----------------------------------------------------------------------------------------------
@@ -303,7 +374,7 @@ std::size_t vertex::reset(const track_vector& tracks) {
   if (new_size > 1) {
     _guess = _guess_vertex(_tracks);
     _final = _guess;
-    if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
+    if (_fit_tracks_minuit(_tracks, _final, _covariance, _two_stage)) {
       util::algorithm::back_insert_transform(_tracks, _delta_chi2,
         [&](const auto& track) {
           return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track);
@@ -509,14 +580,16 @@ std::ostream& operator<<(std::ostream& os,
     const auto& errors = vertex.distance_errors();
     for (std::size_t i{}; i < size; ++i) {
       const auto& track = tracks[i];
-      os << "    " << distances[i] / units::length << "  (+/- " << errors[i] / units::length
-         << ")\n      from (" << track.t0_value() / units::time     << ", "
-                              << track.x0_value() / units::length   << ", "
-                              << track.y0_value() / units::length   << ", "
-                              << track.z0_value() / units::length   << ", "
-                              << track.vx_value() / units::velocity << ", "
-                              << track.vy_value() / units::velocity << ", "
-                              << track.vz_value() / units::velocity << ")\n";
+      os << "    " << distances[i] / units::length
+                   << "  (+/- " << errors[i] / units::length << ") "
+                   << units::length_string << "\n      from ("
+                   << track.t0_value() / units::time     << ", "
+                   << track.x0_value() / units::length   << ", "
+                   << track.y0_value() / units::length   << ", "
+                   << track.z0_value() / units::length   << ", "
+                   << track.vx_value() / units::velocity << ", "
+                   << track.vy_value() / units::velocity << ", "
+                   << track.vz_value() / units::velocity << ")\n";
     }
 
     os << "* Statistics: \n"

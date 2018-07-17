@@ -44,7 +44,7 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
                                                  plot::canvas& canvas,
                                                  analysis::event& non_track_points) {
   const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
-  const auto seeds = analysis::seed(options.seed_size, layers, analysis::topology::double_cone{options.line_width});
+  const auto seeds = analysis::seed(options.seed_size, layers, analysis::seed_heuristic::double_cone{options.line_width});
 
   /*
   for (const auto seed : seeds) {

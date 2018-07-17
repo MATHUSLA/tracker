@@ -175,10 +175,8 @@ public:
   histogram_collection(histogram_collection&& other) noexcept = default;
   ~histogram_collection() = default;
 
-
   histogram_collection& operator=(const histogram_collection& other) = default;
   histogram_collection& operator=(histogram_collection&& other) noexcept = default;
-
 
   histogram& emplace(const histogram& hist);
   histogram& emplace(histogram&& hist);
