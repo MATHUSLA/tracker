@@ -40,12 +40,18 @@ public:
   static constexpr std::size_t free_parameter_count = 6UL;
   using covariance_matrix_type = real_array<free_parameter_count * free_parameter_count>;
 
+  using container_type = analysis::full_event;
+  using value_type = typename container_type::value_type;
+  using iterator = typename container_type::iterator;
+  using const_iterator = typename container_type::const_iterator;
+  using reverse_iterator = typename container_type::reverse_iterator;
+  using const_reverse_iterator = typename container_type::const_reverse_iterator;
+
+  track();
   track(const event& points,
         const Coordinate direction=Coordinate::Z);
-
   track(const full_event& points,
         const Coordinate direction=Coordinate::Z);
-
   track(const track& rhs) = default;
   track(track&& rhs) noexcept = default;
   track& operator=(const track& rhs) = default;
@@ -134,19 +140,26 @@ public:
   const full_hit full_front() const noexcept { return _full_event.front(); }
   const full_hit full_back() const noexcept { return _full_event.back(); }
   const analysis::full_event& full_event() const noexcept { return _full_event; }
-  const geometry::structure_vector& detectors() const noexcept { return _detectors; }
+  const geometry::structure_vector detectors() const;
 
   Coordinate direction() const noexcept { return _direction; }
 
   std::size_t size() const noexcept { return _full_event.size(); }
   bool empty() const noexcept { return _full_event.empty(); }
 
-  analysis::full_event::iterator begin() { return _full_event.begin(); }
-  analysis::full_event::const_iterator begin() const { return _full_event.cbegin(); }
-  analysis::full_event::const_iterator cbegin() const { return _full_event.cbegin(); }
-  analysis::full_event::iterator end() { return _full_event.end(); }
-  analysis::full_event::const_iterator end() const { return _full_event.cend(); }
-  analysis::full_event::const_iterator cend() const { return _full_event.cend(); }
+  iterator       begin()        noexcept { return _full_event.begin();  }
+  const_iterator begin()  const noexcept { return _full_event.cbegin(); }
+  iterator       end()          noexcept { return _full_event.end();    }
+  const_iterator end()    const noexcept { return _full_event.cend();   }
+  const_iterator cbegin() const noexcept { return _full_event.cbegin(); }
+  const_iterator cend()   const noexcept { return _full_event.cend();   }
+
+  reverse_iterator       rbegin()        noexcept { return _full_event.rbegin();  }
+  const_reverse_iterator rbegin()  const noexcept { return _full_event.crbegin(); }
+  reverse_iterator       rend()          noexcept { return _full_event.rend();    }
+  const_reverse_iterator rend()    const noexcept { return _full_event.crend();   }
+  const_reverse_iterator crbegin() const noexcept { return _full_event.crbegin(); }
+  const_reverse_iterator crend()   const noexcept { return _full_event.crend();   }
 
   std::size_t reset(const analysis::event& points);
   std::size_t reset(const analysis::full_event& points);
@@ -165,6 +178,8 @@ public:
   std::size_t remove(const std::vector<std::size_t>& indices);
 
   std::size_t prune_on_chi_squared(const real max_chi_squared);
+
+  void clear();
 
   void reparameterize(const Coordinate direction);
 
@@ -202,7 +217,6 @@ protected:
   analysis::full_event _full_event;
   real_vector _delta_chi2;
   covariance_matrix_type _covariance;
-  geometry::structure_vector _detectors;
   Coordinate _direction;
 };
 //----------------------------------------------------------------------------------------------

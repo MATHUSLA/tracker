@@ -167,6 +167,12 @@ bool _fit_event_minuit(const full_event& points,
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
+//__Track Default Constructor___________________________________________________________________
+track::track() {
+  clear();
+}
+//----------------------------------------------------------------------------------------------
+
 //__Track Constructor___________________________________________________________________________
 track::track(const analysis::event& points,
              const Coordinate direction)
@@ -621,6 +627,16 @@ const std::vector<hit> track::event() const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get Detectors from Track Hits_______________________________________________________________
+const geometry::structure_vector track::detectors() const {
+  geometry::structure_vector out;
+  out.reserve(size());
+  util::algorithm::back_insert_transform(_full_event, out,
+    [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Reset Track_________________________________________________________________________________
 std::size_t track::reset(const analysis::event& points) {
   return reset(add_width(points));
@@ -635,12 +651,7 @@ std::size_t track::reset(const analysis::full_event& points) {
   const auto new_size = size();
 
   _delta_chi2.clear();
-  _detectors.clear();
   _delta_chi2.reserve(new_size);
-  _detectors.reserve(new_size);
-
-  std::transform(begin, end, std::back_inserter(_detectors),
-    [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
 
   if (new_size > 1) {
     _guess = _guess_track(_full_event);
@@ -649,7 +660,14 @@ std::size_t track::reset(const analysis::full_event& points) {
       std::transform(begin, end, std::back_inserter(_delta_chi2),
         [&](const auto& point) {
           return _track_squared_residual(
-            t0_value(), x0_value(), y0_value(), z0_value(), vx_value(), vy_value(), vz_value(), point);
+            _final.t0.value,
+            _final.x0.value,
+            _final.y0.value,
+            _final.z0.value,
+            _final.vx.value,
+            _final.vy.value,
+            _final.vz.value,
+            point);
         });
       return new_size;
     }
@@ -769,6 +787,12 @@ std::size_t track::prune_on_chi_squared(const real max_chi_squared) {
     if (chi_squared_vector()[i] > max_chi_squared)
       indices.push_back(i);
   return remove(indices);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear Hits from Track_______________________________________________________________________
+void track::clear() {
+  reset(analysis::full_event{});
 }
 //----------------------------------------------------------------------------------------------
 

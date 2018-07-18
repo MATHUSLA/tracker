@@ -185,8 +185,7 @@ int prototype_tracking(int argc,
                    std::back_inserter(converged_tracks),
                    [](const auto& track) { return track.fit_converged(); });
 
-      save_vertices({analysis::vertex(converged_tracks, false)}, canvas, vertex_tree, options);
-      save_vertices({analysis::vertex(converged_tracks, true)}, canvas, vertex_tree, options);
+      save_vertices(analysis::pairwise_fit_tracks(converged_tracks), canvas, vertex_tree, options);
 
       canvas.draw();
     }

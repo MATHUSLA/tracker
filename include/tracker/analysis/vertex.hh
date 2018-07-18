@@ -37,9 +37,16 @@ public:
   static constexpr std::size_t free_parameter_count = 4UL;
   using covariance_matrix_type = real_array<free_parameter_count * free_parameter_count>;
 
-  vertex(const track_vector& tracks, const bool two_stage_minimization=false);
-  vertex(track_vector&& tracks);
+  using container_type = analysis::track_vector;
+  using value_type = typename container_type::value_type;
+  using iterator = typename container_type::iterator;
+  using const_iterator = typename container_type::const_iterator;
+  using reverse_iterator = typename container_type::reverse_iterator;
+  using const_reverse_iterator = typename container_type::const_reverse_iterator;
 
+  vertex();
+  vertex(const track_vector& tracks);
+  vertex(track_vector&& tracks);
   vertex(const vertex& rhs) = default;
   vertex(vertex&& rhs)      = default;
   vertex& operator=(const vertex& rhs) = default;
@@ -90,12 +97,19 @@ public:
   std::size_t size() const { return _tracks.size(); }
   bool empty() const { return _tracks.size() <= 1; }
 
-  track_vector::iterator begin() { return _tracks.begin(); }
-  track_vector::const_iterator begin() const { return _tracks.cbegin(); }
-  track_vector::const_iterator cbegin() const { return _tracks.cbegin(); }
-  track_vector::iterator end() { return _tracks.end(); }
-  track_vector::const_iterator end() const { return _tracks.cend(); }
-  track_vector::const_iterator cend() const { return _tracks.cend(); }
+  iterator       begin()        noexcept { return _tracks.begin();  }
+  const_iterator begin()  const noexcept { return _tracks.cbegin(); }
+  iterator       end()          noexcept { return _tracks.end();    }
+  const_iterator end()    const noexcept { return _tracks.cend();   }
+  const_iterator cbegin() const noexcept { return _tracks.cbegin(); }
+  const_iterator cend()   const noexcept { return _tracks.cend();   }
+
+  reverse_iterator       rbegin()        noexcept { return _tracks.rbegin();  }
+  const_reverse_iterator rbegin()  const noexcept { return _tracks.crbegin(); }
+  reverse_iterator       rend()          noexcept { return _tracks.rend();    }
+  const_reverse_iterator rend()    const noexcept { return _tracks.crend();   }
+  const_reverse_iterator crbegin() const noexcept { return _tracks.crbegin(); }
+  const_reverse_iterator crend()   const noexcept { return _tracks.crend();   }
 
   std::size_t reset(const track_vector& tracks);
 
@@ -106,6 +120,8 @@ public:
   std::size_t remove(const std::vector<std::size_t>& indices);
 
   std::size_t prune_on_chi_squared(const real max_chi_squared);
+
+  void clear();
 
   struct plotting_keys {
     plot::histogram::name_type t, x, y, z,
@@ -136,7 +152,6 @@ protected:
   track_vector _tracks;
   real_vector _delta_chi2;
   covariance_matrix_type _covariance;
-  bool _two_stage;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -187,6 +202,10 @@ private:
   branch<uint_fast64_t> _count;
   std::vector<std::reference_wrapper<branch_type>> _vector_branches;
 };
+//----------------------------------------------------------------------------------------------
+
+//__Pairwise Fit Tracks to Vertices_____________________________________________________________
+const vertex_vector pairwise_fit_tracks(const track_vector& tracks);
 //----------------------------------------------------------------------------------------------
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////

@@ -50,7 +50,9 @@ add_library(tracker SHARED
 )
 
 target_compile_features(tracker PUBLIC cxx_std_14)
-target_compile_options(tracker PUBLIC -Wno-missing-braces
+target_compile_options(tracker PUBLIC -Wno-unknown-warning-option
+                                      -Wno-missing-braces
+                                      -Wunused-function
                                       -Wno-unused-value
                                       -Wno-unused-parameter
                                       -Wno-unused-but-set-parameter)

@@ -171,8 +171,7 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
 //__MINUIT Gaussian Fitter______________________________________________________________________
 bool _fit_tracks_minuit(const track_vector& tracks,
                         vertex::fit_parameters& parameters,
-                        vertex::covariance_matrix_type& covariance_matrix,
-                        const bool two_stage_minimization=false) {
+                        vertex::covariance_matrix_type& covariance_matrix) {
   using namespace helper::minuit;
   auto& t = parameters.t;
   auto& x = parameters.x;
@@ -186,52 +185,10 @@ bool _fit_tracks_minuit(const track_vector& tracks,
   TMinuit minuit;
   initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
 
-  std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
-
-  if (two_stage_minimization) {
-    minuit.FixParameter(1);
-    minuit.FixParameter(2);
-    execute(minuit, _gaussian_nll);
-    minuit.Release(1);
-    minuit.Release(2);
-    get_parameters(minuit, t, x, y, z);
-    std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
-    set_parameters(minuit, "T", t, "X", x, "Y", y, "Z", z);
-
-    execute(minuit, _gaussian_nll);
-
-    minuit.FixParameter(1);
-    minuit.FixParameter(2);
-    execute(minuit, _gaussian_nll);
-    minuit.Release(1);
-    minuit.Release(2);
-    get_parameters(minuit, t, x, y, z);
-    std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
-    set_parameters(minuit, "T", t, "X", x, "Y", y, "Z", z);
-
-    execute(minuit, _gaussian_nll);
-
-    minuit.FixParameter(1);
-    minuit.FixParameter(2);
-    execute(minuit, _gaussian_nll);
-    minuit.Release(1);
-    minuit.Release(2);
-    get_parameters(minuit, t, x, y, z);
-    std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
-    set_parameters(minuit, "T", t, "X", x, "Y", y, "Z", z);
-  }
-
   execute(minuit, _gaussian_nll);
 
   get_parameters(minuit, t, x, y, z);
-  std::cout << "(" << t.value << ", " << x.value << ", " << y.value << ", " << z.value << ")\n";
   get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
-
-  std::cout << "NLL: " << std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
-    [&](const auto sum, const auto& track) {
-      const auto distance = _vertex_track_r3_distance_with_error(t.value, x.value, y.value, z.value, track);
-      return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
-  }) << "\n";
 
   return true;
 }
@@ -239,9 +196,14 @@ bool _fit_tracks_minuit(const track_vector& tracks,
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
+//__Vertex Default Constructor__________________________________________________________________
+vertex::vertex() {
+  clear();
+}
+//----------------------------------------------------------------------------------------------
+
 //__Vertex Constructor__________________________________________________________________________
-vertex::vertex(const track_vector& tracks, const bool two_stage_minimization) {
-  _two_stage = two_stage_minimization;
+vertex::vertex(const track_vector& tracks) {
   reset(tracks);
 }
 //----------------------------------------------------------------------------------------------
@@ -374,10 +336,15 @@ std::size_t vertex::reset(const track_vector& tracks) {
   if (new_size > 1) {
     _guess = _guess_vertex(_tracks);
     _final = _guess;
-    if (_fit_tracks_minuit(_tracks, _final, _covariance, _two_stage)) {
+    if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
       util::algorithm::back_insert_transform(_tracks, _delta_chi2,
         [&](const auto& track) {
-          return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track);
+          return _vertex_squared_residual(
+            _final.t.value,
+            _final.x.value,
+            _final.y.value,
+            _final.z.value,
+            track);
         });
       return new_size;
     }
@@ -460,6 +427,12 @@ std::size_t vertex::prune_on_chi_squared(const real max_chi_squared) {
       indices.push_back(i);
   }
   return remove(indices);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear Tracks from Vertex____________________________________________________________________
+void vertex::clear() {
+  reset({});
 }
 //----------------------------------------------------------------------------------------------
 
@@ -694,6 +667,66 @@ void vertex::tree::fill(const vertex_vector& vertices) {
   for (const auto& vertex : vertices)
     insert(vertex);
   analysis::tree::fill();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Pairwise Fit Tracks to Vertices_____________________________________________________________
+const vertex_vector pairwise_fit_tracks(const track_vector& tracks) {
+  const auto size = tracks.size();
+  if (size == 0)
+    return vertex_vector{};
+  if (size <= 2)
+    return vertex_vector{vertex{tracks}};
+
+  vertex_vector out;
+  out.reserve(size);
+
+  util::bit_vector join_list(size);
+
+  vertex current_vertex{};
+  track_vector pair;
+  pair.reserve(2UL);
+
+  std::size_t top_index{}, bottom_index{1UL};
+  while (top_index < size) {
+    pair.push_back(tracks[top_index]);
+    bottom_index = join_list.first_unset(bottom_index);
+
+    real best_fit{-1.0L};
+    std::size_t best_bottom_index{bottom_index};
+    while (bottom_index < size) {
+      pair.push_back(tracks[bottom_index]);
+      current_vertex.reset(pair);
+
+      if (current_vertex.fit_converged()) {
+        if (best_fit < 0.0L) {
+          best_fit = current_vertex.chi_squared_per_dof();
+        } else {
+          const auto current_fit = current_vertex.chi_squared_per_dof();
+          if (current_fit < best_fit) {
+            best_fit = current_fit;
+            best_bottom_index = bottom_index;
+          }
+        }
+      }
+
+      bottom_index = join_list.first_unset(1UL + bottom_index);
+      pair.pop_back();
+    }
+
+    if (best_bottom_index < size) {
+      pair.push_back(tracks[best_bottom_index]);
+      out.emplace_back(pair);
+    }
+
+    join_list.set(top_index);
+    top_index = join_list.first_unset(1UL + top_index);
+    bottom_index = 1UL + top_index;
+    pair.clear();
+  }
+
+  out.shrink_to_fit();
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 
