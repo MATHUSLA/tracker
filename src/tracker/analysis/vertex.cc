@@ -260,7 +260,8 @@ real_vector vertex::distances() const {
   real_vector out;
   out.reserve(_tracks.size());
   util::algorithm::back_insert_transform(_tracks, out, [&](const auto& track) {
-    return _vertex_track_r3_distance(t_value(), x_value(), y_value(), z_value(), track); });
+    return _vertex_track_r3_distance(
+      _final.t.value, _final.x.value, _final.y.value, _final.z.value, track); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -270,7 +271,8 @@ real_vector vertex::distance_errors() const {
   real_vector out;
   out.reserve(_tracks.size());
   util::algorithm::back_insert_transform(_tracks, out, [&](const auto& track) {
-    return _vertex_track_r3_distance_with_error(t_value(), x_value(), y_value(), z_value(), track).error; });
+    return _vertex_track_r3_distance_with_error(
+      _final.t.value, _final.x.value, _final.y.value, _final.z.value, track).error; });
   return out;
 }
 //----------------------------------------------------------------------------------------------
