@@ -21,6 +21,7 @@
 #include <queue>
 
 #include <tracker/core/stat.hh>
+#include <tracker/util/algorithm.hh>
 #include <tracker/geometry.hh>
 
 namespace MATHUSLA { namespace TRACKER {
@@ -78,7 +79,7 @@ const Event compress(const Event& points) {
 
     auto average = sum / collected;
 
-    // TODO: move to time_smear
+    /* TODO: check move
     if (true) {
       using namespace stat;
       static auto current_error = geometry::default_time_resolution();
@@ -89,6 +90,7 @@ const Event compress(const Event& points) {
       }
       average.t += gen;
     }
+    */
 
     out.push_back(average);
   }
@@ -107,8 +109,24 @@ const full_event compress(const full_event& points) {
 template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const Event time_smear(const Event& points) {
-  // TODO: implement
-  return points;
+  Event out;
+  out.reserve(points.size());
+
+  using namespace stat;
+  static auto current_error = geometry::default_time_resolution();
+  static random::generator gen{random::normal(0.0L, current_error)};
+
+  util::algorithm::back_insert_transform(points, out, [&](auto hit) {
+    const auto time_error = geometry::time_resolution_of_volume(reduce_to_r4(hit));
+    if (current_error != time_error) {
+      gen.distribution(random::normal(0.0L, time_error));
+      current_error = time_error;
+    }
+    hit.t += gen;
+    return hit;
+  });
+
+  return t_sort(out);
 }
 const event time_smear(const event& points) {
   return time_smear<>(points);
@@ -123,8 +141,13 @@ template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const Event use_efficiency(const Event& points,
                            const real efficiency) {
-  // TODO: implement
-  return points;
+  Event out;
+  out.reserve(points.size());
+  static stat::random::generator gen{stat::random::uniform_real(0.0L, 1.0L)};
+  util::algorithm::back_insert_copy_if(points, out,
+    [&](const auto) { return gen <= efficiency; });
+  out.shrink_to_fit();
+  return out;
 }
 const event use_efficiency(const event& points,
                            const real efficiency) {

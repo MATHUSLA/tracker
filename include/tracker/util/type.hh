@@ -63,23 +63,35 @@ constexpr std::size_t count(const Ts& ...) noexcept { return sizeof...(Ts); }
 //__Size Ordering for Sorter____________________________________________________________________
 template<class C = void>
 struct size_ordered {
-  constexpr bool operator()(const C& a,
-                            const C& b) const {
-    return util::type::size<C>(a) < util::type::size<C>(b);
+  constexpr std::enable_if_t<has_size_method_v<T>, bool> operator()(const C& a,
+                                                                    const C& b) const {
+    return a.size() < b.size();
+  }
+  constexpr std::enable_if_t<!has_size_method_v<T>, bool> operator()(const C& a,
+                                                                     const C& b) const {
+    return distance(std::cbegin(a), std::cend(a)) < distance(std::cbegin(b), std::cend(b));
   }
 };
 template<class C = void>
 struct size_less {
-  constexpr bool operator()(const C& a,
-                            const C& b) const {
-    return util::type::size<C>(a) < util::type::size<C>(b);
+  constexpr std::enable_if_t<has_size_method_v<T>, bool> operator()(const C& a,
+                                                                    const C& b) const {
+    return a.size() < b.size();
+  }
+  constexpr std::enable_if_t<!has_size_method_v<T>, bool> operator()(const C& a,
+                                                                     const C& b) const {
+    return distance(std::cbegin(a), std::cend(a)) < distance(std::cbegin(b), std::cend(b));
   }
 };
 template<class C = void>
 struct size_greater {
-  constexpr bool operator()(const C& a,
-                            const C& b) const {
-    return util::type::size<C>(a) > util::type::size<C>(b);
+  constexpr std::enable_if_t<has_size_method_v<T>, bool> operator()(const C& a,
+                                                                    const C& b) const {
+    return a.size() > b.size();
+  }
+  constexpr std::enable_if_t<!has_size_method_v<T>, bool> operator()(const C& a,
+                                                                     const C& b) const {
+    return distance(std::cbegin(a), std::cend(a)) > distance(std::cbegin(b), std::cend(b));
   }
 };
 //----------------------------------------------------------------------------------------------
