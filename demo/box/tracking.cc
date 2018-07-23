@@ -101,7 +101,7 @@ int box_tracking(int argc,
     analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
 
     for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
-      const auto& event = box_geometry::add_widths(imported_events[event_counter]);
+      const auto event = box_geometry::add_widths(imported_events[event_counter]);
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 

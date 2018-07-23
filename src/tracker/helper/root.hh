@@ -46,14 +46,14 @@ inline void set_batch_mode(const bool mode) {
 //----------------------------------------------------------------------------------------------
 
 //__Initialize ROOT Environment_________________________________________________________________
-inline void init(const bool interactive=true) {
+inline void init(const bool interactive=false) {
   static bool initialized = false;
   if (!initialized) {
     gErrorIgnoreLevel = kFatal;
     SetErrorHandler(error::empty_handler);
+    set_batch_mode(!interactive);
     initialized = true;
   }
-  set_batch_mode(!interactive);
 }
 //----------------------------------------------------------------------------------------------
 
