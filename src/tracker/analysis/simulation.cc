@@ -114,7 +114,7 @@ const Event time_smear(const Event& points) {
 
   using namespace stat;
   static auto current_error = geometry::default_time_resolution();
-  static random::generator gen{random::normal(0.0L, current_error)};
+  static random::generator gen{random::normal{0.0L, current_error}};
 
   util::algorithm::back_insert_transform(points, out, [&](auto hit) {
     const auto time_error = geometry::time_resolution_of_volume(reduce_to_r4(hit));
@@ -143,7 +143,7 @@ const Event use_efficiency(const Event& points,
                            const real efficiency) {
   Event out;
   out.reserve(points.size());
-  static stat::random::generator gen{stat::random::uniform_real(0.0L, 1.0L)};
+  static stat::random::generator gen{stat::random::uniform_real{0.0L, 1.0L}};
   util::algorithm::back_insert_copy_if(points, out,
     [&](const auto) { return gen <= efficiency; });
   out.shrink_to_fit();
