@@ -77,22 +77,7 @@ const Event compress(const Event& points) {
     if (skipped)
       index = missed_index;
 
-    auto average = sum / collected;
-
-    /* TODO: check move
-    if (true) {
-      using namespace stat;
-      static auto current_error = geometry::default_time_resolution();
-      static random::generator gen(random::normal(0, current_error));
-      if (current_error != time_error) {
-        gen.distribution(random::normal(0, time_error));
-        current_error = time_error;
-      }
-      average.t += gen;
-    }
-    */
-
-    out.push_back(average);
+    out.push_back(sum / collected);
   }
 
   return t_sort(out);
@@ -112,11 +97,11 @@ const Event time_smear(const Event& points) {
   Event out;
   out.reserve(points.size());
 
-  using namespace stat;
-  static auto current_error = geometry::default_time_resolution();
-  static random::generator gen{random::normal{0.0L, current_error}};
-
   util::algorithm::back_insert_transform(points, out, [&](auto hit) {
+    using namespace stat;
+    static auto current_error = geometry::default_time_resolution();
+    static random::generator gen(random::normal(0.0L, current_error));
+
     const auto time_error = geometry::time_resolution_of_volume(reduce_to_r4(hit));
     if (current_error != time_error) {
       gen.distribution(random::normal(0.0L, time_error));
@@ -143,9 +128,10 @@ const Event use_efficiency(const Event& points,
                            const real efficiency) {
   Event out;
   out.reserve(points.size());
-  static stat::random::generator gen{stat::random::uniform_real{0.0L, 1.0L}};
-  util::algorithm::back_insert_copy_if(points, out,
-    [&](const auto) { return gen <= efficiency; });
+  util::algorithm::back_insert_copy_if(points, out, [&](const auto) {
+    static stat::random::generator gen(stat::random::uniform_real(0.0L, 1.0L));
+    return gen <= efficiency;
+  });
   out.shrink_to_fit();
   return out;
 }
