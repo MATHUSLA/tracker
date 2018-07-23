@@ -46,13 +46,6 @@ const full_hit add_width(const hit& point);
 const full_event add_width(const event& points);
 //----------------------------------------------------------------------------------------------
 
-//__Compress Points by R4 Interval______________________________________________________________
-const event compress(const event& points,
-                     bool time_smearing);
-const full_event compress(const full_event& points,
-                          bool time_smearing);
-//----------------------------------------------------------------------------------------------
-
 //__Event Partition Type________________________________________________________________________
 struct event_partition { event_vector parts; Coordinate coordinate; real interval; };
 struct full_event_partition { full_event_vector parts; Coordinate coordinate; real interval; };

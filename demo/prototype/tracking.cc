@@ -129,7 +129,7 @@ int prototype_tracking(int argc,
     const auto event_bundle = reader::root::import_event_mc_bundle(path, options, detector_map);
     const auto imported_events = event_bundle.events;
     const auto import_size = imported_events.size();
-    if (import_size == 0)
+    if (import_size == 0UL)
       continue;
 
     const auto mc_imported_events = event_bundle.true_events;
@@ -142,10 +142,11 @@ int prototype_tracking(int argc,
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 
-      const auto compressed_event = analysis::compress(event, options.time_smearing);
+      const auto compressed_event = options.time_smearing ? analysis::simulation::time_smear(analysis::simulation::compress(event))
+                                                          : analysis::simulation::compress(event);
       const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
-      if (event_size == 0 || compression_size == event_size)
+      if (event_size == 0UL || compression_size == event_size)
         continue;
 
       const auto event_density = modified_geometry_event_density(compressed_event);

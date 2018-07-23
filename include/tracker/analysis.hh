@@ -31,5 +31,6 @@
 #include <tracker/analysis/vertex.hh>
 
 #include <tracker/analysis/monte_carlo.hh>
+#include <tracker/analysis/simulation.hh>
 
 #endif /* TRACKER__ANALYSIS_HH */

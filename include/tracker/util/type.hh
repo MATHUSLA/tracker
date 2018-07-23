@@ -49,7 +49,9 @@ constexpr bool has_size_method_v = has_size_method<C>::value;
 template<class T, std::size_t N>
 constexpr std::size_t size(const T (&)[N]) noexcept { return N; }
 template<class T>
-constexpr std::enable_if_t<has_size_method_v<T>, std::size_t> size(const T& t) { return t.size(); }
+constexpr std::enable_if_t<has_size_method_v<T>, std::size_t> size(const T& t) {
+  return t.size();
+}
 template<class T>
 constexpr std::enable_if_t<!has_size_method_v<T>, std::size_t> size(const T& t) noexcept {
   return distance(std::cbegin(t), std::cend(t));
@@ -61,15 +63,24 @@ constexpr std::size_t count(const Ts& ...) noexcept { return sizeof...(Ts); }
 //__Size Ordering for Sorter____________________________________________________________________
 template<class C = void>
 struct size_ordered {
-  constexpr bool operator()(const C& a, const C& b) const { return size(a) < size(b); }
+  constexpr bool operator()(const C& a,
+                            const C& b) const {
+    return util::type::size<C>(a) < util::type::size<C>(b);
+  }
 };
 template<class C = void>
 struct size_less {
-  constexpr bool operator()(const C& a, const C& b) const { return size(a) < size(b); }
+  constexpr bool operator()(const C& a,
+                            const C& b) const {
+    return util::type::size<C>(a) < util::type::size<C>(b);
+  }
 };
 template<class C = void>
 struct size_greater {
-  constexpr bool operator()(const C& a, const C& b) const { return size(a) > size(b); }
+  constexpr bool operator()(const C& a,
+                            const C& b) const {
+    return util::type::size<C>(a) > util::type::size<C>(b);
+  }
 };
 //----------------------------------------------------------------------------------------------
 
