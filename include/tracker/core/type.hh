@@ -178,6 +178,39 @@ constexpr r4_point reduce_to_r4(const T& point) {
 
 //__Select Coordinate Subset of Point___________________________________________________________
 template<class T>
+constexpr std::enable_if_t<is_r2_type_v<T>, real>
+select_r1(const T& point,
+          const Coordinate c) {
+  switch (c) {
+    case Coordinate::T: return 0.0L;
+    case Coordinate::X: return point.x;
+    case Coordinate::Y: return point.y;
+    case Coordinate::Z: return 0.0L;
+  }
+}
+template<class T>
+constexpr std::enable_if_t<is_r3_type_v<T>, real>
+select_r1(const T& point,
+          const Coordinate c) {
+  switch (c) {
+    case Coordinate::T: return 0.0L;
+    case Coordinate::X: return point.x;
+    case Coordinate::Y: return point.y;
+    case Coordinate::Z: return point.z;
+  }
+}
+template<class T>
+constexpr std::enable_if_t<is_r4_type_v<T>, real>
+select_r1(const T& point,
+          const Coordinate c) {
+  switch (c) {
+    case Coordinate::T: return point.t;
+    case Coordinate::X: return point.x;
+    case Coordinate::Y: return point.y;
+    case Coordinate::Z: return point.z;
+  }
+}
+template<class T>
 constexpr std::enable_if_t<is_r3_type_v<T>, r2_point>
 select_r2(const T& point,
           const Coordinate x1,
@@ -592,7 +625,7 @@ real point_line_distance(const T& point,
   return !norm2_line ? std::numeric_limits<real>::max()
                      : norm(delta - (delta * line) * line / norm2_line);
 }
-template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
+template<class T, typename = std::enable_if_t<is_rN_type_v<T>>>
 real point_line_distance(const T& point,
                          const T& begin,
                          const T& end,
@@ -602,7 +635,7 @@ real point_line_distance(const T& point,
                              select_r2(begin, x1, x2),
                              select_r2(end, x1, x2));
 }
-template<class T, typename = std::enable_if_t<is_r4_type_v<T>>>
+template<class T, typename = std::enable_if_t<is_rN_type_v<T>>>
 real point_line_distance(const T& point,
                          const T& begin,
                          const T& end,

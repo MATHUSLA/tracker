@@ -16,13 +16,7 @@
  * limitations under the License.
  */
 
-#include <tracker/analysis/analysis.hh>
-#include <tracker/analysis/monte_carlo.hh>
-#include <tracker/analysis/track.hh>
-#include <tracker/analysis/vertex.hh>
-
-// TODO: remove
-#include <tracker/analysis/tree.hh>
+#include <tracker/analysis.hh>
 
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
@@ -47,32 +41,32 @@ namespace MATHUSLA {
 //__Find Primary Tracks for Prototype___________________________________________________________
 const analysis::track_vector find_primary_tracks(const analysis::event& event,
                                                  const reader::tracking_options& options,
+                                                 plot::canvas& canvas,
                                                  analysis::event& non_track_points) {
+  namespace ash = analysis::seed_heuristic;
+
   analysis::event combined_rpc_hits;
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
-  const auto seeds           = analysis::seed(options.seed_size, layers, options.line_width);
-  const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
-  const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 1UL);
+  const auto seeds           = analysis::seed(options.seed_size, layers, ash::double_cone{options.line_width});
 
-  // TODO: improve efficiency
-  const auto size = event.size();
-  util::bit_vector save_list(size);
-  for (const auto& track : out) {
-    for (const auto& point : track.event()) {
-      const auto search = util::algorithm::range_binary_find_first(event,
-                                                                   point,
-                                                                   type::t_ordered<analysis::hit>{});
-      if (search != event.cend())
-        save_list.set(static_cast<std::size_t>(search - event.cbegin()));
+  /*
+  for (const auto seed : seeds) {
+    for (std::size_t i{}; i < seed.size() - 1; ++i) {
+      canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
     }
   }
+  */
 
-  non_track_points.clear();
-  non_track_points.reserve(size - save_list.count());
-  save_list.unset_conditional_push_back(event, non_track_points);
+  const auto tracking_vector = reset_seeds(analysis::join_all(seeds), combined_rpc_hits, original_rpc_hits);
+  auto first_tracks = analysis::independent_fit_seeds(tracking_vector, options.layer_axis);
 
+  for (auto& track : first_tracks)
+    track.prune_on_chi_squared(10.0L);
+
+  const auto out = analysis::overlap_fit_tracks(first_tracks, 2UL);
+  non_track_points = analysis::non_tracked_points(event, out, true);
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -80,32 +74,28 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
 //__Find Secondary Tracks for Prototype_________________________________________________________
 const analysis::track_vector find_secondary_tracks(const analysis::event& event,
                                                    const reader::tracking_options& options,
+                                                   plot::canvas& canvas,
                                                    analysis::event& non_track_points) {
   analysis::event combined_rpc_hits;
   analysis::full_event original_rpc_hits;
   const auto optimized_event = combine_rpc_hits(event, combined_rpc_hits, original_rpc_hits);
   const auto layers          = analysis::partition(optimized_event, options.layer_axis, options.layer_depth);
-  const auto seeds           = analysis::seed(2UL, layers, options.line_width);
-  const auto tracking_vector = reset_seeds(seeds, combined_rpc_hits, original_rpc_hits);
-  const auto out = analysis::overlap_fit_seeds(tracking_vector, options.layer_axis, 0UL);
+  const auto seeds           = analysis::seed(options.seed_size, layers, analysis::seed_heuristic::cylinder{options.line_width});
 
-  // TODO: improve efficiency
-  const auto size = event.size();
-  util::bit_vector save_list(size);
-  for (const auto& track : out) {
-    for (const auto& point : track.event()) {
-      const auto search = util::algorithm::range_binary_find_first(event,
-                                                                   point,
-                                                                   type::t_ordered<analysis::hit>{});
-      if (search != event.cend())
-        save_list.set(static_cast<std::size_t>(search - event.cbegin()));
+  for (const auto seed : seeds) {
+    for (std::size_t i{}; i < seed.size() - 1; ++i) {
+      canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
     }
   }
 
-  non_track_points.clear();
-  non_track_points.reserve(size - save_list.count());
-  save_list.unset_conditional_push_back(event, non_track_points);
+  const auto tracking_vector = reset_seeds(seeds, combined_rpc_hits, original_rpc_hits);
+  auto first_tracks = analysis::independent_fit_seeds(tracking_vector, options.layer_axis);
 
+  for (auto& track : first_tracks)
+    track.prune_on_chi_squared(6.0L);
+
+  const auto out = analysis::overlap_fit_tracks(first_tracks, 0UL);
+  non_track_points = analysis::non_tracked_points(event, out, true);
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -115,17 +105,18 @@ int prototype_tracking(int argc,
                        char* argv[]) {
   const auto options = reader::parse_input(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
-  const auto time_resolution_map = reader::import_time_resolution_map(options.geometry_time_file);
 
   plot::init(options.draw_events);
-  geometry::open(options.geometry_file, options.default_time_error, time_resolution_map);
+  geometry::open(options.geometry_file,
+                 options.default_time_error,
+                 reader::import_time_resolution_map(options.geometry_time_file));
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
   const plot::value_tag filetype_tag("FILETYPE", "MATHUSLA TRACKING STATFILE");
   const plot::value_tag project_tag("PROJECT", "Prototype");
 
-  std::uint_fast64_t path_counter{};
+  std::size_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
     const auto path_counter_string = std::to_string(path_counter++);
     const auto statistics_save_path = statistics_path_prefix
@@ -138,21 +129,24 @@ int prototype_tracking(int argc,
     const auto event_bundle = reader::root::import_event_mc_bundle(path, options, detector_map);
     const auto imported_events = event_bundle.events;
     const auto import_size = imported_events.size();
-    if (import_size == 0)
+    if (import_size == 0UL)
       continue;
 
     const auto mc_imported_events = event_bundle.true_events;
 
-    auto histograms = generate_histograms();
-    for (std::uint_fast64_t event_counter{}; event_counter < import_size; ++event_counter) {
+    analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
+    analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
+
+    for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
       const auto& event = imported_events[event_counter];
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 
-      const auto compressed_event = analysis::compress(event, options.time_smearing);
+      const auto compressed_event = options.time_smearing ? analysis::simulation::time_smear(analysis::simulation::compress(event))
+                                                          : analysis::simulation::compress(event);
       const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
-      if (event.empty() || compression_size == event_size)
+      if (event_size == 0UL || compression_size == event_size)
         continue;
 
       const auto event_density = modified_geometry_event_density(compressed_event);
@@ -169,27 +163,41 @@ int prototype_tracking(int argc,
       }
 
       analysis::event non_primary_track_points, non_secondary_track_points;
-      auto tracks = find_primary_tracks(compressed_event, options, non_primary_track_points);
+      auto tracks = find_primary_tracks(compressed_event, options, canvas, non_primary_track_points);
+
       /*
       auto secondary_tracks = find_secondary_tracks(non_primary_track_points,
                                                     options,
+                                                    canvas,
                                                     non_secondary_track_points);
       tracks.reserve(tracks.size() + secondary_tracks.size());
       tracks.insert(tracks.cend(),
                     std::make_move_iterator(secondary_tracks.cbegin()),
                     std::make_move_iterator(secondary_tracks.cend()));
       */
-      save_tracks(tracks, canvas, histograms, options);
+
+      save_tracks(tracks, canvas, track_tree, options);
       print_tracking_summary(event, tracks);
 
-      save_vertex(analysis::vertex(tracks), canvas, histograms, options);
+      analysis::track_vector converged_tracks;
+      converged_tracks.reserve(tracks.size());
+      std::copy_if(std::make_move_iterator(tracks.begin()),
+                   std::make_move_iterator(tracks.end()),
+                   std::back_inserter(converged_tracks),
+                   [](const auto& track) { return track.fit_converged(); });
+
+      save_vertices(analysis::pairwise_fit_tracks(converged_tracks), canvas, vertex_tree, options);
 
       canvas.draw();
     }
-    plot::value_tag input_tag("DATAPATH", path);
-    plot::value_tag event_tag("EVENTS", std::to_string(import_size));
-    histograms.draw_all();
-    plot::save_all(statistics_save_path, histograms, filetype_tag, project_tag, input_tag, event_tag);
+
+    plot::save_all(statistics_save_path,
+      filetype_tag,
+      project_tag,
+      plot::value_tag{"DATAPATH", path},
+      plot::value_tag{"EVENTS", std::to_string(import_size)});
+    track_tree.save(statistics_save_path);
+    vertex_tree.save(statistics_save_path);
   }
 
   print_bar();

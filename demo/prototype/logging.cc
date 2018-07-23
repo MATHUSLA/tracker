@@ -35,7 +35,10 @@ void draw_detector_centers(plot::canvas& canvas) {
 void draw_track(plot::canvas& canvas,
                 const analysis::track& track) {
   const auto& full_event = track.full_event();
-  uint_fast8_t brightness = 0, step = 230 / full_event.size();
+  const auto size = full_event.size();
+  if (size == 0)
+    return;
+  uint_fast8_t brightness = 0, step = 230 / size;
   for (const auto& point : full_event) {
     const auto center = type::reduce_to_r3(point);
     canvas.add_box(center,
@@ -44,12 +47,7 @@ void draw_track(plot::canvas& canvas,
                    {brightness, brightness, brightness});
     brightness += step;
   }
-  track.draw(canvas, 1.1, plot::color::RED);
-  /*
-  for (std::size_t i = 0; i < full_event.size() - 1; ++i) {
-    canvas.add_line(type::reduce_to_r3(full_event[i]), type::reduce_to_r3(full_event[i+1]), 1, plot::color::BLACK);
-  }
-  */
+  track.draw(canvas, 2, plot::color::RED);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -80,8 +78,16 @@ void draw_mc_tracks(plot::canvas& canvas,
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________
 void draw_vertex_and_guess(plot::canvas& canvas,
                            const analysis::vertex& vertex) {
-  vertex.draw(canvas, 1.5, plot::color::GREEN);
-  vertex.draw_guess(canvas, 1.5, plot::color::RED);
+  vertex.draw(canvas, 1.2, plot::color::GREEN);
+  vertex.draw_guess(canvas, 1.2, plot::color::RED);
+
+  if (vertex.fit_converged()) {
+    const auto point = vertex.point();
+    for (const auto& track : vertex.tracks()) {
+      canvas.add_line(track.at_t(point.t), point, 2, plot::color::GREEN);
+    }
+  }
+
 }
 //----------------------------------------------------------------------------------------------
 
@@ -102,7 +108,9 @@ const analysis::track::plotting_keys& track_plotting_keys() {
     "track_vx_error",
     "track_vy_error",
     "track_vz_error",
+    "track_chi_squared",
     "track_chi_squared_per_dof",
+    "track_chi_squared_p_value",
     "track_size",
     "track_beta",
     "track_beta_error",
@@ -126,7 +134,9 @@ const analysis::vertex::plotting_keys& vertex_plotting_keys() {
     "vertex_z_error",
     "vertex_distance",
     "vertex_distance_error",
+    "vertex_chi_squared",
     "vertex_chi_squared_per_dof",
+    "vertex_chi_squared_p_value",
     "vertex_size",
   };
   return _keys;
@@ -191,37 +201,30 @@ plot::histogram_collection generate_histograms() {
 //__Show and Add Tracks to Statistics___________________________________________________________
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
-                 plot::histogram_collection& histograms,
+                 analysis::track::tree& tree,
                  const reader::tracking_options& options) {
-  std::size_t counter{};
   for (const auto& track : tracks) {
-    if (track.chi_squared_per_dof() <= 3.0L) {
-      if (track.beta() - 1.0L * track.beta_error() <= 1.0L) {
-        track.fill_plots(histograms, track_plotting_keys());
-        ++counter;
-      }
-    }
     if (options.verbose_output)
       std::cout << track << "\n";
     if (options.draw_events)
       draw_track(canvas, track);
   }
-  histograms["track_count"].insert(counter);
+  tree.fill(tracks);
 }
 //----------------------------------------------------------------------------------------------
 
-//__Show and Add Vertex to Statistics___________________________________________________________
-void save_vertex(const analysis::vertex& vertex,
-                 plot::canvas& canvas,
-                 plot::histogram_collection& histograms,
-                 const reader::tracking_options& options) {
-  if (vertex.size() != 2)
-    return;
-  vertex.fill_plots(histograms, vertex_plotting_keys());
-  if (options.verbose_output)
-    std::cout << vertex << "\n";
-  if (options.draw_events)
-    draw_vertex_and_guess(canvas, vertex);
+//__Show and Add Vertices to Statistics_________________________________________________________
+void save_vertices(const analysis::vertex_vector& vertices,
+                   plot::canvas& canvas,
+                   analysis::vertex::tree& tree,
+                   const reader::tracking_options& options) {
+  for (const auto& vertex : vertices) {
+    if (options.verbose_output)
+      std::cout << vertex << "\n";
+    if (options.draw_events)
+      draw_vertex_and_guess(canvas, vertex);
+  }
+  tree.fill(vertices);
 }
 //----------------------------------------------------------------------------------------------
 

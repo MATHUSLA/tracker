@@ -22,7 +22,7 @@
 
 #include <ROOT/TMinuit.h>
 
-#include <tracker/analysis/analysis.hh>
+#include <tracker/analysis.hh>
 
 #include <tracker/util/error.hh>
 

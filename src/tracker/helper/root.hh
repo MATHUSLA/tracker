@@ -25,6 +25,7 @@
 #include <ROOT/TTree.h>
 #include <ROOT/TError.h>
 #include <ROOT/TKey.h>
+#include <ROOT/TROOT.h>
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -38,14 +39,21 @@ inline void empty_handler(int, Bool_t, const char*, const char*) {}
 
 } /* namespace error */ ////////////////////////////////////////////////////////////////////////
 
+//__Set Batch Mode for ROOT Environment_________________________________________________________
+inline void set_batch_mode(const bool mode) {
+  gROOT->SetBatch(mode);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Initialize ROOT Environment_________________________________________________________________
-inline void init() {
+inline void init(const bool interactive=true) {
   static bool initialized = false;
   if (!initialized) {
     gErrorIgnoreLevel = kFatal;
     SetErrorHandler(error::empty_handler);
     initialized = true;
   }
+  set_batch_mode(!interactive);
 }
 //----------------------------------------------------------------------------------------------
 

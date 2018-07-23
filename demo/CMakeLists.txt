@@ -17,6 +17,8 @@
 
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
+# TODO: add_subdirectory(plugin)
+
 add_subdirectory(box)
 add_subdirectory(module_box)
 add_subdirectory(prototype)

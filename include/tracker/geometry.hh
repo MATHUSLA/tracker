@@ -139,6 +139,30 @@ const r3_point find_center(const r3_point& point);
 const r4_point find_center(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
+//__Add Volume to Geometry Using Local Coordinates______________________________________________
+std::size_t add_to_volume_local(const structure_value& parent,
+                                const structure_value& name,
+                                const box_volume& box);
+//----------------------------------------------------------------------------------------------
+
+//__Add Volumes to Geometry Using Local Coordinates_____________________________________________
+std::size_t add_to_volume_local(const structure_value& parent,
+                                const structure_vector& names,
+                                const box_volume_vector& boxes);
+//----------------------------------------------------------------------------------------------
+
+//__Add Volume to Geometry Using Global Coordinates_____________________________________________
+std::size_t add_to_volume_global(const structure_value& parent,
+                                 const structure_value& name,
+                                 const box_volume& box);
+//----------------------------------------------------------------------------------------------
+
+//__Add Volumes to Geometry Using Global Coordinates____________________________________________
+std::size_t add_to_volume_global(const structure_value& parent,
+                                 const structure_vector& names,
+                                 const box_volume_vector& boxes);
+//----------------------------------------------------------------------------------------------
+
 } /* namespace geometry */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */

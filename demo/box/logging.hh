@@ -1,5 +1,5 @@
 /*
- * demo/prototype/logging.hh
+ * demo/box/logging.hh
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef TRACKER__PROTOTYPE__LOGGING_HH
-#define TRACKER__PROTOTYPE__LOGGING_HH
+#ifndef TRACKER__BOX__LOGGING_HH
+#define TRACKER__BOX__LOGGING_HH
 #pragma once
 
 #include <iostream>
@@ -55,18 +55,6 @@ void draw_vertex_and_guess(plot::canvas& canvas,
                            const analysis::vertex& vertex);
 //----------------------------------------------------------------------------------------------
 
-//__Track Plotting Keys for Prototype___________________________________________________________
-const analysis::track::plotting_keys& track_plotting_keys();
-//----------------------------------------------------------------------------------------------
-
-//__Vertex Plotting Keys for Prototype__________________________________________________________
-const analysis::vertex::plotting_keys& vertex_plotting_keys();
-//----------------------------------------------------------------------------------------------
-
-//__Generate Histograms for Prototype___________________________________________________________
-plot::histogram_collection generate_histograms();
-//----------------------------------------------------------------------------------------------
-
 //__Show and Add Tracks to Statistics___________________________________________________________
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
@@ -100,7 +88,7 @@ inline void print_event_summary(const std::size_t event_counter,
 //----------------------------------------------------------------------------------------------
 
 //__Print Tracking Summary______________________________________________________________________
-inline void print_tracking_summary(const analysis::event& event,
+inline void print_tracking_summary(const analysis::full_event& event,
                                    const analysis::track_vector& tracks) {
   std::cout << "  Track Count: "   << tracks.size() << "\n"
             << "  Track Density: " << tracks.size() / static_cast<type::real>(event.size())
@@ -110,4 +98,4 @@ inline void print_tracking_summary(const analysis::event& event,
 
 } /* namespace MATHUSLA */
 
-#endif /* TRACKER__PROTOTYPE__LOGGING_HH */
+#endif /* TRACKER__BOX__LOGGING_HH */

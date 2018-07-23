@@ -21,6 +21,7 @@
 #pragma once
 
 #include <tracker/analysis/type.hh>
+#include <tracker/analysis/tree.hh>
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 
@@ -31,24 +32,37 @@ namespace analysis { ///////////////////////////////////////////////////////////
 //__Track Object________________________________________________________________________________
 class track {
 public:
+  class tree;
+  // TODO: class graph;
   enum class parameter { T0, X0, Y0, Z0, VX, VY, VZ };
   struct fit_parameters { fit_parameter t0, x0, y0, z0, vx, vy, vz; };
 
   static constexpr std::size_t free_parameter_count = 6UL;
   using covariance_matrix_type = real_array<free_parameter_count * free_parameter_count>;
 
+  using container_type = analysis::full_event;
+  using value_type = typename container_type::value_type;
+  using iterator = typename container_type::iterator;
+  using const_iterator = typename container_type::const_iterator;
+  using reverse_iterator = typename container_type::reverse_iterator;
+  using const_reverse_iterator = typename container_type::const_reverse_iterator;
+
+  track();
   track(const event& points,
         const Coordinate direction=Coordinate::Z);
-
   track(const full_event& points,
         const Coordinate direction=Coordinate::Z);
-
   track(const track& rhs) = default;
   track(track&& rhs) noexcept = default;
   track& operator=(const track& rhs) = default;
   track& operator=(track&& rhs) noexcept = default;
 
   const r4_point operator()(const real p) const;
+
+  const r4_point origin() const;
+  const r3_point ray() const;
+  const r4_point origin_error() const;
+  const r3_point ray_error() const;
 
   const r4_point point(const real t) const;
   const r4_point point_error(const real t) const;
@@ -111,6 +125,7 @@ public:
   real chi_squared() const;
   std::size_t degrees_of_freedom() const;
   real chi_squared_per_dof() const;
+  real chi_squared_p_value() const;
   const real_vector& chi_squared_vector() const { return _delta_chi2; }
 
   real variance(const parameter p) const;
@@ -125,19 +140,26 @@ public:
   const full_hit full_front() const noexcept { return _full_event.front(); }
   const full_hit full_back() const noexcept { return _full_event.back(); }
   const analysis::full_event& full_event() const noexcept { return _full_event; }
-  const geometry::structure_vector& detectors() const noexcept { return _detectors; }
+  const geometry::structure_vector detectors() const;
 
   Coordinate direction() const noexcept { return _direction; }
 
   std::size_t size() const noexcept { return _full_event.size(); }
   bool empty() const noexcept { return _full_event.empty(); }
 
-  analysis::full_event::iterator begin() { return _full_event.begin(); }
-  analysis::full_event::const_iterator begin() const { return _full_event.cbegin(); }
-  analysis::full_event::const_iterator cbegin() const { return _full_event.cbegin(); }
-  analysis::full_event::iterator end() { return _full_event.end(); }
-  analysis::full_event::const_iterator end() const { return _full_event.cend(); }
-  analysis::full_event::const_iterator cend() const { return _full_event.cend(); }
+  iterator       begin()        noexcept { return _full_event.begin();  }
+  const_iterator begin()  const noexcept { return _full_event.cbegin(); }
+  iterator       end()          noexcept { return _full_event.end();    }
+  const_iterator end()    const noexcept { return _full_event.cend();   }
+  const_iterator cbegin() const noexcept { return _full_event.cbegin(); }
+  const_iterator cend()   const noexcept { return _full_event.cend();   }
+
+  reverse_iterator       rbegin()        noexcept { return _full_event.rbegin();  }
+  const_reverse_iterator rbegin()  const noexcept { return _full_event.crbegin(); }
+  reverse_iterator       rend()          noexcept { return _full_event.rend();    }
+  const_reverse_iterator rend()    const noexcept { return _full_event.crend();   }
+  const_reverse_iterator crbegin() const noexcept { return _full_event.crbegin(); }
+  const_reverse_iterator crend()   const noexcept { return _full_event.crend();   }
 
   std::size_t reset(const analysis::event& points);
   std::size_t reset(const analysis::full_event& points);
@@ -157,12 +179,14 @@ public:
 
   std::size_t prune_on_chi_squared(const real max_chi_squared);
 
+  void clear();
+
   void reparameterize(const Coordinate direction);
 
   struct plotting_keys {
     plot::histogram::name_type t0, x0, y0, z0, vx, vy, vz,
       t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
-      chi_squared_per_dof,
+      chi_squared, chi_squared_per_dof, chi_squared_p_value,
       size,
       beta, beta_error,
       angle, angle_error;
@@ -193,7 +217,6 @@ protected:
   analysis::full_event _full_event;
   real_vector _delta_chi2;
   covariance_matrix_type _covariance;
-  geometry::structure_vector _detectors;
   Coordinate _direction;
 };
 //----------------------------------------------------------------------------------------------
@@ -224,6 +247,33 @@ std::ostream& operator<<(std::ostream& os,
 using track_vector = std::vector<track>;
 //----------------------------------------------------------------------------------------------
 
+//__Track Data Tree Specialization______________________________________________________________
+class track::tree : public analysis::tree {
+public:
+  using branch_value_type = std::vector<double>;
+  using branch_type = branch<branch_value_type>;
+
+  tree(const std::string& name);
+  tree(const std::string& name,
+       const std::string& title);
+
+  branch_type t0, x0, y0, z0, vx, vy, vz,
+              t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
+              chi_squared, chi_squared_per_dof, chi_squared_p_value,
+              size, beta, beta_error, angle, angle_error;
+
+  void insert(const track& track);
+  void clear();
+  void reserve(std::size_t capacity);
+
+  void fill(const track_vector& tracks);
+
+private:
+  branch<uint_fast64_t> _count;
+  std::vector<std::reference_wrapper<branch_type>> _vector_branches;
+};
+//----------------------------------------------------------------------------------------------
+
 //__Fit all Seeds to Tracks_____________________________________________________________________
 const track_vector independent_fit_seeds(const event_vector& seeds,
                                          const Coordinate direction=Coordinate::Z);
@@ -239,6 +289,23 @@ const track_vector overlap_fit_seeds(const full_event_vector& seeds,
                                      const Coordinate direction=Coordinate::Z,
                                      const std::size_t min_overlap=2UL);
 //----------------------------------------------------------------------------------------------
+
+//__Remove Overlaps from Tracks_________________________________________________________________
+const track_vector overlap_fit_tracks(const track_vector& tracks,
+                                      const std::size_t min_overlap=2UL);
+//----------------------------------------------------------------------------------------------
+
+//__Collect Points Which are Untracked__________________________________________________________
+const event non_tracked_points(const event& points,
+                               const track_vector& tracks,
+                               const bool ignore_diverged=false);
+const full_event non_tracked_points(const full_event& points,
+                                    const track_vector& tracks,
+                                    const bool ignore_diverged=false);
+//----------------------------------------------------------------------------------------------
+
+// TODO: implement
+// class track::graph {};
 
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
 

@@ -27,8 +27,10 @@ find_package(ROOT   REQUIRED COMPONENTS MathCore Minuit)
 include(${Geant4_USE_FILE})
 
 add_library(tracker SHARED
-    src/tracker/analysis/analysis.cc
+    src/tracker/analysis/event.cc
+    src/tracker/analysis/join.cc
     src/tracker/analysis/monte_carlo.cc
+    src/tracker/analysis/simulation.cc
     src/tracker/analysis/track.cc
     src/tracker/analysis/tree.cc
     src/tracker/analysis/vertex.cc
@@ -49,7 +51,12 @@ add_library(tracker SHARED
 )
 
 target_compile_features(tracker PUBLIC cxx_std_14)
-target_compile_options(tracker PUBLIC -Wno-missing-braces)
+target_compile_options(tracker PUBLIC -Wno-unknown-warning-option
+                                      -Wno-missing-braces
+                                      -Wunused-function
+                                      -Wno-unused-value
+                                      -Wno-unused-parameter
+                                      -Wno-unused-but-set-parameter)
 
 set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 

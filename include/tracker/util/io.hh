@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
 
 namespace MATHUSLA {
 
@@ -66,7 +67,8 @@ inline std::ostream& repeat(const std::size_t count,
 //----------------------------------------------------------------------------------------------
 
 //__Print Newline Characters____________________________________________________________________
-inline std::ostream& newline(const std::size_t count=1, std::ostream& os=std::cout) {
+inline std::ostream& newline(const std::size_t count=1,
+                             std::ostream& os=std::cout) {
   return repeat(count, '\n', os);
 }
 //----------------------------------------------------------------------------------------------

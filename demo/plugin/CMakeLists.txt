@@ -1,5 +1,5 @@
 #
-# demo/box/CMakeLists.txt
+# demo/plugin/CMakeLists.txt
 #
 # Copyright 2018 Brandon Gomes
 #
@@ -17,12 +17,15 @@
 
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
-add_executable(box tracking.cc geometry.cc logging.cc)
-target_compile_features(box PUBLIC cxx_std_14)
+add_library(plugin SHARED
+  src/
+)
 
-target_link_libraries(box PUBLIC tracker)
-target_include_directories(box PUBLIC
+target_compile_features(plugin PUBLIC cxx_std_14)
+
+target_link_libraries(plugin PUBLIC tracker)
+target_include_directories(plugin PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
 
-install(TARGETS box DESTINATION bin)
+install(TARGETS plugin DESTINATION lib)

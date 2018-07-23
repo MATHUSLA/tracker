@@ -20,6 +20,8 @@
 #define TRACKER__CORE__UNITS_HH
 #pragma once
 
+#include <tracker/core/type.hh>
+
 namespace MATHUSLA {
 
 namespace units { //////////////////////////////////////////////////////////////////////////////
@@ -56,6 +58,62 @@ static const std::string& angle_string    = "rad";
 
 //__Alias Units and Constants___________________________________________________________________
 constexpr auto speed_of_light = c_light;
+//----------------------------------------------------------------------------------------------
+
+//__Scale R3 by Units___________________________________________________________________________
+inline type::r3_point& scale_r3_length(type::r3_point& point) {
+  return point /= length;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Scale R3 by Units___________________________________________________________________________
+inline const type::r3_point scale_r3_length(const type::r3_point& point) {
+  return point / length;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Scale R4 by Units___________________________________________________________________________
+inline type::r4_point& scale_r4_length(type::r4_point& point) {
+  point.t /= time;
+  point.x /= length;
+  point.y /= length;
+  point.z /= length;
+  return point;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Scale R4 by Units___________________________________________________________________________
+inline const type::r4_point scale_r4_length(const type::r4_point& point) {
+  return type::r4_point{point.t / time, point.x / length, point.y / length, point.z / length};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Scale R3 by Units___________________________________________________________________________
+inline type::r3_point& scale_r3_momentum(type::r3_point& point) {
+  return point /= momentum;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Scale R3 by Units___________________________________________________________________________
+inline const type::r3_point scale_r3_momentum(const type::r3_point& point) {
+  return point / momentum;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Scale R4 by Units___________________________________________________________________________
+inline type::r4_point& scale_r4_momentum(type::r4_point& point) {
+  point.t /= energy;
+  point.x /= momentum;
+  point.y /= momentum;
+  point.z /= momentum;
+  return point;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Scale R4 by Units___________________________________________________________________________
+inline const type::r4_point scale_r4_momentum(const type::r4_point& point) {
+  return type::r4_point{point.t / energy, point.x / momentum, point.y / momentum, point.z / momentum};
+}
 //----------------------------------------------------------------------------------------------
 
 } /* namespace units */ ////////////////////////////////////////////////////////////////////////

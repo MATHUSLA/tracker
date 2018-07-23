@@ -26,6 +26,9 @@
 #include <Geant4/G4RunManager.hh>
 #include <Geant4/G4VoxelLimits.hh>
 #include <Geant4/G4AffineTransform.hh>
+#include <Geant4/G4NistManager.hh>
+#include <Geant4/G4PVPlacement.hh>
+#include <Geant4/G4Box.hh>
 // TODO: use #include <Geant4/G4IntersectionSolid.hh>
 // TODO: use #include <Geant4/G4UnionSolid.hh>
 
@@ -119,24 +122,28 @@ class _empty_construction : public G4VUserDetectorConstruction {
 };
 //----------------------------------------------------------------------------------------------
 
+//__Insert Volume into Geometry_________________________________________________________________
+_geometric_volume& _insert_volume(G4VPhysicalVolume* volume,
+                                  const G4AffineTransform& top_transform) {
+  const auto name = volume->GetName();
+  _geometry[name] = _geometric_volume{
+    volume,
+    G4AffineTransform().InverseProduct(
+      top_transform,
+      G4AffineTransform(volume->GetFrameRotation(),
+                        volume->GetFrameTranslation()))
+  };
+  _geometry_insertion_order.push_back(name);
+  return _geometry[name];
+}
+//----------------------------------------------------------------------------------------------
+
 //__Build Geometry Tree and Insertion-Order List________________________________________________
 void _setup_geometry(const _geometric_volume& top) {
   const auto& volume = top.volume->GetLogicalVolume();
   const auto size = volume->GetNoDaughters();
-  for (auto i = 0; i < size; ++i) {
-    const auto& daughter = volume->GetDaughter(i);
-    const auto& name = daughter->GetName();
-    _geometric_volume daughter_geometry{
-      daughter,
-      G4AffineTransform().InverseProduct(
-        top.transform,
-        G4AffineTransform(daughter->GetFrameRotation(),
-                          daughter->GetFrameTranslation()))
-    };
-    _geometry[name] = daughter_geometry;  // FIXME: overwrite if duplicate name! is this wanted?
-    _geometry_insertion_order.push_back(name);
-    _setup_geometry(daughter_geometry);
-  }
+  for (auto i = 0; i < size; ++i)
+    _setup_geometry(_insert_volume(volume->GetDaughter(i), top.transform));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -316,7 +323,9 @@ const structure_value volume(const r4_point& point) {
 //__Box Volume Stream Overload__________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const box_volume& box) {
-  return os << "[" << box.min << "..." << box.center << "..." << box.max << "]";
+  return os << "[" << units::scale_r3_length(box.min)    << "..."
+                   << units::scale_r3_length(box.center) << "..."
+                   << units::scale_r3_length(box.max)    << "]";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -365,7 +374,7 @@ const box_volume _calculate_global_extent(const G4VSolid* solid,
   const auto minmax_x = std::minmax(min.x, max.x);
   const auto minmax_y = std::minmax(min.y, max.y);
   const auto minmax_z = std::minmax(min.z, max.z);
-  return {
+  return box_volume{
     _convert_transform(G4ThreeVector(), translation, rotation),
     {minmax_x.first, minmax_y.first, minmax_z.first},
     {minmax_x.second, minmax_y.second, minmax_z.second}
@@ -481,6 +490,143 @@ const r3_point find_center(const r3_point& point) {
 const r4_point find_center(const r4_point& point) {
   const auto center = limits_of_volume(point).center;
   return {point.t, center.x, center.y, center.z};
+}
+//----------------------------------------------------------------------------------------------
+
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+
+//__Materials___________________________________________________________________________________
+const auto _nist = G4NistManager::Instance();
+auto _material_air = _nist->FindOrBuildMaterial("__AAAA_TRACKER__AIR__MATERIAL__G4_AIR__AAAA__");
+//----------------------------------------------------------------------------------------------
+
+//__Box Builder_________________________________________________________________________________
+G4Box* _create_box(const structure_value& name,
+                   const G4ThreeVector& widths) {
+  return new G4Box(name, 0.5L * std::abs(widths.x()),
+                         0.5L * std::abs(widths.y()),
+                         0.5L * std::abs(widths.z()));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Volume Builder______________________________________________________________________________
+G4LogicalVolume* _create_volume(G4VSolid* solid,
+                                G4Material* material) {
+  return new G4LogicalVolume(solid, material, solid->GetName());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Physical Volume Placer______________________________________________________________________
+G4VPhysicalVolume* _place_volume(G4LogicalVolume* current,
+                                 G4LogicalVolume* parent,
+                                 const G4Transform3D& transform) {
+  return new G4PVPlacement(transform, current, current->GetName(), parent, false, 0);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volume to Geometric Volume______________________________________________________________
+bool _add_to_geometric_volume_local(const _geometric_volume& gvolume,
+                                    const structure_value& name,
+                                    const box_volume& box) {
+  _insert_volume(
+    _place_volume(
+      _create_volume(_create_box(name, _to_G4ThreeVector(box.max - box.min)), _material_air),
+      gvolume.volume->GetLogicalVolume(),
+      G4Translate3D{_to_G4ThreeVector(box.center)}),
+    gvolume.transform);
+  return true;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volume to Geometric Volume______________________________________________________________
+bool _add_to_geometric_volume_global(const _geometric_volume& gvolume,
+                                     const structure_value& name,
+                                     const box_volume& box) {
+  const auto& transform = gvolume.transform;
+  const auto& translation = transform.NetTranslation();
+  const auto& rotation = transform.NetRotation();
+  const auto center = _to_local_transform(_to_G4ThreeVector(box.center), translation, rotation);
+  const auto min = _to_local_transform(_to_G4ThreeVector(box.min), translation, rotation);
+  const auto max = _to_local_transform(_to_G4ThreeVector(box.max), translation, rotation);
+  _insert_volume(
+    _place_volume(
+      _create_volume(_create_box(name, max - min), _material_air),
+      gvolume.volume->GetLogicalVolume(),
+      G4Translate3D{center}),
+    transform);
+  return true;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volume to Geometric Volume Using Insert Function________________________________________
+template<class TernaryFunction>
+std::size_t _add_to_volume(const structure_value& parent,
+                           const structure_value& name,
+                           const box_volume& box,
+                           TernaryFunction insert) {
+  const auto& search = _geometry.find(parent);
+  if (search == _geometry.cend() || _geometry.find(name) != _geometry.cend())
+    return 0UL;
+  return static_cast<std::size_t>(insert(search->second, name, box));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volumes to Geometric Volume Using Insert Function_______________________________________
+template<class TernaryFunction>
+std::size_t _add_to_volume(const structure_value& parent,
+                           const structure_vector& names,
+                           const box_volume_vector& boxes,
+                           TernaryFunction insert) {
+  const auto& search = _geometry.find(parent);
+  if (search == _geometry.cend())
+    return 0UL;
+
+  const auto name_count = names.size();
+  const auto box_count = boxes.size();
+  if (name_count != box_count || name_count == 0UL || box_count == 0UL)
+    return 0UL;
+
+  for (std::size_t i{}; i < name_count; ++i) {
+    const auto name = names[i];
+    if (_geometry.find(name) != _geometry.cend() || !insert(search->second, name, boxes[i]))
+      return i;
+  }
+
+  return name_count;
+}
+//----------------------------------------------------------------------------------------------
+
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Add Volume to Geometry Using Local Coordinates______________________________________________
+std::size_t add_to_volume_local(const structure_value& parent,
+                                const structure_value& name,
+                                const box_volume& box) {
+  return _add_to_volume(parent, name, box, _add_to_geometric_volume_local);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volumes to Geometry Using Local Coordinates_____________________________________________
+std::size_t add_to_volume_local(const structure_value& parent,
+                                const structure_vector& names,
+                                const box_volume_vector& boxes) {
+  return _add_to_volume(parent, names, boxes, _add_to_geometric_volume_local);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volume to Geometry Using Global Coordinates_____________________________________________
+std::size_t add_to_volume_global(const structure_value& parent,
+                                 const structure_value& name,
+                                 const box_volume& box) {
+  return _add_to_volume(parent, name, box, _add_to_geometric_volume_global);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volumes to Geometry Using Global Coordinates____________________________________________
+std::size_t add_to_volume_global(const structure_value& parent,
+                                 const structure_vector& names,
+                                 const box_volume_vector& boxes) {
+  return _add_to_volume(parent, names, boxes, _add_to_geometric_volume_global);
 }
 //----------------------------------------------------------------------------------------------
 

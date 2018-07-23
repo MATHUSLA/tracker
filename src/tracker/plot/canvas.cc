@@ -30,6 +30,8 @@
 #include <ROOT/TColor.h>
 #include <ROOT/TFile.h>
 
+#include <tracker/core/units.hh>
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace plot { ///////////////////////////////////////////////////////////////////////////////
@@ -201,7 +203,7 @@ void canvas::add_point(const real x,
                        const real z,
                        const real size,
                        const color& color) {
-  _impl->_polymarker_map.insert({{color, size}, r3_point{x, y, z}});
+  _impl->_polymarker_map.insert({{color, size}, r3_point{x, y, z} / units::length});
 }
 //----------------------------------------------------------------------------------------------
 
@@ -243,8 +245,8 @@ void canvas::add_line(const real x1,
   auto& lines = _impl->_poly_lines;
   lines.push_back(new TPolyLine3D);
   auto& line = lines.back();
-  line->SetNextPoint(x1, y1, z1);
-  line->SetNextPoint(x2, y2, z2);
+  line->SetNextPoint(x1 / units::length, y1 / units::length, z1 / units::length);
+  line->SetNextPoint(x2 / units::length, y2 / units::length, z2 / units::length);
   line->SetLineWidth(width);
   line->SetLineColor(_to_TColor_id(color));
 }
@@ -375,9 +377,9 @@ void canvas::draw() {
       axis->SetLabelColor(kBlack);
       axis->SetAxisColor(kBlack);
       axis->SetTitleOffset(2);
-      axis->SetXTitle("X (mm)");
-      axis->SetYTitle("Y (mm)");
-      axis->SetZTitle("Z (mm)");
+      axis->SetXTitle(("X (" + units::length_string + ")").c_str());
+      axis->SetYTitle(("Y (" + units::length_string + ")").c_str());
+      axis->SetZTitle(("Z (" + units::length_string + ")").c_str());
     }
   }
 

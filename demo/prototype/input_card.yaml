@@ -6,8 +6,8 @@ draw-events: false
 # Thresholds and Settings
 time-smearing:        true
 layer-axis:           Z
-layer-depth:          50
-line-width:           20
+layer-depth:          5
+line-width:           21
 seed-size:            3
 event-overload-limit: 2   # unused
 event-density-limit:  0.22
@@ -33,7 +33,6 @@ statistics-directory:      .temp/root_data_stat
 statistics-file-prefix:    statistics
 statistics-file-extension: root
 # TODO: add stat keys
-# TODO: transform to TTree storage model
 
 # Geometry Setup
 geometry-file:               demo/prototype/resources/world.prototype.gdml

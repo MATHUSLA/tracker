@@ -19,7 +19,8 @@
 CONFIG_CMAKE=0
 CLEAN_BUILD=0
 RUN_BUILD=0
-OTHER_ARGS=""
+declare -a OTHER_ARGS
+OTHER_ARGS_INDEX=0
 
 while [[ $# -gt 0 ]]; do
     arg="$1"
@@ -37,7 +38,7 @@ while [[ $# -gt 0 ]]; do
             echo -e "  run [args] : run executable after building with \"args\""
             echo -e "  help       : open this help screen"
             exit;;
-        *) OTHER_ARGS="$OTHER_ARGS $arg"
+        *) OTHER_ARGS[OTHER_ARGS_INDEX++]="$arg"
             shift;;
     esac
 done
@@ -47,7 +48,12 @@ if [[ "$CONFIG_CMAKE" -eq 1 && "$CLEAN_BUILD" -eq 1 ]]; then
     rm -rf build;
 fi
 
-mkdir -p build
+if [ ! -d "build" ]; then
+    mkdir -p build
+    CONFIG_CMAKE=1
+    CLEAN_BUILD=1
+fi
+
 cd build
 
 if [[ "$CONFIG_CMAKE" -eq 1 ]]; then cmake .. -DCMAKE_BUILD_TYPE=Release; fi;
@@ -58,5 +64,15 @@ make -j8
 if [[ ! "$?" -eq 0 ]]; then
     echo -e "\nBuild Failed!\n"
 else
-    if [[ "$RUN_BUILD" -eq 1 ]]; then cd ..; ./build/demo/prototype/prototype $OTHER_ARGS; fi;
+    if [[ "$RUN_BUILD" -eq 1 ]]; then
+        cd ..;
+        NAME=${OTHER_ARGS[0]}
+        unset OTHER_ARGS[0]
+        case $NAME in
+          prototype)  ./build/demo/prototype/prototype   ${OTHER_ARGS[*]}; ;;
+          box)        ./build/demo/box/box               ${OTHER_ARGS[*]}; ;;
+          module_box) ./build/demo/module_box/module_box ${OTHER_ARGS[*]}; ;;
+          *) echo -e "ERROR: No Project Named: $NAME"; ;;
+        esac
+    fi;
 fi

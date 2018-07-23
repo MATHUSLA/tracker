@@ -20,7 +20,7 @@
 
 #include <tracker/core/stat.hh>
 #include <tracker/core/units.hh>
-#include <tracker/analysis/analysis.hh>
+#include <tracker/analysis.hh>
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/bit_vector.hh>
@@ -33,7 +33,7 @@ namespace MATHUSLA {
 
 //__Total Geometry of the Prototype Detector____________________________________________________
 const geometry::structure_vector prototype_geometry() {
-  return geometry::full_structure_except({"world", "Sandstone", "Marl", "Mix", "Earth"});
+  return geometry::full_structure_except({"World", "Sandstone", "Marl", "Mix", "Earth"});
 }
 //----------------------------------------------------------------------------------------------
 
@@ -43,11 +43,22 @@ type::real modified_geometry_event_density(const analysis::event& event) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Check If Volume is NOT RPC__________________________________________________________________
+bool is_not_rpc(const geometry::structure_value& name) {
+  return name[0] == 'A' || name[1] == 'B';
+}
+//----------------------------------------------------------------------------------------------
+
 //__Combine Pair of Hits if they Occur in Overlapping RPCs______________________________________
-const geometry::box_volume combine_rpc_volume_pair(const geometry::box_volume& first,
-                                                   const geometry::box_volume& second) {
-  const auto union_volume = geometry::coordinatewise_union(first, second);
-  auto out = geometry::coordinatewise_intersection(first, second);
+const geometry::box_volume combine_rpc_volume_pair(const geometry::structure_value& first,
+                                                   const geometry::structure_value& second) {
+  if (is_not_rpc(first) || is_not_rpc(second))
+    return geometry::box_volume{};
+
+  const auto first_box = geometry::limits_of(first);
+  const auto second_box = geometry::limits_of(second);
+  const auto union_volume = geometry::coordinatewise_union(first_box, second_box);
+  auto out = geometry::coordinatewise_intersection(first_box, second_box);
   out.min.z = union_volume.min.z;
   out.center.z = union_volume.center.z;
   out.max.z = union_volume.max.z;
@@ -76,13 +87,13 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
 
   static const type::real z_lower = 24.0L * units::length;
   static const type::real z_upper = 45.0L * units::length;
-  static const type::real time_threshold = 4.0L * units::time;
+  static const type::real time_threshold = 3.0L * units::time;
 
   using namespace util::math;
 
   const auto size = points.size();
-  if (size == 0)
-    return {};
+  if (size == 0UL)
+    return analysis::event{};
 
   analysis::event event;
   event.reserve(size);
@@ -91,9 +102,9 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
   const auto partition_size = parts.size();
 
   std::size_t layer_index{};
-  for (; layer_index < partition_size - 1; ++layer_index) {
+  for (; layer_index < partition_size - 1UL; ++layer_index) {
     const auto top = parts[layer_index];
-    const auto bottom = parts[layer_index + 1];
+    const auto bottom = parts[layer_index + 1UL];
 
     if (within(top.front().z, bottom.back().z, z_lower, z_upper)) {
       const auto top_size = top.size();
@@ -105,18 +116,16 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
         bottom_index = discard_list.first_unset(bottom_index);
 
         const auto top_point = top[top_index];
-        if (bottom_index == bottom_size) {
+        const auto top_point_name = geometry::volume(top_point);
+        if (bottom_index == bottom_size || is_not_rpc(top_point_name)) {
           event.push_back(top_point);
           ++top_index;
-          bottom_index = 0;
+          bottom_index = 0UL;
           continue;
         }
         const auto bottom_point = bottom[bottom_index];
 
-        const auto combined = combine_rpc_volume_pair(
-          geometry::limits_of_volume(top_point),
-          geometry::limits_of_volume(bottom_point));
-
+        const auto combined = combine_rpc_volume_pair(top_point_name, geometry::volume(bottom_point));
         if (was_combine_successful(combined) && within(top_point.t, bottom_point.t, time_threshold)) {
           const auto new_hit = construct_hit(top_point.t, bottom_point.t, combined);
           event.push_back(new_hit);
@@ -125,7 +134,7 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
           original_rpc_hits.push_back(analysis::add_width(bottom_point));
           discard_list.set(bottom_index);
           ++top_index;
-          bottom_index = 0;
+          bottom_index = 0UL;
         } else {
           ++bottom_index;
         }
@@ -134,20 +143,20 @@ const analysis::event combine_rpc_hits(const analysis::event& points,
       for (; top_index < top_size; ++top_index) {
         event.push_back(top[top_index]);
       }
-      for (bottom_index = 0; bottom_index < bottom_size; ++bottom_index) {
+      for (bottom_index = 0UL; bottom_index < bottom_size; ++bottom_index) {
         if (!discard_list[bottom_index])
           event.push_back(bottom[bottom_index]);
       }
       ++layer_index;
     } else {
       util::algorithm::back_insert_transform(top, event,
-        [](const auto& part){ return part; });
+        [](const auto& part) { return part; });
     }
   }
 
-  if (layer_index == partition_size - 1) {
+  if (layer_index == partition_size - 1UL) {
     util::algorithm::back_insert_transform(parts.back(), event,
-      [](const auto& part){ return part; });
+      [](const auto& part) { return part; });
   }
 
   // FIXME: because upward going tracks are aligned -Z <-> T

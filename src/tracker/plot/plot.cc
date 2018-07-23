@@ -35,7 +35,7 @@ thread_local bool _app_on = false;
 
 //__Start Plotting Environment__________________________________________________________________
 void init(bool on) {
-  root::helper::init();
+  root::helper::init(false);
   _app_on = on;
   if (!_app && _app_on) {
     static int argc = 1;
@@ -49,6 +49,7 @@ void init(bool on) {
 void end() {
   if (_app) {
     try {
+      root::helper::set_batch_mode(false);
       _app->Run(true);
       delete _app;
       _app = nullptr;

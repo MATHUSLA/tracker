@@ -28,11 +28,34 @@
 
 #include "../helper/analysis.hh"
 
+#include <ROOT/TCanvas.h>
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
 namespace { ////////////////////////////////////////////////////////////////////////////////////
+
+//__Calculate Pairwise Closest Approach for Tracks in R3________________________________________
+r3_point _pairwise_track_r3_closest_approach(const track& first,
+                                             const track& second) {
+  const auto x0 = reduce_to_r3(first.origin());
+  const auto x1 = reduce_to_r3(second.origin());
+  const auto v0 = first.ray();
+  const auto v1 = second.ray();
+  const auto v0v0 = v0 * v0;
+  const auto v1v1 = v1 * v1;
+  const auto v0v1 = v0 * v1;
+  const auto v1v0 = v1 * v0;
+  const auto n1 = v0 * v1v1 - v1 * v1v0;
+  const auto n0 = v1 * v0v0 - v0 * v0v1;
+  const auto diff = x1 - x0;
+  // const auto c0 = x0 + (diff * n1 / (v0v0 * v1v1 - v1v0 * v1v0)) * v0;
+  // const auto c1 = x1 - (diff * n0 / (v1v1 * v0v0 - v0v1 * v0v1)) * v1;
+  return 0.5L * ((x1 - (diff * n0 / (v1v1 * v0v0 - v0v1 * v0v1)) * v1)
+               + (x0 + (diff * n1 / (v0v0 * v1v1 - v1v0 * v1v0)) * v0));
+}
+//----------------------------------------------------------------------------------------------
 
 //__Calculate Distance from Vertex to Track at Fixed Time_______________________________________
 real _vertex_track_r3_distance(const real t,
@@ -99,12 +122,11 @@ vertex::fit_parameters _guess_vertex(const track_vector& tracks) {
   std::vector<full_hit> track_fronts;
   track_fronts.reserve(size);
   util::algorithm::back_insert_transform(tracks, track_fronts, [](const auto& track) {
-    const auto front = track.full_front();
-    const auto front_t = front.t;
+    const auto front_t = track.t0_value();
     const auto point = track.at_t(front_t);
     const auto error = track.error_at_t(front_t);
     return full_hit{point.t, point.x, point.y, point.z,
-             r4_point{front.width.t, error.x, error.y, error.z}};
+             r4_point{track.t0_error(), error.x, error.y, error.z}};
   });
 
   real_vector t_errors, x_errors, y_errors, z_errors;
@@ -138,8 +160,11 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
     [&](const auto sum, const auto& track) {
       const auto distance = _vertex_track_r3_distance_with_error(x[0], x[1], x[2], x[3], track);
+      // std::cout << "distance: " << distance.value << " error: " << distance.error << "\n";
       return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
     });
+  // std::cout << "(" << x[0] << ", " << x[1] << ", " << x[2] << ", " << x[3] << ")\n";
+  // std::cout << "NLL: " << out << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -153,21 +178,29 @@ bool _fit_tracks_minuit(const track_vector& tracks,
   auto& y = parameters.y;
   auto& z = parameters.z;
   _nll_fit_tracks = tracks;
+  for (const auto& track : tracks)
+    if (track.empty() || track.fit_diverged())
+      return false;
 
   TMinuit minuit;
   initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
 
-  // FIXME: error handling for -> execute(minuit, _gaussian_nll);
-  if (execute(minuit, _gaussian_nll) == error::diverged)
-    return false;
+  execute(minuit, _gaussian_nll);
 
   get_parameters(minuit, t, x, y, z);
   get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
+
   return true;
 }
 //----------------------------------------------------------------------------------------------
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Vertex Default Constructor__________________________________________________________________
+vertex::vertex() {
+  clear();
+}
+//----------------------------------------------------------------------------------------------
 
 //__Vertex Constructor__________________________________________________________________________
 vertex::vertex(const track_vector& tracks) {
@@ -218,7 +251,7 @@ real vertex::error(const vertex::parameter p) const {
 
 //__Check if Track Fit Converged________________________________________________________________
 bool vertex::fit_diverged() const noexcept {
-  return _guess != _final && _final == vertex::fit_parameters{};
+  return _final == vertex::fit_parameters{};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -227,7 +260,8 @@ real_vector vertex::distances() const {
   real_vector out;
   out.reserve(_tracks.size());
   util::algorithm::back_insert_transform(_tracks, out, [&](const auto& track) {
-    return _vertex_track_r3_distance(t_value(), x_value(), y_value(), z_value(), track); });
+    return _vertex_track_r3_distance(
+      _final.t.value, _final.x.value, _final.y.value, _final.z.value, track); });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -237,7 +271,8 @@ real_vector vertex::distance_errors() const {
   real_vector out;
   out.reserve(_tracks.size());
   util::algorithm::back_insert_transform(_tracks, out, [&](const auto& track) {
-    return _vertex_track_r3_distance_with_error(t_value(), x_value(), y_value(), z_value(), track).error; });
+    return _vertex_track_r3_distance_with_error(
+      _final.t.value, _final.x.value, _final.y.value, _final.z.value, track).error; });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -257,6 +292,12 @@ std::size_t vertex::degrees_of_freedom() const {
 //__Chi-Squared per Degree of Freedom___________________________________________________________
 real vertex::chi_squared_per_dof() const {
   return chi_squared() / degrees_of_freedom();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Chi-Squared P-Value_________________________________________________________________________
+real vertex::chi_squared_p_value() const {
+  return stat::chi_squared_p_value(chi_squared(), degrees_of_freedom());
 }
 //----------------------------------------------------------------------------------------------
 
@@ -289,22 +330,34 @@ real vertex::covariance(const vertex::parameter p,
 //__Reset Vertex with Given Tracks______________________________________________________________
 std::size_t vertex::reset(const track_vector& tracks) {
   _tracks = tracks;
-  const auto new_size = _tracks.size();
+  const auto new_size = size();
+
+  _delta_chi2.clear();
+  _delta_chi2.reserve(new_size);
+
   if (new_size > 1) {
     _guess = _guess_vertex(_tracks);
     _final = _guess;
     if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
       util::algorithm::back_insert_transform(_tracks, _delta_chi2,
         [&](const auto& track) {
-          return _vertex_squared_residual(t_value(), x_value(), y_value(), z_value(), track);
+          return _vertex_squared_residual(
+            _final.t.value,
+            _final.x.value,
+            _final.y.value,
+            _final.z.value,
+            track);
         });
-      return size();
+      return new_size;
     }
+  } else {
+    _guess = {};
   }
-  _delta_chi2.resize(new_size, 0);
+
   _final = {};
   _covariance = {};
-  return new_size;
+  _delta_chi2.resize(new_size, 0);
+  return size();
 }
 //----------------------------------------------------------------------------------------------
 
@@ -379,6 +432,12 @@ std::size_t vertex::prune_on_chi_squared(const real max_chi_squared) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Clear Tracks from Vertex____________________________________________________________________
+void vertex::clear() {
+  reset({});
+}
+//----------------------------------------------------------------------------------------------
+
 //__Fill Plots with Vertexing Variables_________________________________________________________
 void vertex::fill_plots(plot::histogram_collection& collection,
                         const vertex::plotting_keys& keys) const {
@@ -402,7 +461,9 @@ void vertex::fill_plots(plot::histogram_collection& collection,
       distance_error_histogram.insert(distance_error / units::length);
   }
 
+  if (collection.count(keys.chi_squared)) collection[keys.chi_squared].insert(chi_squared());
   if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
+  if (collection.count(keys.chi_squared_p_value)) collection[keys.chi_squared_p_value].insert(chi_squared_p_value());
   if (collection.count(keys.size)) collection[keys.size].insert(size());
 }
 //----------------------------------------------------------------------------------------------
@@ -431,28 +492,61 @@ void vertex::draw_guess(plot::canvas& canvas,
 }
 //----------------------------------------------------------------------------------------------
 
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+//__Print Vertex Parameters with Units__________________________________________________________
+std::ostream& _print_vertex_parameters(std::ostream& os,
+                                       const vertex::fit_parameters& parameters,
+                                       std::size_t prefix_count) {
+  return os
+    << std::string(prefix_count, ' ')
+      << "T: " << std::setw(10) << parameters.t.value / units::time
+               << "  (+/- " << std::setw(10) << parameters.t.error / units::time     << ")  "
+               << units::time_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "X: " << std::setw(10) << parameters.x.value / units::length
+               << "  (+/- " << std::setw(10) << parameters.x.error / units::length   << ")  "
+               << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "Y: " << std::setw(10) << parameters.y.value / units::length
+               << "  (+/- " << std::setw(10) << parameters.y.error / units::length   << ")  "
+               << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "Z: " << std::setw(10) << parameters.z.value / units::length
+               << "  (+/- " << std::setw(10) << parameters.z.error / units::length   << ")  "
+               << units::length_string << "\n";
+}
+//----------------------------------------------------------------------------------------------
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Vertex Output Stream Operator_______________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const vertex& vertex) {
   static const std::string bar(80, '-');
   os << bar << "\n";
+  os.precision(6);
 
   if (vertex.fit_diverged()) {
-    os << "* Vertex Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n";
-    const auto guess = vertex.guess_fit();
-    os << "* Guess Parameters:\n"
-       << "    T: " << guess.t.value << "  (+/- " << guess.t.error << ")\n"
-       << "    X: " << guess.x.value << "  (+/- " << guess.x.error << ")\n"
-       << "    Y: " << guess.y.value << "  (+/- " << guess.y.error << ")\n"
-       << "    Z: " << guess.z.value << "  (+/- " << guess.z.error << ")\n";
+
+    os << "* Vertex Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n"
+       << "* Guess Parameters:\n";
+    _print_vertex_parameters(os, vertex.guess_fit(), 4);
+
+    os << "* Tracks: \n";
+    for (const auto& track : vertex.tracks()) {
+      os << "    (" << track.t0_value() / units::time     << ", "
+                    << track.x0_value() / units::length   << ", "
+                    << track.y0_value() / units::length   << ", "
+                    << track.z0_value() / units::length   << ", "
+                    << track.vx_value() / units::velocity << ", "
+                    << track.vy_value() / units::velocity << ", "
+                    << track.vz_value() / units::velocity << ")\n";
+    }
+
   } else {
-    os << "* Vertex Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n";
-    os << "* Parameters:\n"
-       << "    T: " << vertex.t_value() << "  (+/- " << vertex.t_error() << ")\n"
-       << "    X: " << vertex.x_value() << "  (+/- " << vertex.x_error() << ")\n"
-       << "    Y: " << vertex.y_value() << "  (+/- " << vertex.y_error() << ")\n"
-       << "    Z: " << vertex.z_value() << "  (+/- " << vertex.z_error() << ")\n";
+
+    os << "* Vertex Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n"
+       << "* Parameters:\n";
+    _print_vertex_parameters(os, vertex.final_fit(), 4);
 
     os << "* Tracks: \n";
     const auto size = vertex.size();
@@ -461,34 +555,42 @@ std::ostream& operator<<(std::ostream& os,
     const auto& errors = vertex.distance_errors();
     for (std::size_t i{}; i < size; ++i) {
       const auto& track = tracks[i];
-      os << "    " << distances[i] << "  (+/- " << errors[i]
-         << ")\n      from (" << track.t0_value() << ", "
-                              << track.x0_value() << ", "
-                              << track.y0_value() << ", "
-                              << track.z0_value() << ", "
-                              << track.vx_value() << ", "
-                              << track.vy_value() << ", "
-                              << track.vz_value() << ")\n";
+      os << "    " << distances[i] / units::length
+                   << "  (+/- " << errors[i] / units::length << ") "
+                   << units::length_string << "\n      from ("
+                   << track.t0_value() / units::time     << ", "
+                   << track.x0_value() / units::length   << ", "
+                   << track.y0_value() / units::length   << ", "
+                   << track.z0_value() / units::length   << ", "
+                   << track.vx_value() / units::velocity << ", "
+                   << track.vy_value() / units::velocity << ", "
+                   << track.vz_value() / units::velocity << ")\n";
     }
 
-    os.precision(7);
     os << "* Statistics: \n"
-       << "    dof:      " << vertex.degrees_of_freedom()               << "\n"
+       << "    dof:      " << vertex.degrees_of_freedom()             << "\n"
        << "    chi2:     " << vertex.chi_squared() << " = ";
-    util::io::print_range(vertex.chi_squared_vector(), " + ", "", os)   << "\n";
-    os << "    chi2/dof: " << vertex.chi_squared_per_dof()              << "\n"
-       << "    p-value:  " << stat::chi_squared_p_value(vertex)         << "\n"
+    util::io::print_range(vertex.chi_squared_vector(), " + ", "", os) << "\n";
+    os << "    chi2/dof: " << vertex.chi_squared_per_dof()            << "\n"
+       << "    p-value:  " << vertex.chi_squared_p_value()            << "\n"
        << "    cov mat:  | ";
     const auto matrix = vertex.covariance_matrix();
+    os << std::right;
     for (size_t i = 0; i < 4; ++i) {
       if (i > 0) os << "              | ";
       for (size_t j = 0; j < 4; ++j) {
         const auto cell = matrix[4*i+j];
+        real cell_unit{1.0L};
+        if (i == 0) cell_unit *= units::time;
+        else cell_unit *= units::length;
+        if (j == 0) cell_unit *= units::time;
+        else cell_unit *= units::length;
+
         if (i == j) {
-          os << util::io::bold << util::io::underline
-             << cell << util::io::reset_font << " ";
+          os << util::io::bold << std::setw(14)
+             << cell / cell_unit << util::io::reset_font << " ";
         } else {
-          os << cell << " ";
+          os << std::setw(14) << cell / cell_unit << " ";
         }
       }
       os << "|\n";
@@ -496,6 +598,137 @@ std::ostream& operator<<(std::ostream& os,
   }
 
   return os << bar;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Vertex Data Tree Constructor________________________________________________________________
+vertex::tree::tree(const std::string& name)
+    : tree(name, name) {}
+//----------------------------------------------------------------------------------------------
+
+//__Vertex Data Tree Constructor________________________________________________________________
+vertex::tree::tree(const std::string& name,
+                   const std::string& title)
+    : analysis::tree(name, title),
+      t(emplace_branch<branch_value_type>("t")),
+      x(emplace_branch<branch_value_type>("x")),
+      y(emplace_branch<branch_value_type>("y")),
+      z(emplace_branch<branch_value_type>("z")),
+      t_error(emplace_branch<branch_value_type>("t_error")),
+      x_error(emplace_branch<branch_value_type>("x_error")),
+      y_error(emplace_branch<branch_value_type>("y_error")),
+      z_error(emplace_branch<branch_value_type>("z_error")),
+      chi_squared(emplace_branch<branch_value_type>("chi_squared")),
+      chi_squared_per_dof(emplace_branch<branch_value_type>("chi_squared_per_dof")),
+      chi_squared_p_value(emplace_branch<branch_value_type>("chi_squared_p_value")),
+      size(emplace_branch<branch_value_type>("size")),
+      _count(emplace_branch<decltype(_count)::value_type>("N")),
+      _vector_branches({t, x, y, z,
+                        t_error, x_error, y_error, z_error,
+                        chi_squared, chi_squared_per_dof, chi_squared_p_value,
+                        size}) {}
+//----------------------------------------------------------------------------------------------
+
+//__Track Data Tree Insertion___________________________________________________________________
+void vertex::tree::insert(const vertex& vertex) {
+  t.get().push_back(vertex.t_value() / units::time);
+  x.get().push_back(vertex.x_value() / units::length);
+  y.get().push_back(vertex.y_value() / units::length);
+  z.get().push_back(vertex.z_value() / units::length);
+  t_error.get().push_back(vertex.t_error() / units::time);
+  x_error.get().push_back(vertex.x_error() / units::length);
+  y_error.get().push_back(vertex.y_error() / units::length);
+  z_error.get().push_back(vertex.z_error() / units::length);
+  chi_squared.get().push_back(vertex.chi_squared());
+  chi_squared_per_dof.get().push_back(vertex.chi_squared_per_dof());
+  chi_squared_p_value.get().push_back(vertex.chi_squared_p_value());
+  size.get().push_back(vertex.size());
+  ++_count;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear Vertex Data Tree______________________________________________________________________
+void vertex::tree::clear() {
+  _count = 0UL;
+  for (auto& entry : _vector_branches)
+    entry.get().get().clear();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reserve Space for Vertex Data Tree__________________________________________________________
+void vertex::tree::reserve(std::size_t capacity) {
+  for (auto& entry : _vector_branches)
+    entry.get().get().reserve(capacity);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fill Tree With Vertex Vector________________________________________________________________
+void vertex::tree::fill(const vertex_vector& vertices) {
+  clear();
+  reserve(vertices.size());
+  for (const auto& vertex : vertices)
+    insert(vertex);
+  analysis::tree::fill();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Pairwise Fit Tracks to Vertices_____________________________________________________________
+const vertex_vector pairwise_fit_tracks(const track_vector& tracks) {
+  const auto size = tracks.size();
+  if (size == 0)
+    return vertex_vector{};
+  if (size <= 2)
+    return vertex_vector{vertex{tracks}};
+
+  vertex_vector out;
+  out.reserve(size);
+
+  util::bit_vector join_list(size);
+
+  vertex current_vertex{};
+  track_vector pair;
+  pair.reserve(2UL);
+
+  std::size_t top_index{}, bottom_index{1UL};
+  while (top_index < size) {
+    pair.push_back(tracks[top_index]);
+    bottom_index = join_list.first_unset(bottom_index);
+
+    real best_fit{-1.0L};
+    std::size_t best_bottom_index{bottom_index};
+    while (bottom_index < size) {
+      pair.push_back(tracks[bottom_index]);
+      current_vertex.reset(pair);
+
+      if (current_vertex.fit_converged()) {
+        if (best_fit < 0.0L) {
+          best_fit = current_vertex.chi_squared_per_dof();
+        } else {
+          const auto current_fit = current_vertex.chi_squared_per_dof();
+          if (current_fit < best_fit) {
+            best_fit = current_fit;
+            best_bottom_index = bottom_index;
+          }
+        }
+      }
+
+      bottom_index = join_list.first_unset(1UL + bottom_index);
+      pair.pop_back();
+    }
+
+    if (best_bottom_index < size) {
+      pair.push_back(tracks[best_bottom_index]);
+      out.emplace_back(pair);
+    }
+
+    join_list.set(top_index);
+    top_index = join_list.first_unset(1UL + top_index);
+    bottom_index = 1UL + top_index;
+    pair.clear();
+  }
+
+  out.shrink_to_fit();
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 

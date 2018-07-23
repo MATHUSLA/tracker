@@ -134,17 +134,10 @@ bool _fit_event_minuit(const full_event& points,
   }
 
   if (points.size() == 2) {
-    // FIXME: error handling for -> execute(minuit, _gaussian_nll_two_hit_track);
     if (execute(minuit, _gaussian_nll_two_hit_track) == error::diverged)
       return false;
-    vz.value = _vz_from_c(vx.value, vy.value);
-    vz.error = stat::error::propagate(
-      real_array<2>{-vx.value / vz.value, -vy.value / vz.value},
-      real_array<4>{vx.error * vx.error, vx.error * vy.error,
-                    vx.error * vy.error, vy.error * vy.error});
   } else {
     set_parameters(minuit, 6UL, "VZ", vz);
-    // FIXME: error handling for -> execute(minuit, _gaussian_nll);
     if (execute(minuit, _gaussian_nll) == error::diverged)
       return false;
     get_parameters(minuit, 6UL, vz);
@@ -154,10 +147,17 @@ bool _fit_event_minuit(const full_event& points,
   get_covariance<track::free_parameter_count>(minuit, covariance_matrix);
 
   if (points.size() == 2) {
+    vz.value = _vz_from_c(vx.value, vy.value);
+
     for (std::size_t i{}; i < 5UL; ++i) {
       covariance_matrix[30UL + i] = 0.0L;
       covariance_matrix[6UL * i + 5UL] = 0.0L;
     }
+
+    vz.error = stat::error::propagate(
+      real_array<2>{-vx.value / vz.value, -vy.value / vz.value},
+      real_array<4>{vx.error * vx.error, covariance_matrix[22UL],
+                    covariance_matrix[22UL], vy.error * vy.error});
     covariance_matrix[35UL] = vz.error * vz.error;
   }
 
@@ -166,6 +166,12 @@ bool _fit_event_minuit(const full_event& points,
 //----------------------------------------------------------------------------------------------
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
+//__Track Default Constructor___________________________________________________________________
+track::track() {
+  clear();
+}
+//----------------------------------------------------------------------------------------------
 
 //__Track Constructor___________________________________________________________________________
 track::track(const analysis::event& points,
@@ -188,6 +194,30 @@ const r4_point track::operator()(const real p) const {
     case Coordinate::Y: return at_y(p);
     case Coordinate::Z: return at_z(p);
   }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Origin of Track_________________________________________________________________________
+const r4_point track::origin() const {
+  return r4_point{t0_value(), x0_value(), y0_value(), z0_value()};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Ray of Track____________________________________________________________________________
+const r3_point track::ray() const {
+  return r3_point{vx_value(), vy_value(), vz_value()};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Error in Origin of Track________________________________________________________________
+const r4_point track::origin_error() const {
+  return r4_point{t0_error(), x0_error(), y0_error(), z0_error()};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Error in Ray of Track___________________________________________________________________
+const r3_point track::ray_error() const {
+  return r3_point{vx_error(), vy_error(), vz_error()};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -402,7 +432,7 @@ real track::error(const track::parameter p) const {
 
 //__Check if Track Fit Diverged_________________________________________________________________
 bool track::fit_diverged() const noexcept {
-  return _guess != _final && _final == track::fit_parameters{};
+  return _final == track::fit_parameters{};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -495,6 +525,12 @@ std::size_t track::degrees_of_freedom() const {
 //__Chi-Squared per Degree of Freedom___________________________________________________________
 real track::chi_squared_per_dof() const {
   return chi_squared() / degrees_of_freedom();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Chi-Squared P-Value_________________________________________________________________________
+real track::chi_squared_p_value() const {
+  return stat::chi_squared_p_value(chi_squared(), degrees_of_freedom());
 }
 //----------------------------------------------------------------------------------------------
 
@@ -591,6 +627,16 @@ const std::vector<hit> track::event() const {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get Detectors from Track Hits_______________________________________________________________
+const geometry::structure_vector track::detectors() const {
+  geometry::structure_vector out;
+  out.reserve(size());
+  util::algorithm::back_insert_transform(_full_event, out,
+    [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Reset Track_________________________________________________________________________________
 std::size_t track::reset(const analysis::event& points) {
   return reset(add_width(points));
@@ -600,24 +646,39 @@ std::size_t track::reset(const analysis::event& points) {
 //__Reset Track_________________________________________________________________________________
 std::size_t track::reset(const analysis::full_event& points) {
   _full_event = points;
-  _guess = _guess_track(_full_event);
-  _final = _guess;
-  if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
-    const auto& full_event_begin = _full_event.cbegin();
-    const auto& full_event_end = _full_event.cend();
+  const auto begin = _full_event.cbegin();
+  const auto end = _full_event.cend();
+  const auto new_size = size();
 
-    std::transform(full_event_begin, full_event_end, std::back_inserter(_delta_chi2),
-      [&](const auto& point) {
-        return _track_squared_residual(
-          t0_value(), x0_value(), y0_value(), z0_value(), vx_value(), vy_value(), vz_value(), point);
-      });
+  _delta_chi2.clear();
+  _delta_chi2.reserve(new_size);
 
-    std::transform(full_event_begin, full_event_end, std::back_inserter(_detectors),
-      [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
+  if (new_size > 1) {
+    _guess = _guess_track(_full_event);
+    _final = _guess;
+    if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
+      std::transform(begin, end, std::back_inserter(_delta_chi2),
+        [&](const auto& point) {
+          return _track_squared_residual(
+            _final.t0.value,
+            _final.x0.value,
+            _final.y0.value,
+            _final.z0.value,
+            _final.vx.value,
+            _final.vy.value,
+            _final.vz.value,
+            point);
+        });
+      return new_size;
+    }
   } else {
-    _final = {};
+    _guess = {};
   }
-  return size();
+
+  _final = {};
+  _covariance = {};
+  _delta_chi2.resize(new_size, 0.0L);
+  return new_size;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -697,16 +758,21 @@ std::size_t track::remove(const std::size_t index) {
 //__Remove Hits from Track and Refit____________________________________________________________
 std::size_t track::remove(const std::vector<std::size_t>& indices) {
   const auto sorted = util::algorithm::copy_sort_range(indices);
+  const auto sorted_size = sorted.size();
   const auto s = size();
+  if (sorted_size == 0UL)
+    return s;
+
   analysis::full_event saved_hits;
   saved_hits.reserve(s);
-  for (std::size_t hit_index{}, removal_index{}; hit_index < s; ++hit_index) {
-    if (sorted[removal_index] == hit_index) {
-      ++removal_index;
-    } else {
-      saved_hits.push_back(_full_event[hit_index]);
-    }
+  std::size_t i{};
+  for (std::size_t removal_index{}; i < s && removal_index < sorted_size; ++i) {
+    if (i == sorted[removal_index]) ++removal_index;
+    else saved_hits.push_back(_full_event[i]);
   }
+  for (; i < s; ++i)
+    saved_hits.push_back(_full_event[i]);
+
   saved_hits.shrink_to_fit();
   return reset(saved_hits);
 }
@@ -717,11 +783,16 @@ std::size_t track::prune_on_chi_squared(const real max_chi_squared) {
   const auto s = size();
   std::vector<std::size_t> indices;
   indices.reserve(s);
-  for (std::size_t i{}; i < s; ++i) {
+  for (std::size_t i{}; i < s; ++i)
     if (chi_squared_vector()[i] > max_chi_squared)
       indices.push_back(i);
-  }
   return remove(indices);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear Hits from Track_______________________________________________________________________
+void track::clear() {
+  reset(analysis::full_event{});
 }
 //----------------------------------------------------------------------------------------------
 
@@ -749,7 +820,9 @@ void track::fill_plots(plot::histogram_collection& collection,
   if (collection.count(keys.vx_error)) collection[keys.vx_error].insert(vx_error() / units::velocity);
   if (collection.count(keys.vy_error)) collection[keys.vy_error].insert(vy_error() / units::velocity);
   if (collection.count(keys.vz_error)) collection[keys.vz_error].insert(vz_error() / units::velocity);
+  if (collection.count(keys.chi_squared)) collection[keys.chi_squared].insert(chi_squared());
   if (collection.count(keys.chi_squared_per_dof)) collection[keys.chi_squared_per_dof].insert(chi_squared_per_dof());
+  if (collection.count(keys.chi_squared_p_value)) collection[keys.chi_squared_p_value].insert(chi_squared_p_value());
   if (collection.count(keys.size)) collection[keys.size].insert(size());
   if (collection.count(keys.beta)) collection[keys.beta].insert(beta());
   if (collection.count(keys.beta_error)) collection[keys.beta_error].insert(beta_error());
@@ -764,7 +837,20 @@ void track::draw(plot::canvas& canvas,
                  const plot::color color,
                  const bool with_errors) const {
   if (fit_converged()) {
-    canvas.add_line(front(), back(), size, color);
+    const auto z_sorted = util::algorithm::copy_sort_range(_full_event, z_ordered<analysis::full_hit>{});
+    canvas.add_line(at_z(z_sorted.front().z), at_z(z_sorted.back().z), size, color);
+    if (with_errors) {
+      for (const auto& point : z_sorted) {
+        const auto z = point.z;
+        const auto error = error_at_z(z);
+        canvas.add_box(at_z(z),
+                       error.x,
+                       error.y,
+                       stat::error::uniform(point.width.z),
+                       size,
+                       color);
+      }
+    }
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -778,77 +864,214 @@ void track::draw_guess(plot::canvas& canvas,
 }
 //----------------------------------------------------------------------------------------------
 
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+//__Print Track Parameters with Units___________________________________________________________
+std::ostream& _print_track_parameters(std::ostream& os,
+                                      const track::fit_parameters& parameters,
+                                      std::size_t prefix_count) {
+  return os
+    << std::string(prefix_count, ' ')
+      << "T0: " << std::setw(10) << parameters.t0.value / units::time
+                << "  (+/- " << std::setw(10) << parameters.t0.error / units::time     << ")  "
+                << units::time_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "X0: " << std::setw(10) << parameters.x0.value / units::length
+                << "  (+/- " << std::setw(10) << parameters.x0.error / units::length   << ")  "
+                << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "Y0: " << std::setw(10) << parameters.y0.value / units::length
+                << "  (+/- " << std::setw(10) << parameters.y0.error / units::length   << ")  "
+                << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "Z0: " << std::setw(10) << parameters.z0.value / units::length
+                << "  (+/- " << std::setw(10) << parameters.z0.error / units::length   << ")  "
+                << units::length_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "VX: " << std::setw(10) << parameters.vx.value / units::velocity
+                << "  (+/- " << std::setw(10) << parameters.vx.error / units::velocity << ")  "
+                << units::velocity_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "VY: " << std::setw(10) << parameters.vy.value / units::velocity
+                << "  (+/- " << std::setw(10) << parameters.vy.error / units::velocity << ")  "
+                << units::velocity_string << "\n"
+    << std::string(prefix_count, ' ')
+      << "VZ: " << std::setw(10) << parameters.vz.value / units::velocity
+                << "  (+/- " << std::setw(10) << parameters.vz.error / units::velocity << ")  "
+                << units::velocity_string << "\n";
+}
+//----------------------------------------------------------------------------------------------
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
 //__Track Output Stream Operator________________________________________________________________
 std::ostream& operator<<(std::ostream& os,
                          const track& track) {
   static const std::string bar(80, '-');
   os << bar << "\n";
+  os.precision(6);
 
   if (track.fit_diverged()) {
-    os << "* Track Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n";
-    const auto guess = track.guess_fit();
-    os << "* Guess Parameters: \n"
-       << "    T0: " << guess.t0.value << "  (+/- " << guess.t0.error << ")\n"
-       << "    X0: " << guess.x0.value << "  (+/- " << guess.x0.error << ")\n"
-       << "    Y0: " << guess.y0.value << "  (+/- " << guess.y0.error << ")\n"
-       << "    Z0: " << guess.z0.value << "  (+/- " << guess.z0.error << ")\n"
-       << "    VX: " << guess.vx.value << "  (+/- " << guess.vx.error << ")\n"
-       << "    VY: " << guess.vy.value << "  (+/- " << guess.vy.error << ")\n"
-       << "    VZ: " << guess.vz.value << "  (+/- " << guess.vz.error << ")\n";
-  } else {
-    os << "* Track Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n";
 
-    os.precision(7);
-    os << "* Parameters: \n"
-       << "    T0: " << track.t0_value() << "  (+/- " << track.t0_error() << ")\n"
-       << "    X0: " << track.x0_value() << "  (+/- " << track.x0_error() << ")\n"
-       << "    Y0: " << track.y0_value() << "  (+/- " << track.y0_error() << ")\n"
-       << "    Z0: " << track.z0_value() << "  (+/- " << track.z0_error() << ")\n"
-       << "    VX: " << track.vx_value() << "  (+/- " << track.vx_error() << ")\n"
-       << "    VY: " << track.vy_value() << "  (+/- " << track.vy_error() << ")\n"
-       << "    VZ: " << track.vz_value() << "  (+/- " << track.vz_error() << ")\n";
+    os << "* Track Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n"
+       << "* Guess Parameters: \n";
+    _print_track_parameters(os, track.guess_fit(), 4);
 
-    os.precision(6);
     os << "* Event: \n";
-    os << "    front: " << track.front() << "\n\n";
     const auto points = track.event();
     const auto& detectors = track.detectors();
     const auto size = points.size();
     for (size_t i = 0; i < size; ++i)
-      os << "      " << detectors[i] << " " << points[i] << "\n";
-    os << "\n    back:  " << track.back()  << "\n";
+      os << "    " << detectors[i] << " " << units::scale_r4_length(points[i]) << "\n";
 
-    os.precision(7);
+  } else {
+
+    os << "* Track Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n"
+       << "* Parameters: \n";
+    _print_track_parameters(os, track.final_fit(), 4);
+
+    os << "* Event: \n";
+    os << "    front: " << units::scale_r4_length(track.front()) << "\n\n";
+    const auto points = track.event();
+    const auto& detectors = track.detectors();
+    const auto size = points.size();
+    for (std::size_t i{}; i < size; ++i)
+      os << "      " << detectors[i] << " " << units::scale_r4_length(points[i]) << "\n";
+    os << "\n    back:  " << units::scale_r4_length(track.back())  << "\n";
+
     os << "* Statistics: \n"
-       << "    dof:      " << track.degrees_of_freedom()               << "\n"
+       << "    dof:      " << track.degrees_of_freedom()             << "\n"
        << "    chi2:     " << track.chi_squared() << " = ";
-    util::io::print_range(track.chi_squared_vector(), " + ", "", os)   << "\n";
-    os << "    chi2/dof: " << track.chi_squared_per_dof()              << "\n"
-       << "    p-value:  " << stat::chi_squared_p_value(track)         << "\n"
+    util::io::print_range(track.chi_squared_vector(), " + ", "", os) << "\n";
+    os << "    chi2/dof: " << track.chi_squared_per_dof()            << "\n"
+       << "    p-value:  " << track.chi_squared_p_value()            << "\n"
        << "    cov mat:  | ";
     const auto matrix = track.covariance_matrix();
+    os << std::right;
     for (size_t i = 0; i < 6; ++i) {
       if (i > 0) os << "              | ";
       for (size_t j = 0; j < 6; ++j) {
         const auto cell = matrix[6*i+j];
+        real cell_unit{1.0L};
+
+        if (i == 0) cell_unit *= units::time;
+        else if (i > 2) cell_unit *= units::velocity;
+        else cell_unit *= units::length;
+
+        if (j == 0) cell_unit *= units::time;
+        else if (j > 2) cell_unit *= units::velocity;
+        else cell_unit *= units::length;
+
         if (i == j) {
-          os << util::io::bold << util::io::underline
-             << cell << util::io::reset_font << " ";
+          os << util::io::bold << std::setw(14)
+             << cell / cell_unit << util::io::reset_font << " ";
         } else {
-          os << cell << " ";
+          os << std::setw(14) << cell / cell_unit << " ";
         }
       }
       os << "|\n";
     }
 
-    os.precision(6);
     os << "* Dynamics: \n"
-       << "    beta:  " << track.beta()  << "  (+/- " << track.beta_error()  << ")\n"
-       << "    unit:  " << track.unit()  << "  (+/- " << track.unit_error()  << ")\n"
-       << "    angle: " << track.angle() << "  (+/- " << track.angle_error() << ")\n";
+       << "    beta:  " << track.beta()
+                        << "  (+/- " << track.beta_error() << ")\n"
+       << "    unit:  " << track.unit()
+                        << "  (+/- " << track.unit_error() << ")\n"
+       << "    angle: " << track.angle() / units::angle
+                        << "  (+/- " << track.angle_error() / units::angle << ")  "
+                        << units::angle_string << "\n";
   }
 
   return os << bar;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Track Data Tree Constructor_________________________________________________________________
+track::tree::tree(const std::string& name)
+    : tree(name, name) {}
+//----------------------------------------------------------------------------------------------
+
+//__Track Data Tree Constructor_________________________________________________________________
+track::tree::tree(const std::string& name,
+                  const std::string& title)
+    : analysis::tree(name, title),
+      t0(emplace_branch<branch_value_type>("t0")),
+      x0(emplace_branch<branch_value_type>("x0")),
+      y0(emplace_branch<branch_value_type>("y0")),
+      z0(emplace_branch<branch_value_type>("z0")),
+      vx(emplace_branch<branch_value_type>("vx")),
+      vy(emplace_branch<branch_value_type>("vy")),
+      vz(emplace_branch<branch_value_type>("vz")),
+      t0_error(emplace_branch<branch_value_type>("t0_error")),
+      x0_error(emplace_branch<branch_value_type>("x0_error")),
+      y0_error(emplace_branch<branch_value_type>("y0_error")),
+      z0_error(emplace_branch<branch_value_type>("z0_error")),
+      vx_error(emplace_branch<branch_value_type>("vx_error")),
+      vy_error(emplace_branch<branch_value_type>("vy_error")),
+      vz_error(emplace_branch<branch_value_type>("vz_error")),
+      chi_squared(emplace_branch<branch_value_type>("chi_squared")),
+      chi_squared_per_dof(emplace_branch<branch_value_type>("chi_squared_per_dof")),
+      chi_squared_p_value(emplace_branch<branch_value_type>("chi_squared_p_value")),
+      size(emplace_branch<branch_value_type>("size")),
+      beta(emplace_branch<branch_value_type>("beta")),
+      beta_error(emplace_branch<branch_value_type>("beta_error")),
+      angle(emplace_branch<branch_value_type>("angle")),
+      angle_error(emplace_branch<branch_value_type>("angle_error")),
+      _count(emplace_branch<decltype(_count)::value_type>("N")),
+      _vector_branches({t0, x0, y0, z0, vx, vy, vz,
+                        t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
+                        chi_squared, chi_squared_per_dof, chi_squared_p_value,
+                        size, beta, beta_error, angle, angle_error}) {}
+//----------------------------------------------------------------------------------------------
+
+//__Track Data Tree Insertion___________________________________________________________________
+void track::tree::insert(const track& track) {
+  t0.get().push_back(track.t0_value() / units::time);
+  x0.get().push_back(track.x0_value() / units::length);
+  y0.get().push_back(track.y0_value() / units::length);
+  z0.get().push_back(track.z0_value() / units::length);
+  vx.get().push_back(track.vx_value() / units::velocity);
+  vy.get().push_back(track.vy_value() / units::velocity);
+  vz.get().push_back(track.vz_value() / units::velocity);
+  t0_error.get().push_back(track.t0_error() / units::time);
+  x0_error.get().push_back(track.x0_error() / units::length);
+  y0_error.get().push_back(track.y0_error() / units::length);
+  z0_error.get().push_back(track.z0_error() / units::length);
+  vx_error.get().push_back(track.vx_error() / units::velocity);
+  vy_error.get().push_back(track.vy_error() / units::velocity);
+  vz_error.get().push_back(track.vz_error() / units::velocity);
+  chi_squared.get().push_back(track.chi_squared());
+  chi_squared_per_dof.get().push_back(track.chi_squared_per_dof());
+  chi_squared_p_value.get().push_back(track.chi_squared_p_value());
+  size.get().push_back(track.size());
+  beta.get().push_back(track.beta());
+  beta_error.get().push_back(track.beta_error());
+  angle.get().push_back(track.angle());
+  angle_error.get().push_back(track.angle_error());
+  ++_count;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Clear Track Data Tree_______________________________________________________________________
+void track::tree::clear() {
+  _count = 0UL;
+  for (auto& entry : _vector_branches)
+    entry.get().get().clear();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reserve Space for Track Data Tree___________________________________________________________
+void track::tree::reserve(std::size_t capacity) {
+  for (auto& entry : _vector_branches)
+    entry.get().get().reserve(capacity);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fill Tree With Track Vector_________________________________________________________________
+void track::tree::fill(const track_vector& tracks) {
+  clear();
+  reserve(tracks.size());
+  for (const auto& track : tracks)
+    insert(track);
+  analysis::tree::fill();
 }
 //----------------------------------------------------------------------------------------------
 
@@ -870,6 +1093,29 @@ const track_vector independent_fit_seeds(const event_vector& seeds,
 const track_vector independent_fit_seeds(const full_event_vector& seeds,
                                          const Coordinate direction) {
   return independent_fit_seeds<>(seeds, direction);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Fit all Seeds to Tracks using Overlaps______________________________________________________
+template<class EventVector,
+  typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
+const track_vector overlap_fit_seeds(const EventVector& seeds,
+                                     const Coordinate direction,
+                                     const std::size_t min_overlap) {
+  const auto size = seeds.size();
+  if (size == 0UL) return track_vector{};
+  if (size == 1UL) return independent_fit_seeds(seeds, direction);
+  return overlap_fit_tracks(independent_fit_seeds(seeds, direction), min_overlap);
+}
+const track_vector overlap_fit_seeds(const event_vector& seeds,
+                                     const Coordinate direction,
+                                     const std::size_t min_overlap) {
+  return overlap_fit_seeds<>(seeds, direction, min_overlap);
+}
+const track_vector overlap_fit_seeds(const full_event_vector& seeds,
+                                     const Coordinate direction,
+                                     const std::size_t min_overlap) {
+  return overlap_fit_seeds<>(seeds, direction, min_overlap);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -941,29 +1187,23 @@ std::size_t _time_ordered_overlap_size(const Event& first,
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
-//__Fit all Seeds to Tracks using Overlaps______________________________________________________
-template<class EventVector,
-  typename Event = typename EventVector::value_type,
-  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-const track_vector overlap_fit_seeds(const EventVector& seeds,
-                                     const Coordinate direction,
-                                     const std::size_t min_overlap) {
-  const auto size = seeds.size();
-  if (size == 0UL)
-    return track_vector{};
-  else if (size == 1UL)
-    return independent_fit_seeds(seeds, direction);
+//__Remove Overlaps from Tracks_________________________________________________________________
+const track_vector overlap_fit_tracks(const track_vector& tracks,
+                                      const std::size_t min_overlap) {
+  const auto size = tracks.size();
+  if (size <= 1UL)
+    return tracks;
 
   track_vector out;
   out.reserve(size);
 
-  const auto sorted_seeds = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
-  const auto track_buffer = independent_fit_seeds(sorted_seeds, direction);
-
   util::index_vector<> track_indices(size);
+  util::algorithm::sort_range(track_indices,
+    [&](const auto left, const auto right) { return tracks[left].size() > tracks[right].size(); });
+
   /* FIXME: what to do here?
   util::algorithm::stable_sort_range(track_indices, [&](const auto left, const auto right) {
-    return track_buffer[left].chi_squared_per_dof() > track_buffer[right].chi_squared_per_dof();
+    return tracks[left].chi_squared_per_dof() > tracks[right].chi_squared_per_dof();
   });
   */
 
@@ -974,35 +1214,68 @@ const track_vector overlap_fit_seeds(const EventVector& seeds,
     bottom_index = visited.first_unset(bottom_index);
     const auto top_track_index = track_indices[top_index];
     if (bottom_index == size) {
-      out.push_back(track_buffer[top_track_index]);
+      out.push_back(tracks[top_track_index]);
       visited.set(top_index);
-      top_index = visited.first_unset(1 + top_index);
-      bottom_index = 1 + top_index;
+      top_index = visited.first_unset(1UL + top_index);
+      bottom_index = 1UL + top_index;
       continue;
     }
-    if (min_overlap <= _time_ordered_overlap_size(sorted_seeds[top_track_index],
-                                                  sorted_seeds[track_indices[bottom_index]])) {
+    if (min_overlap <= _time_ordered_overlap_size(tracks[top_track_index].full_event(),
+                                                  tracks[track_indices[bottom_index]].full_event())) {
       visited.set(bottom_index);
     }
     ++bottom_index;
   }
 
-  for (std::size_t i = 0; i < size; ++i)
+  for (std::size_t i{}; i < size; ++i)
     if (!visited[i])
-      out.push_back(track_buffer[track_indices[i]]);
+      out.push_back(tracks[track_indices[i]]);
 
   out.shrink_to_fit();
   return out;
 }
-const track_vector overlap_fit_seeds(const event_vector& seeds,
-                                     const Coordinate direction,
-                                     const std::size_t min_overlap) {
-  return overlap_fit_seeds<>(seeds, direction, min_overlap);
+//----------------------------------------------------------------------------------------------
+
+//__Collect Points Which are Untracked__________________________________________________________
+template<class Event,
+  typename Hit = typename Event::value_type,
+  typename = std::enable_if_t<is_r4_type_v<Hit>>>
+const Event non_tracked_points(const Event& points,
+                               const track_vector& tracks,
+                               const bool ignore_diverged) {
+  const auto size = points.size();
+  if (size == 0)
+    return Event{};
+
+  util::bit_vector save_list(size);
+
+  for (const auto& track : tracks) {
+    if (ignore_diverged && track.fit_diverged())
+      continue;
+    for (const auto& point : track.event()) {
+      const auto search = util::algorithm::range_binary_find_first(points, point,
+        [](const auto left, const auto right) { return left.t < right.t;});
+      if (search != points.cend())
+        save_list.set(static_cast<std::size_t>(search - points.cbegin()));
+    }
+    if (save_list.count() == size)
+      break;
+  }
+
+  Event out;
+  out.reserve(size - save_list.count());
+  save_list.unset_conditional_push_back(points, out);
+  return out;
 }
-const track_vector overlap_fit_seeds(const full_event_vector& seeds,
-                                     const Coordinate direction,
-                                     const std::size_t min_overlap) {
-  return overlap_fit_seeds<>(seeds, direction, min_overlap);
+const event non_tracked_points(const event& points,
+                               const track_vector& tracks,
+                               const bool ignore_diverged) {
+  return non_tracked_points<>(points, tracks, ignore_diverged);
+}
+const full_event non_tracked_points(const full_event& points,
+                                    const track_vector& tracks,
+                                    const bool ignore_diverged) {
+  return non_tracked_points<>(points, tracks, ignore_diverged);
 }
 //----------------------------------------------------------------------------------------------
 
