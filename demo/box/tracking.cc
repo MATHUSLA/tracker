@@ -101,7 +101,7 @@ int box_tracking(int argc,
   geometry::open(options.geometry_file,
                  options.default_time_error);
 
-  box_geometry::update_global_geometry();
+  // box_geometry::update_global_geometry();
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
