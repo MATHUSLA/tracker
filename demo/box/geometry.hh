@@ -58,6 +58,16 @@ static const auto half_detector_height          = 0.5L * full_detector_height;
 
 } /* namespace constants */ ////////////////////////////////////////////////////////////////////
 
+struct manager {
+
+  static const geometry::box_volume limits_of(const geometry::structure_value& name);
+  static const geometry::box_volume limits_of_volume(const type::r3_point point);
+  static const geometry::box_volume limits_of_volume(const type::r4_point point);
+  static type::real time_resolution_of_volume(const type::r3_point point);
+  static type::real time_resolution_of_volume(const type::r4_point point);
+
+};
+
 //__Total Geometry of the Box Detector__________________________________________________________
 const geometry::structure_vector& full();
 //----------------------------------------------------------------------------------------------

@@ -44,18 +44,19 @@ const analysis::track_vector find_primary_tracks(const analysis::full_event& eve
   const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
   const auto seeds = analysis::seed(options.seed_size, layers, analysis::seed_heuristic::double_cone{options.line_width});
 
-
+  /*
   for (const auto& seed : seeds) {
     for (std::size_t i{}; i < seed.size() - 1; ++i) {
       canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
     }
   }
+  */
 
 
   auto first_tracks = analysis::independent_fit_seeds(analysis::join_all(seeds), options.layer_axis);
 
   for (auto& track : first_tracks)
-    track.prune_on_chi_squared(10.0L);
+    track.prune_on_chi_squared(20.0L);
 
   const auto out = analysis::overlap_fit_tracks(first_tracks, 1UL);
   non_track_points = analysis::non_tracked_points(event, out, true);
@@ -100,8 +101,6 @@ int box_tracking(int argc,
   plot::init(options.draw_events);
   geometry::open(options.geometry_file,
                  options.default_time_error);
-
-  // box_geometry::update_global_geometry();
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;

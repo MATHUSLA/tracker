@@ -189,7 +189,6 @@ util::index_vector<N> _get_unique_volume_ranges(const geometry::structure_vector
 
   util::index_vector<> out;
   out.reserve(unique_size);
-
   std::size_t i{}, u{};
   for (; i < size && u < unique_size; ++i) {
     if (indices[i] == unique_indices[u]) {
@@ -197,7 +196,6 @@ util::index_vector<N> _get_unique_volume_ranges(const geometry::structure_vector
       ++u;
     }
   }
-
   return out;
 }
 //----------------------------------------------------------------------------------------------

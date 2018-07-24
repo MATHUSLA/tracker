@@ -474,14 +474,14 @@ real time_resolution_of_volume(const r4_point& point) {
 //----------------------------------------------------------------------------------------------
 
 //__Box Volume Containment Check________________________________________________________________
-constexpr bool is_inside_volume(const r3_point& point,
-                                const box_volume& box) {
+bool is_inside_volume(const r3_point& point,
+                      const box_volume& box) {
   return util::algorithm::between(point.x, box.min.x, box.max.x)
       && util::algorithm::between(point.y, box.min.y, box.max.y)
       && util::algorithm::between(point.z, box.min.z, box.max.z);
 }
-constexpr bool is_inside_volume(const r4_point& point,
-                                const box_volume& box) {
+bool is_inside_volume(const r4_point& point,
+                      const box_volume& box) {
   return is_inside_volume(reduce_to_r3(point), box);
 }
 //----------------------------------------------------------------------------------------------
