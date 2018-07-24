@@ -7,10 +7,10 @@ draw-events: false
 time-smearing:         true
 simulated-efficiency:  0.9
 simulated-noise-rate:  1e-6
-event-time-window:     0, 1000
+event-time-window:     300, 900
 layer-axis:            Z
-layer-depth:           1
-line-width:            32
+layer-depth:           10
+line-width:            40
 seed-size:             3
 event-density-limit:   0.25
 

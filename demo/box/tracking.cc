@@ -169,7 +169,7 @@ int box_tracking(int argc,
 
       auto secondary_tracks = find_tracks(non_primary_track_points,
                                           options,
-                                          8.0L,
+                                          100.0L,
                                           0UL,
                                           canvas,
                                           non_secondary_track_points);

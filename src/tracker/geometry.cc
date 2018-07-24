@@ -67,7 +67,7 @@ thread_local std::vector<structure_value> _geometry_insertion_order;
 thread_local real _default_time_resolution = 2 * units::time;
 thread_local time_resolution_map _time_resolution_map;
 thread_local std::unordered_map<r3_point, structure_value, r3_point_hash> _name_cache;
-// TODO: use -> thread_local std::unordered_map<std::string, box_volume> _box_cache;
+// TODO: add thread_local std::unordered_map<std::string, box_volume> _box_cache;
 const G4VoxelLimits _blank_voxels;
 const G4AffineTransform _blank_transform;
 //----------------------------------------------------------------------------------------------
@@ -230,9 +230,15 @@ void close() {
   _geometry.clear();
   _time_resolution_map.clear();
   _name_cache.clear();
-  // _box_cache.clear();
-  delete _world;
-  delete _manager;
+  // TODO: add _box_cache.clear();
+  if (_world) {
+    delete _world;
+    _world = nullptr;
+  }
+  if (_manager) {
+    delete _manager;
+    _manager = nullptr;
+  }
 }
 //----------------------------------------------------------------------------------------------
 
