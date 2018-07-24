@@ -896,14 +896,6 @@ inline const normal get_distribution_parameters<normal>(const distribution_union
 
 // TODO: finish get_parameters
 
-//__Build Normal Distribution Parameter Type from Distribution Parameters_______________________
-template<>
-inline const piecewise_constant get_distribution_parameters<piecewise_constant>(const distribution_union& distribution) {
-  const auto& dist = distribution.piecewise_constant;
-  return piecewise_constant(dist.intervals(), dist.densities());
-}
-//----------------------------------------------------------------------------------------------
-
 } /* namespace detail */ ///////////////////////////////////////////////////////////////////////
 
 //__Random Number Generator_____________________________________________________________________
