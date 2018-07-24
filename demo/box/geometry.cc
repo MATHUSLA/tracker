@@ -18,6 +18,8 @@
 
 #include "geometry.hh"
 
+#include <iostream> // TODO: remove
+
 namespace MATHUSLA {
 
 namespace box_geometry { ///////////////////////////////////////////////////////////////////////
@@ -46,9 +48,46 @@ const geometry::structure_vector& full() {
 //----------------------------------------------------------------------------------------------
 
 //__Update Global Geometry______________________________________________________________________
-void update_geometry() {
+void update_global_geometry() {
   // TODO: finish
+  static bool initialized = false;
+  if (!initialized) {
+    namespace cn = constants;
+    geometry::structure_vector names;
+    names.reserve(cn::total_count);
+    geometry::box_volume_vector boxes;
+    boxes.reserve(cn::total_count);
 
+    for (std::size_t z{}; z < cn::layer_count; ++z) {
+      const auto z_fullname = std::to_string(1 + z);
+      for (std::size_t y{}; y < cn::y_total_count; ++y) {
+        const auto y_name = std::to_string(y);
+        const auto y_fullname = y < 10UL ? "00" + y_name : (y < 100UL ? "0" + y_name : y_name);
+        for (std::size_t x{}; x < cn::x_total_count; ++x) {
+          const auto x_name = std::to_string(x);
+          names.push_back(z_fullname
+            + (x < 10UL ? "00" + x_name : (x < 100UL ? "0" + x_name : x_name))
+            + y_fullname);
+
+          // TODO: fix
+          geometry::box_volume volume;
+          volume.min.x = cn::x_displacement + cn::scintillator_x_width * x;
+          volume.max.x = volume.min.x + cn::scintillator_x_width;
+          volume.min.y = cn::y_displacement + cn::scintillator_y_width * y;
+          volume.max.y = volume.min.y + cn::scintillator_y_width;
+          volume.max.z = -(cn::scintillator_height + cn::layer_spacing) * z;
+          volume.min.z = volume.max.z - cn::scintillator_height;
+          volume.center = 0.5L * (volume.min + volume.max);
+          boxes.push_back(volume);
+
+          // std::cout << names.back() << " -> " << boxes.back() << "\n";
+        }
+      }
+    }
+
+    geometry::add_to_volume_global("Box", names, boxes);
+    initialized = true;
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -95,9 +134,8 @@ const geometry::box_volume limits_of(const geometry::structure_value& name) {
 //__Limits of Point_____________________________________________________________________________
 const geometry::box_volume limits_of_volume(const type::r3_point point) {
   namespace cn = constants;
-  static const auto half_y_edge = 0.5L * cn::y_edge_length;
 
-  const auto local_position = point - type::r3_point{cn::x_displacement, -half_y_edge, cn::steel_height};
+  const auto local_position = point - type::r3_point{cn::x_displacement, cn::y_displacement, cn::steel_height};
   const auto layer_z = local_position.z + cn::steel_height + cn::layer_count * cn::scintillator_height - cn::layer_spacing;
   const auto x_index = static_cast<std::size_t>(std::ceil(local_position.x / cn::scintillator_x_width));
   const auto y_index = static_cast<std::size_t>(std::ceil(local_position.y / cn::scintillator_y_width));
@@ -106,7 +144,7 @@ const geometry::box_volume limits_of_volume(const type::r3_point point) {
   geometry::box_volume out;
   out.min.x = cn::x_displacement + cn::scintillator_x_width * x_index;
   out.max.x = out.min.x + cn::scintillator_x_width;
-  out.min.y = cn::y_displacement - half_y_edge + cn::scintillator_y_width * y_index;
+  out.min.y = cn::y_displacement + cn::scintillator_y_width * y_index;
   out.max.y = out.min.y + cn::scintillator_y_width;
   out.max.z = -(cn::scintillator_height + cn::layer_spacing) * z_index;
   out.min.z = out.max.z - cn::scintillator_height;

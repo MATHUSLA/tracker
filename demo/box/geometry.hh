@@ -34,20 +34,25 @@ namespace box_geometry { ///////////////////////////////////////////////////////
 
 namespace constants { //////////////////////////////////////////////////////////////////////////
 
-static const auto x_edge_length                 = 100*units::m;
-static const auto y_edge_length                 = 100*units::m;
-static const auto x_displacement                = 100*units::m;
-static const auto y_displacement                = 0;
-static const auto steel_height                  = 3.0L*units::cm;
-static const auto air_gap                       = 20*units::m;
-static const auto scintillator_x_width          = 0.25L*units::m;
-static const auto scintillator_y_width          = 0.25L*units::m;
-static const auto scintillator_height           = 1*units::cm;
-static const auto scintillator_casing_thickness = 0.1*units::cm;
-static const auto layer_spacing                 = 1.5L*units::m;
+static const auto x_edge_length                 = 100.00L*units::m;
+static const auto y_edge_length                 = 100.00L*units::m;
+static const auto x_displacement                = 100.00L*units::m;
+static const auto y_displacement                = -50.00L*units::m;
+static const auto steel_height                  =   3.00L*units::cm;
+static const auto air_gap                       =  20.00L*units::m;
+static const auto scintillator_x_width          =   0.25L*units::m;
+static const auto scintillator_y_width          =   0.25L*units::m;
+static const auto scintillator_height           =   1.00L*units::cm;
+static const auto scintillator_casing_thickness =   0.10L*units::cm;
+static const auto layer_spacing                 =   1.50L*units::m;
 static const auto layer_count                   = 5UL;
+
 static const auto x_total_count                 = static_cast<std::size_t>(std::ceil(x_edge_length / scintillator_x_width));
 static const auto y_total_count                 = static_cast<std::size_t>(std::ceil(y_edge_length / scintillator_y_width));
+static const auto total_count                   = x_total_count * y_total_count * layer_count;
+
+static const auto half_x_edge_length            = 0.5L * x_edge_length;
+static const auto half_y_edge_length            = 0.5L * y_edge_length;
 static const auto full_detector_height          = steel_height + layer_count * (layer_spacing + scintillator_height);
 static const auto half_detector_height          = 0.5L * full_detector_height;
 
@@ -58,7 +63,7 @@ const geometry::structure_vector& full();
 //----------------------------------------------------------------------------------------------
 
 //__Update Global Geometry______________________________________________________________________
-void update_geometry();
+void update_global_geometry();
 //----------------------------------------------------------------------------------------------
 
 //__Hits per Total Geometry_____________________________________________________________________

@@ -50,7 +50,7 @@ const analysis::track_vector find_primary_tracks(const analysis::full_event& eve
       canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
     }
   }
-  
+
 
   auto first_tracks = analysis::independent_fit_seeds(analysis::join_all(seeds), options.layer_axis);
 
@@ -100,6 +100,8 @@ int box_tracking(int argc,
   plot::init(options.draw_events);
   geometry::open(options.geometry_file,
                  options.default_time_error);
+
+  box_geometry::update_global_geometry();
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
