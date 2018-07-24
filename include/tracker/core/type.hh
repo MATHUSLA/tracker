@@ -34,6 +34,7 @@
 
 #include <tracker/util/algorithm.hh>
 #include <tracker/util/math.hh>
+#include <tracker/util/type.hh>
 
 namespace MATHUSLA {
 
@@ -42,6 +43,14 @@ namespace type { ///////////////////////////////////////////////////////////////
 //__Numerical Types_____________________________________________________________________________
 using integer = long long;
 using real = long double;
+using integer_range = util::type::basic_range<integer>;
+using real_range = util::type::basic_range<real>;
+//----------------------------------------------------------------------------------------------
+
+//__Custom Integer Containers___________________________________________________________________
+template<std::size_t N>
+using integer_array = std::array<real, N>;
+using integer_vector = std::vector<integer>;
 //----------------------------------------------------------------------------------------------
 
 //__RN Point Types______________________________________________________________________________

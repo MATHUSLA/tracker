@@ -45,6 +45,12 @@ const geometry::structure_vector& full() {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Update Global Geometry______________________________________________________________________
+void update_geometry() {
+  // TODO: do
+}
+//----------------------------------------------------------------------------------------------
+
 //__Hits per Total Geometry_____________________________________________________________________
 type::real event_density(const analysis::full_event& event) {
   return event.size() / static_cast<type::real>(full().size());

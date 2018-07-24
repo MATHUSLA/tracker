@@ -44,6 +44,35 @@ const analysis::track_vector find_primary_tracks(const analysis::full_event& eve
   const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
   const auto seeds = analysis::seed(options.seed_size, layers, analysis::seed_heuristic::double_cone{options.line_width});
 
+
+  for (const auto& seed : seeds) {
+    for (std::size_t i{}; i < seed.size() - 1; ++i) {
+      canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
+    }
+  }
+  
+
+  auto first_tracks = analysis::independent_fit_seeds(analysis::join_all(seeds), options.layer_axis);
+
+  for (auto& track : first_tracks)
+    track.prune_on_chi_squared(10.0L);
+
+  const auto out = analysis::overlap_fit_tracks(first_tracks, 1UL);
+  non_track_points = analysis::non_tracked_points(event, out, true);
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Find Tracks for Box_________________________________________________________________________
+const analysis::track_vector find_tracks(const analysis::full_event& event,
+                                         const reader::tracking_options& options,
+                                         const type::real limit_chi_squared,
+                                         const std::size_t overlap,
+                                         plot::canvas& canvas,
+                                         analysis::full_event& non_track_points) {
+  const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
+  const auto seeds = analysis::seed(options.seed_size, layers, analysis::seed_heuristic::double_cone{options.line_width});
+
   /*
   for (const auto& seed : seeds) {
     for (std::size_t i{}; i < seed.size() - 1; ++i) {
@@ -55,9 +84,9 @@ const analysis::track_vector find_primary_tracks(const analysis::full_event& eve
   auto first_tracks = analysis::independent_fit_seeds(analysis::join_all(seeds), options.layer_axis);
 
   for (auto& track : first_tracks)
-    track.prune_on_chi_squared(10.0L);
+    track.prune_on_chi_squared(limit_chi_squared);
 
-  const auto out = analysis::overlap_fit_tracks(first_tracks, 1UL);
+  const auto out = analysis::overlap_fit_tracks(first_tracks, overlap);
   non_track_points = analysis::non_tracked_points(event, out, true);
   return out;
 }
@@ -100,7 +129,7 @@ int box_tracking(int argc,
     analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
     analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
 
-    for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
+    for (std::size_t event_counter=22; event_counter < 23/*import_size*/; ++event_counter) {
       const auto event = box_geometry::add_widths(imported_events[event_counter]);
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
@@ -113,8 +142,14 @@ int box_tracking(int argc,
       if (event_size == 0UL || compression_size == event_size)
         continue;
 
-      const auto event_density = box_geometry::event_density(compressed_event);
-      print_event_summary(event_counter, event_size, compression_size, event_density);
+      const auto altered_event = analysis::simulation::add_noise(
+        analysis::simulation::use_efficiency(compressed_event, options.simulated_efficiency),
+        options.simulated_noise_rate,
+        options.event_time_window.begin,
+        options.event_time_window.end);
+
+      const auto event_density = box_geometry::event_density(altered_event);
+      print_event_summary(event_counter, altered_event.size(), compression_size, event_density);
 
       if (event_density >= options.event_density_limit)
         continue;
@@ -123,23 +158,23 @@ int box_tracking(int argc,
       if (options.draw_events) {
         // draw_detector_centers(canvas);
         draw_mc_tracks(canvas, analysis::mc::convert(mc_imported_events[event_counter]));
-        for (const auto hit : compressed_event)
+        for (const auto hit : altered_event)
           canvas.add_point(type::reduce_to_r3(hit), 0.8, plot::color::BLACK);
       }
 
       analysis::full_event non_primary_track_points, non_secondary_track_points;
-      auto tracks = find_primary_tracks(compressed_event, options, canvas, non_primary_track_points);
+      auto tracks = find_primary_tracks(altered_event, options, canvas, non_primary_track_points);
 
-      /*
-      auto secondary_tracks = find_secondary_tracks(non_primary_track_points,
-                                                    options,
-                                                    canvas,
-                                                    non_secondary_track_points);
+      auto secondary_tracks = find_tracks(non_primary_track_points,
+                                          options,
+                                          8.0L,
+                                          0UL,
+                                          canvas,
+                                          non_secondary_track_points);
       tracks.reserve(tracks.size() + secondary_tracks.size());
       tracks.insert(tracks.cend(),
                     std::make_move_iterator(secondary_tracks.cbegin()),
                     std::make_move_iterator(secondary_tracks.cend()));
-      */
 
       save_tracks(tracks, canvas, track_tree, options);
       print_tracking_summary(event, tracks);

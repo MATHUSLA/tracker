@@ -44,8 +44,14 @@ const full_event use_efficiency(const full_event& points,
 //----------------------------------------------------------------------------------------------
 
 //__Add Noise to Points_________________________________________________________________________
-const event add_noise(const event& points);
-const full_event add_noise(const full_event& points);
+const event add_noise(const event& points,
+                      const real rate,
+                      const real begin_time,
+                      const real end_time);
+const full_event add_noise(const full_event& points,
+                           const real rate,
+                           const real begin_time,
+                           const real end_time);
 //----------------------------------------------------------------------------------------------
 
 } } /* namespace analysis::simulation */ ///////////////////////////////////////////////////////

@@ -41,7 +41,7 @@ inline void empty_handler(int, Bool_t, const char*, const char*) {}
 
 //__Set Batch Mode for ROOT Environment_________________________________________________________
 inline void set_batch_mode(const bool mode) {
-  gROOT->SetBatch(mode);
+  // gROOT->SetBatch(mode);
 }
 //----------------------------------------------------------------------------------------------
 

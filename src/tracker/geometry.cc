@@ -493,6 +493,38 @@ const r4_point find_center(const r4_point& point) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get Volumes from Set of Points______________________________________________________________
+const structure_vector volumes(const r3_point_vector& points) {
+  structure_vector out;
+  out.reserve(points.size());
+  util::algorithm::back_insert_transform(points, out,
+    [](const auto point) { return volume(point); });
+  return out;
+}
+const structure_vector volumes(const r4_point_vector& points) {
+  structure_vector out;
+  out.reserve(points.size());
+  util::algorithm::back_insert_transform(points, out,
+    [](const auto point) { return volume(point); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Unique Volumes from Set of Points_______________________________________________________
+const structure_vector unique_volumes(const r3_point_vector& points) {
+  auto out = volumes(points);
+  out.erase(std::unique(out.begin(), out.end()), out.cend());
+  out.shrink_to_fit();
+  return out;
+}
+const structure_vector unique_volumes(const r4_point_vector& points) {
+  auto out = volumes(points);
+  out.erase(std::unique(out.begin(), out.end()), out.cend());
+  out.shrink_to_fit();
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Materials___________________________________________________________________________________
