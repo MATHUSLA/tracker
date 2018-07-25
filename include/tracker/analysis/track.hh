@@ -140,7 +140,15 @@ public:
   const full_hit full_front() const noexcept { return _full_event.front(); }
   const full_hit full_back() const noexcept { return _full_event.back(); }
   const analysis::full_event& full_event() const noexcept { return _full_event; }
-  const geometry::structure_vector detectors() const;
+
+  template<class Geometry=void>
+  const geometry::structure_vector detectors() const {
+    geometry::structure_vector out;
+    out.reserve(size());
+    util::algorithm::back_insert_transform(_full_event, out,
+      [](const auto point) { return geometry::custom::volume<Geometry>(reduce_to_r3(point)); });
+    return out;
+  }
 
   Coordinate direction() const noexcept { return _direction; }
 

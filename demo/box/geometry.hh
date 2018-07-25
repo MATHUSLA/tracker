@@ -25,14 +25,16 @@
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
-namespace geometry = MATHUSLA::TRACKER::geometry;
+namespace tracker_geometry = MATHUSLA::TRACKER::geometry;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
 
-namespace box_geometry { ///////////////////////////////////////////////////////////////////////
+namespace box { ////////////////////////////////////////////////////////////////////////////////
 
 namespace constants { //////////////////////////////////////////////////////////////////////////
+
+static const auto scintillator_time_resolution  = 1.5L*units::ns;
 
 static const auto x_edge_length                 = 100.00L*units::m;
 static const auto y_edge_length                 = 100.00L*units::m;
@@ -44,62 +46,49 @@ static const auto scintillator_x_width          =   0.25L*units::m;
 static const auto scintillator_y_width          =   0.25L*units::m;
 static const auto scintillator_height           =   1.00L*units::cm;
 static const auto scintillator_casing_thickness =   0.10L*units::cm;
-static const auto layer_spacing                 =   1.50L*units::m;
-static const auto layer_count                   = 5UL;
 
+static const auto layer_spacing                 = 1.50L*units::m;
+static const auto layer_count                   = 5UL;
 static const auto x_total_count                 = static_cast<std::size_t>(std::ceil(x_edge_length / scintillator_x_width));
 static const auto y_total_count                 = static_cast<std::size_t>(std::ceil(y_edge_length / scintillator_y_width));
 static const auto total_count                   = x_total_count * y_total_count * layer_count;
 
 static const auto half_x_edge_length            = 0.5L * x_edge_length;
 static const auto half_y_edge_length            = 0.5L * y_edge_length;
-static const auto full_detector_height          = steel_height + layer_count * (layer_spacing + scintillator_height);
+static const auto full_detector_height          = steel_height + layer_count * (layer_spacing + scintillator_height) - layer_spacing;
 static const auto half_detector_height          = 0.5L * full_detector_height;
 
 } /* namespace constants */ ////////////////////////////////////////////////////////////////////
 
-struct manager {
+//__Geometry Structure__________________________________________________________________________
+struct geometry {
 
-  static const geometry::box_volume limits_of(const geometry::structure_value& name);
-  static const geometry::box_volume limits_of_volume(const type::r3_point point);
-  static const geometry::box_volume limits_of_volume(const type::r4_point point);
+  struct index_triple {
+    std::size_t x, y, z;
+    index_triple() = default;
+    index_triple(std::size_t x_index,
+                 std::size_t y_index,
+                 std::size_t z_index) : x(x_index), y(y_index), z(z_index) {}
+    index_triple(const type::r3_point point);
+    const tracker_geometry::box_volume limits() const;
+    const tracker_geometry::structure_value name() const;
+  };
+
+  static const tracker_geometry::structure_vector& full();
+  static type::real event_density(const analysis::full_event& event);
+  static const tracker_geometry::structure_value volume(const type::r3_point point);
+  static const tracker_geometry::structure_value volume(const type::r4_point point);
+  static const tracker_geometry::box_volume limits_of(const tracker_geometry::structure_value& name);
+  static const tracker_geometry::box_volume limits_of_volume(const type::r3_point point);
+  static const tracker_geometry::box_volume limits_of_volume(const type::r4_point point);
+  static type::real default_time_resolution();
+  static type::real time_resolution_of(const tracker_geometry::structure_value& name);
   static type::real time_resolution_of_volume(const type::r3_point point);
   static type::real time_resolution_of_volume(const type::r4_point point);
-
 };
-
-//__Total Geometry of the Box Detector__________________________________________________________
-const geometry::structure_vector& full();
 //----------------------------------------------------------------------------------------------
 
-//__Update Global Geometry______________________________________________________________________
-void update_global_geometry();
-//----------------------------------------------------------------------------------------------
-
-//__Hits per Total Geometry_____________________________________________________________________
-type::real event_density(const analysis::full_event& event);
-//----------------------------------------------------------------------------------------------
-
-//__Add Widths to Point_________________________________________________________________________
-const analysis::full_hit add_widths(const analysis::hit& point);
-const analysis::full_event add_widths(const analysis::event& points);
-//----------------------------------------------------------------------------------------------
-
-//__Limits of Volume____________________________________________________________________________
-const geometry::box_volume limits_of(const geometry::structure_value& name);
-//----------------------------------------------------------------------------------------------
-
-//__Limits of Point_____________________________________________________________________________
-const geometry::box_volume limits_of_volume(const type::r3_point point);
-const geometry::box_volume limits_of_volume(const type::r4_point point);
-//----------------------------------------------------------------------------------------------
-
-//__Time Resolution of Point____________________________________________________________________
-type::real time_resolution_of_volume(const type::r3_point point);
-type::real time_resolution_of_volume(const type::r4_point point);
-//----------------------------------------------------------------------------------------------
-
-} /* namespace box_geometry */ /////////////////////////////////////////////////////////////////
+} /* namespace box */ //////////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 

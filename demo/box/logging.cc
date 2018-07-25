@@ -24,10 +24,25 @@
 
 namespace MATHUSLA {
 
-//__Add Detector Centers to Canvas______________________________________________________________
-void draw_detector_centers(plot::canvas& canvas) {
-  for (const auto& name : box_geometry::full())
-    canvas.add_point(box_geometry::limits_of(name).center, 0.25, plot::color::MAGENTA);
+namespace box { ////////////////////////////////////////////////////////////////////////////////
+
+//__Draw Main Detector To Canvas________________________________________________________________
+void draw_detector(plot::canvas& canvas) {
+  for (const auto& volume : tracker_geometry::full_structure_except({"World",
+                                                                     "Box",
+                                                                     "SteelPlate",
+                                                                     "ModifiedSandstone",
+                                                                     "Marl",
+                                                                     "Mix",
+                                                                     "Earth"})) {
+    const auto limits = tracker_geometry::limits_of(volume);
+    canvas.add_box(limits.center,
+                   limits.max.x - limits.min.x,
+                   limits.max.y - limits.min.y,
+                   limits.max.z - limits.min.z,
+                   2.5,
+                   plot::color::MAGENTA);
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -36,7 +51,7 @@ void draw_track(plot::canvas& canvas,
                 const analysis::track& track) {
   const auto& full_event = track.full_event();
   const auto size = full_event.size();
-  if (size == 0)
+  if (size == 0UL)
     return;
   uint_fast8_t brightness = 0, step = 230 / size;
   for (const auto& point : full_event) {
@@ -65,12 +80,11 @@ void draw_mc_tracks(plot::canvas& canvas,
                      box.max.x - box.min.x,
                      box.max.y - box.min.y,
                      box.max.z - box.min.z,
-                     1,
+                     5,
                      plot::color::BLUE);
     }
-    for (std::size_t i = 0; i < size - 1; ++i) {
+    for (std::size_t i = 0; i < size - 1; ++i)
       canvas.add_line(type::reduce_to_r3(hits[i]), type::reduce_to_r3(hits[i+1]), 1, plot::color::BLUE);
-    }
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -79,15 +93,13 @@ void draw_mc_tracks(plot::canvas& canvas,
 void draw_vertex_and_guess(plot::canvas& canvas,
                            const analysis::vertex& vertex) {
   vertex.draw(canvas, 1.2, plot::color::GREEN);
-  vertex.draw_guess(canvas, 1.2, plot::color::RED);
 
   if (vertex.fit_converged()) {
+    vertex.draw_guess(canvas, 1.2, plot::color::RED);
     const auto point = vertex.point();
-    for (const auto& track : vertex.tracks()) {
+    for (const auto& track : vertex.tracks())
       canvas.add_line(track.at_t(point.t), point, 2, plot::color::GREEN);
-    }
   }
-
 }
 //----------------------------------------------------------------------------------------------
 
@@ -120,5 +132,7 @@ void save_vertices(const analysis::vertex_vector& vertices,
   tree.fill(vertices);
 }
 //----------------------------------------------------------------------------------------------
+
+} /* namespace box */ //////////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */

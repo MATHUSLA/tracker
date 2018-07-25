@@ -21,7 +21,6 @@
 #include <array>
 #include <fstream>
 
-#include <tracker/geometry.hh>
 #include <tracker/core/units.hh>
 
 #include <tracker/util/command_line_parser.hh>

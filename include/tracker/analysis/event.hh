@@ -51,8 +51,12 @@ const full_hit add_width(const hit& point) {
   const auto center = limits.center;
   const auto min = limits.min;
   const auto max = limits.max;
-  return { point.t, center.x, center.y, center.z,
-           { geometry::custom::time_resolution_of<Geometry>(volume), max.x - min.x, max.y - min.y, max.z - min.z } };
+  return full_hit{
+    point.t, center.x, center.y, center.z,
+    {geometry::custom::time_resolution_of<Geometry>(volume),
+     max.x - min.x,
+     max.y - min.y,
+     max.z - min.z}};
 }
 template<class Geometry=void>
 const full_event add_width(const event& points) {

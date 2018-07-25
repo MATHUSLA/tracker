@@ -28,8 +28,6 @@
 #include <tracker/util/math.hh>
 #include <tracker/util/type.hh>
 
-#include <iostream> // TODO: remove
-
 namespace MATHUSLA { namespace TRACKER {
 
 namespace stat { ///////////////////////////////////////////////////////////////////////////////
@@ -926,8 +924,8 @@ public:
   real max() const;
 
   real operator()();
-
   operator real() { return (*this)(); };
+  real next() { return (*this)(); }
 
   void seed(const std::uint_least32_t seed);
   void seed(std::seed_seq& seq);
@@ -936,6 +934,31 @@ public:
 
   bool operator==(const generator& other) const;
   bool operator!=(const generator& other) const { return !(*this == other); }
+
+  template<class Container, class FillFunction>
+  FillFunction fill_container(const std::size_t count,
+                              Container& c,
+                              FillFunction f) {
+    for (std::size_t i{}; i < count; ++i)
+      f(c, next());
+    return std::move(f);
+  }
+
+  template<class Container, class FillFunction>
+  FillFunction fill_container_until(const std::size_t count,
+                                    Container& c,
+                                    FillFunction f) {
+    for (std::size_t i{}; i < count; ++i)
+      if (!f(c, next())) break;
+    return std::move(f);
+  }
+
+  template<class Container, class FillFunction>
+  FillFunction fill_container_until(Container& c,
+                                    FillFunction f) {
+    while (f(c, next())) {}
+    return std::move(f);
+  }
 
 private:
   std::mt19937 _engine;
