@@ -67,7 +67,7 @@ thread_local std::vector<structure_value> _geometry_insertion_order;
 thread_local real _default_time_resolution = 2 * units::time;
 thread_local time_resolution_map _time_resolution_map;
 thread_local std::unordered_map<r3_point, structure_value, r3_point_hash> _name_cache;
-// TODO: use -> thread_local std::unordered_map<std::string, box_volume> _box_cache;
+// TODO: add thread_local std::unordered_map<std::string, box_volume> _box_cache;
 const G4VoxelLimits _blank_voxels;
 const G4AffineTransform _blank_transform;
 //----------------------------------------------------------------------------------------------
@@ -230,9 +230,15 @@ void close() {
   _geometry.clear();
   _time_resolution_map.clear();
   _name_cache.clear();
-  // _box_cache.clear();
-  delete _world;
-  delete _manager;
+  // TODO: add _box_cache.clear();
+  if (_world) {
+    delete _world;
+    _world = nullptr;
+  }
+  if (_manager) {
+    delete _manager;
+    _manager = nullptr;
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -468,14 +474,14 @@ real time_resolution_of_volume(const r4_point& point) {
 //----------------------------------------------------------------------------------------------
 
 //__Box Volume Containment Check________________________________________________________________
-constexpr bool is_inside_volume(const r3_point& point,
-                                const box_volume& box) {
+bool is_inside_volume(const r3_point& point,
+                      const box_volume& box) {
   return util::algorithm::between(point.x, box.min.x, box.max.x)
       && util::algorithm::between(point.y, box.min.y, box.max.y)
       && util::algorithm::between(point.z, box.min.z, box.max.z);
 }
-constexpr bool is_inside_volume(const r4_point& point,
-                                const box_volume& box) {
+bool is_inside_volume(const r4_point& point,
+                      const box_volume& box) {
   return is_inside_volume(reduce_to_r3(point), box);
 }
 //----------------------------------------------------------------------------------------------
@@ -490,6 +496,38 @@ const r3_point find_center(const r3_point& point) {
 const r4_point find_center(const r4_point& point) {
   const auto center = limits_of_volume(point).center;
   return {point.t, center.x, center.y, center.z};
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Volumes from Set of Points______________________________________________________________
+const structure_vector volumes(const r3_point_vector& points) {
+  structure_vector out;
+  out.reserve(points.size());
+  util::algorithm::back_insert_transform(points, out,
+    [](const auto point) { return volume(point); });
+  return out;
+}
+const structure_vector volumes(const r4_point_vector& points) {
+  structure_vector out;
+  out.reserve(points.size());
+  util::algorithm::back_insert_transform(points, out,
+    [](const auto point) { return volume(point); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Unique Volumes from Set of Points_______________________________________________________
+const structure_vector unique_volumes(const r3_point_vector& points) {
+  auto out = volumes(points);
+  out.erase(std::unique(out.begin(), out.end()), out.cend());
+  out.shrink_to_fit();
+  return out;
+}
+const structure_vector unique_volumes(const r4_point_vector& points) {
+  auto out = volumes(points);
+  out.erase(std::unique(out.begin(), out.end()), out.cend());
+  out.shrink_to_fit();
+  return out;
 }
 //----------------------------------------------------------------------------------------------
 

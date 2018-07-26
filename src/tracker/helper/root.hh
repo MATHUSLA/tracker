@@ -41,19 +41,19 @@ inline void empty_handler(int, Bool_t, const char*, const char*) {}
 
 //__Set Batch Mode for ROOT Environment_________________________________________________________
 inline void set_batch_mode(const bool mode) {
-  gROOT->SetBatch(mode);
+  // gROOT->SetBatch(mode);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Initialize ROOT Environment_________________________________________________________________
-inline void init(const bool interactive=true) {
+inline void init(const bool interactive=false) {
   static bool initialized = false;
   if (!initialized) {
     gErrorIgnoreLevel = kFatal;
     SetErrorHandler(error::empty_handler);
+    set_batch_mode(!interactive);
     initialized = true;
   }
-  set_batch_mode(!interactive);
 }
 //----------------------------------------------------------------------------------------------
 

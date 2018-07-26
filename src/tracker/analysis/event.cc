@@ -18,9 +18,6 @@
 
 #include <tracker/analysis/event.hh>
 
-#include <tracker/util/algorithm.hh>
-#include <tracker/geometry.hh>
-
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
@@ -58,8 +55,8 @@ template<class Event,
   typename = std::enable_if_t<is_r4_type_v<Point>>>
 real geometric_event_density(const Event& points) {
   const auto size = points.size();
-  if (size == 0)
-    return 0;
+  if (size == 0UL)
+    return 0.0L;
 
   geometry::structure_vector structures;
   util::algorithm::back_insert_transform(points, structures,
@@ -75,24 +72,6 @@ real geometric_event_density(const event& points) {
 }
 real geometric_event_density(const full_event& points) {
   return geometric_event_density<>(points);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Find The Errors Associated with a Hit from Geometry_________________________________________
-const full_hit add_width(const hit& point) {
-  const auto volume = geometry::volume(point);
-  const auto limits = geometry::limits_of(volume);
-  const auto center = limits.center;
-  const auto min = limits.min;
-  const auto max = limits.max;
-  return { point.t, center.x, center.y, center.z,
-           { geometry::time_resolution_of(volume), max.x - min.x, max.y - min.y, max.z - min.z } };
-}
-const full_event add_width(const event& points) {
-  full_event out;
-  out.reserve(points.size());
-  util::algorithm::back_insert_transform(points, out, [](const auto& point) { return add_width(point); });
-  return out;
 }
 //----------------------------------------------------------------------------------------------
 

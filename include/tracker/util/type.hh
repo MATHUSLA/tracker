@@ -61,25 +61,26 @@ constexpr std::size_t count(const Ts& ...) noexcept { return sizeof...(Ts); }
 //----------------------------------------------------------------------------------------------
 
 //__Size Ordering for Sorter____________________________________________________________________
+// TODO: use general size function
 template<class C = void>
 struct size_ordered {
   constexpr bool operator()(const C& a,
                             const C& b) const {
-    return util::type::size<C>(a) < util::type::size<C>(b);
+    return a.size() < b.size();
   }
 };
 template<class C = void>
 struct size_less {
   constexpr bool operator()(const C& a,
                             const C& b) const {
-    return util::type::size<C>(a) < util::type::size<C>(b);
+    return a.size() < b.size();
   }
 };
 template<class C = void>
 struct size_greater {
   constexpr bool operator()(const C& a,
                             const C& b) const {
-    return util::type::size<C>(a) > util::type::size<C>(b);
+    return a.size() > b.size();
   }
 };
 //----------------------------------------------------------------------------------------------
@@ -125,6 +126,11 @@ template<class CharT>
 constexpr bool isspace(CharT&& ch) {
   return std::isspace(static_cast<unsigned char>(std::forward<CharT>(ch)));
 }
+//----------------------------------------------------------------------------------------------
+
+//__Primitive Range Class_______________________________________________________________________
+template<class Begin, class End=Begin>
+struct basic_range { Begin begin; End end; };
 //----------------------------------------------------------------------------------------------
 
 } } /* namespace util::type */ /////////////////////////////////////////////////////////////////

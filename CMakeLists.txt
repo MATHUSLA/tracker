@@ -30,7 +30,6 @@ add_library(tracker SHARED
     src/tracker/analysis/event.cc
     src/tracker/analysis/join.cc
     src/tracker/analysis/monte_carlo.cc
-    src/tracker/analysis/simulation.cc
     src/tracker/analysis/track.cc
     src/tracker/analysis/tree.cc
     src/tracker/analysis/vertex.cc

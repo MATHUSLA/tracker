@@ -127,16 +127,26 @@ real time_resolution_of_volume(const r4_point& point);
 //----------------------------------------------------------------------------------------------
 
 //__Box Volume Containment Check________________________________________________________________
-constexpr bool is_inside_volume(const r3_point& point,
-                                const box_volume& box);
-constexpr bool is_inside_volume(const r4_point& point,
-                                const box_volume& box);
+bool is_inside_volume(const r3_point& point,
+                      const box_volume& box);
+bool is_inside_volume(const r4_point& point,
+                      const box_volume& box);
 //----------------------------------------------------------------------------------------------
 
 //__Find Center of Geometry_____________________________________________________________________
 const r3_point find_center(const structure_value& name);
 const r3_point find_center(const r3_point& point);
 const r4_point find_center(const r4_point& point);
+//----------------------------------------------------------------------------------------------
+
+//__Get Volumes from Set of Points______________________________________________________________
+const structure_vector volumes(const r3_point_vector& points);
+const structure_vector volumes(const r4_point_vector& points);
+//----------------------------------------------------------------------------------------------
+
+//__Get Unique Volumes from Set of Points_______________________________________________________
+const structure_vector unique_volumes(const r3_point_vector& points);
+const structure_vector unique_volumes(const r4_point_vector& points);
 //----------------------------------------------------------------------------------------------
 
 //__Add Volume to Geometry Using Local Coordinates______________________________________________
@@ -162,6 +172,355 @@ std::size_t add_to_volume_global(const structure_value& parent,
                                  const structure_vector& names,
                                  const box_volume_vector& boxes);
 //----------------------------------------------------------------------------------------------
+
+namespace custom { /////////////////////////////////////////////////////////////////////////////
+
+//__Current Geometry File_______________________________________________________________________
+template<class Geometry=void>
+const std::string& current_geometry_path() {
+  return Geometry::current_geometry_path();
+}
+template<>
+inline const std::string& current_geometry_path<void>() {
+  return geometry::current_geometry_path();
+}
+//----------------------------------------------------------------------------------------------
+
+//__List of all Geometry Volumes________________________________________________________________
+template<class Geometry=void>
+const structure_vector full_structure() {
+  return Geometry::full_structure();
+}
+template<>
+inline const structure_vector full_structure<void>() {
+  return geometry::full_structure();
+}
+//----------------------------------------------------------------------------------------------
+
+//__List of all Geometry Volumes Except those in the List_______________________________________
+template<class Geometry=void>
+const structure_vector full_structure_except(const structure_vector& names) {
+  return Geometry::full_structure_except(names);
+}
+template<>
+inline const structure_vector full_structure_except<void>(const structure_vector& names) {
+  return geometry::full_structure_except(names);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Default Time Resolution for Detector Volumes____________________________________________
+template<class Geometry=void>
+real default_time_resolution() {
+  return Geometry::default_time_resolution();
+}
+template<>
+inline real default_time_resolution<void>() {
+  return geometry::default_time_resolution();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Volume Hierarchy of a Volume________________________________________________________________
+// TODO: finish
+// template<class Geometry>
+// const std::vector<std::string> volume_hierarchy(const std::string& name);
+//----------------------------------------------------------------------------------------------
+
+//__Volume Containment Check____________________________________________________________________
+template<class Geometry=void>
+bool is_inside_volume(const r3_point& point,
+                      const structure_value& name) {
+  return Geometry::is_inside_volume(point, name);
+}
+template<>
+inline bool is_inside_volume<void>(const r3_point& point,
+                                   const structure_value& name) {
+  return geometry::is_inside_volume(point, name);
+}
+template<class Geometry=void>
+bool is_inside_volume(const r4_point& point,
+                      const structure_value& name) {
+  return Geometry::is_inside_volume(point, name);
+}
+template<>
+inline bool is_inside_volume<void>(const r4_point& point,
+                                   const structure_value& name) {
+  return geometry::is_inside_volume(point, name);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Volume Hierarchy Search_____________________________________________________________________
+template<class Geometry=void>
+const structure_vector volume_hierarchy(const r3_point& point) {
+  return Geometry::volume_hierarchy(point);
+}
+template<>
+inline const structure_vector volume_hierarchy<void>(const r3_point& point) {
+  return geometry::volume_hierarchy(point);
+}
+template<class Geometry=void>
+const structure_vector volume_hierarchy(const r4_point& point) {
+  return Geometry::volume_hierarchy(point);
+}
+template<>
+inline const structure_vector volume_hierarchy<void>(const r4_point& point) {
+  return geometry::volume_hierarchy(point);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Volume Search_______________________________________________________________________________
+template<class Geometry=void>
+const structure_value volume(const r3_point& point) {
+  return Geometry::volume(point);
+}
+template<>
+inline const structure_value volume<void>(const r3_point& point) {
+  return geometry::volume(point);
+}
+template<class Geometry=void>
+const structure_value volume(const r4_point& point) {
+  return Geometry::volume(point);
+}
+template<>
+inline const structure_value volume<void>(const r4_point& point) {
+  return geometry::volume(point);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Limit Box of a Volume_______________________________________________________________________
+template<class Geometry=void>
+const box_volume limits_of(const structure_value& name) {
+  return Geometry::limits_of(name);
+}
+template<>
+inline const box_volume limits_of<void>(const structure_value& name) {
+  return geometry::limits_of(name);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Time Error on a Detector Component__________________________________________________________
+template<class Geometry=void>
+real time_resolution_of(const structure_value& name) {
+  return Geometry::time_resolution_of(name);
+}
+template<>
+inline real time_resolution_of<void>(const structure_value& name) {
+  return geometry::time_resolution_of(name);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Compute Intersection of Box Volumes_________________________________________________________
+template<class Geometry=void>
+const box_volume coordinatewise_intersection(const box_volume& first,
+                                             const box_volume& second) {
+  return Geometry::coordinatewise_intersection(first, second);
+}
+template<>
+inline const box_volume coordinatewise_intersection<void>(const box_volume& first,
+                                                          const box_volume& second) {
+  return geometry::coordinatewise_intersection(first, second);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Compute Union of Box Volumes________________________________________________________________
+template<class Geometry=void>
+const box_volume coordinatewise_union(const box_volume& first,
+                                      const box_volume& second) {
+  return Geometry::coordinatewise_intersection(first, second);
+}
+template<>
+inline const box_volume coordinatewise_union<void>(const box_volume& first,
+                                                   const box_volume& second) {
+  return geometry::coordinatewise_intersection(first, second);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Limit Box of the Volume with Point__________________________________________________________
+template<class Geometry=void>
+const box_volume limits_of_volume(const r3_point& point) {
+  return Geometry::limits_of_volume(point);
+}
+template<>
+inline const box_volume limits_of_volume<void>(const r3_point& point) {
+  return geometry::limits_of_volume(point);
+}
+template<class Geometry=void>
+const box_volume limits_of_volume(const r4_point& point) {
+  return Geometry::limits_of_volume(point);
+}
+template<>
+inline const box_volume limits_of_volume<void>(const r4_point& point) {
+  return geometry::limits_of_volume(point);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Time Error on a Detector Component from a Point_____________________________________________
+template<class Geometry=void>
+real time_resolution_of_volume(const r3_point& point) {
+  return Geometry::time_resolution_of_volume(point);
+}
+template<>
+inline real time_resolution_of_volume<void>(const r3_point& point) {
+  return geometry::time_resolution_of_volume(point);
+}
+template<class Geometry=void>
+real time_resolution_of_volume(const r4_point& point) {
+  return Geometry::time_resolution_of_volume(point);
+}
+template<>
+inline real time_resolution_of_volume<void>(const r4_point& point) {
+  return geometry::time_resolution_of_volume(point);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Box Volume Containment Check________________________________________________________________
+template<class Geometry=void>
+bool is_inside_volume(const r3_point& point,
+                      const box_volume& box) {
+  return Geometry::is_inside_volume(point, box);
+}
+template<>
+inline bool is_inside_volume<void>(const r3_point& point,
+                                   const box_volume& box) {
+  return geometry::is_inside_volume(point, box);
+}
+template<class Geometry=void>
+bool is_inside_volume(const r4_point& point,
+                      const box_volume& box) {
+  return Geometry::is_inside_volume(point, box);
+}
+template<>
+inline bool is_inside_volume<void>(const r4_point& point,
+                                   const box_volume& box) {
+  return geometry::is_inside_volume(point, box);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Find Center of Geometry_____________________________________________________________________
+template<class Geometry=void>
+const r3_point find_center(const structure_value& name) {
+  return Geometry::find_center(name);
+}
+template<>
+inline const r3_point find_center<void>(const structure_value& name) {
+  return geometry::find_center(name);
+}
+template<class Geometry=void>
+const r3_point find_center(const r3_point& point) {
+  return Geometry::find_center(point);
+}
+template<>
+inline const r3_point find_center<void>(const r3_point& point) {
+  return geometry::find_center(point);
+}
+template<class Geometry=void>
+const r4_point find_center(const r4_point& point) {
+  return Geometry::find_center(point);
+}
+template<>
+inline const r4_point find_center<void>(const r4_point& point) {
+  return geometry::find_center(point);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Volumes from Set of Points______________________________________________________________
+template<class Geometry=void>
+const structure_vector volumes(const r3_point_vector& points) {
+  return Geometry::volumes(points);
+}
+template<>
+inline const structure_vector volumes<void>(const r3_point_vector& points) {
+  return geometry::volumes(points);
+}
+template<class Geometry=void>
+const structure_vector volumes(const r4_point_vector& points) {
+  return Geometry::volumes(points);
+}
+template<>
+inline const structure_vector volumes<void>(const r4_point_vector& points) {
+  return geometry::volumes(points);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get Unique Volumes from Set of Points_______________________________________________________
+template<class Geometry=void>
+const structure_vector unique_volumes(const r3_point_vector& points) {
+  return Geometry::unique_volumes(points);
+}
+template<>
+inline const structure_vector unique_volumes<void>(const r3_point_vector& points) {
+  return geometry::unique_volumes(points);
+}
+template<class Geometry=void>
+const structure_vector unique_volumes(const r4_point_vector& points) {
+  return Geometry::unique_volumes(points);
+}
+template<>
+inline const structure_vector unique_volumes<void>(const r4_point_vector& points) {
+  return geometry::unique_volumes(points);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volume to Geometry Using Local Coordinates______________________________________________
+template<class Geometry=void>
+std::size_t add_to_volume_local(const structure_value& parent,
+                                const structure_value& name,
+                                const box_volume& box) {
+  return Geometry::add_to_volume_local(parent, name, box);
+}
+template<>
+inline std::size_t add_to_volume_local<void>(const structure_value& parent,
+                                             const structure_value& name,
+                                             const box_volume& box) {
+  return geometry::add_to_volume_local(parent, name, box);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volumes to Geometry Using Local Coordinates_____________________________________________
+template<class Geometry=void>
+std::size_t add_to_volume_local(const structure_value& parent,
+                                const structure_vector& names,
+                                const box_volume_vector& boxes) {
+  return Geometry::add_to_volume_local(parent, names, boxes);
+}
+template<>
+inline std::size_t add_to_volume_local<void>(const structure_value& parent,
+                                             const structure_vector& names,
+                                             const box_volume_vector& boxes) {
+  return geometry::add_to_volume_local(parent, names, boxes);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volume to Geometry Using Global Coordinates_____________________________________________
+template<class Geometry=void>
+std::size_t add_to_volume_global(const structure_value& parent,
+                                 const structure_value& name,
+                                 const box_volume& box) {
+  return Geometry::add_to_volume_global(parent, name, box);
+}
+template<>
+inline std::size_t add_to_volume_global<void>(const structure_value& parent,
+                                              const structure_value& name,
+                                              const box_volume& box) {
+  return geometry::add_to_volume_global(parent, name, box);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Volumes to Geometry Using Global Coordinates____________________________________________
+template<class Geometry=void>
+std::size_t add_to_volume_global(const structure_value& parent,
+                                 const structure_vector& names,
+                                 const box_volume_vector& boxes) {
+  return Geometry::add_to_volume_global(parent, names, boxes);
+}
+template<>
+inline std::size_t add_to_volume_global<void>(const structure_value& parent,
+                                              const structure_vector& names,
+                                              const box_volume_vector& boxes) {
+  return geometry::add_to_volume_global(parent, names, boxes);
+}
+//----------------------------------------------------------------------------------------------
+
+} /* namespace custom */ ///////////////////////////////////////////////////////////////////////
 
 } /* namespace geometry */ /////////////////////////////////////////////////////////////////////
 

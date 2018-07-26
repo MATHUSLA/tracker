@@ -25,7 +25,7 @@ namespace MATHUSLA { namespace TRACKER {
 namespace analysis { namespace mc { ////////////////////////////////////////////////////////////
 
 //__Type Conversion Helper Functions____________________________________________________________
-const track_vector convert(const event& points) {
+const track_vector convert_events(const event& points) {
   const auto size = points.size();
   if (size == 0)
     return track_vector{};
@@ -68,7 +68,7 @@ truth_evaluation::truth_evaluation(const track_vector& true_tracks,
 //__Truth Evaluation Constructor________________________________________________________________
 truth_evaluation::truth_evaluation(const event& points,
                                    const analysis::track_vector& tracks)
-    : truth_evaluation(convert(points), tracks) {}
+    : truth_evaluation(convert_events(points), tracks) {}
 //----------------------------------------------------------------------------------------------
 
 } } /* namespace analysis::mc */ ///////////////////////////////////////////////////////////////

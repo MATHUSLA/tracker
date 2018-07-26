@@ -36,8 +36,10 @@ namespace reader   = MATHUSLA::TRACKER::reader;
 
 namespace MATHUSLA {
 
-//__Add Detector Centers to Canvas______________________________________________________________
-void draw_detector_centers(plot::canvas& canvas);
+namespace box { ////////////////////////////////////////////////////////////////////////////////
+
+//__Draw Main Detector To Canvas________________________________________________________________
+void draw_detector(plot::canvas& canvas);
 //----------------------------------------------------------------------------------------------
 
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________
@@ -95,6 +97,8 @@ inline void print_tracking_summary(const analysis::full_event& event,
                                         * 100.0L << " %\n";
 }
 //----------------------------------------------------------------------------------------------
+
+} /* namespace box */ //////////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 

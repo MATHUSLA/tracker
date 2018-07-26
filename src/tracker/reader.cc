@@ -21,7 +21,6 @@
 #include <array>
 #include <fstream>
 
-#include <tracker/geometry.hh>
 #include <tracker/core/units.hh>
 
 #include <tracker/util/command_line_parser.hh>
@@ -768,6 +767,27 @@ void _parse_key_value_positive_real(const std::string& key,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Parse Real Range Key Value__________________________________________________________________
+void _parse_key_value_real_range(const std::string& key,
+                                 const std::string& value,
+                                 real_range& out) {
+  try {
+    std::vector<std::string> values;
+    util::string::split(value, values, ",;");
+    if (values.size() != 2)
+      throw std::invalid_argument{"Size Mismatch."};
+
+    out = real_range{static_cast<real>(std::stold(values[0])),
+                     static_cast<real>(std::stold(values[1]))};
+
+  } catch (...) {
+    util::error::exit(
+      "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
+      "              Expected argument convertible to Real range (min, max).\n");
+  }
+}
+//----------------------------------------------------------------------------------------------
+
 //__Parse Integer Key Value_____________________________________________________________________
 void _parse_key_value_integer(const std::string& key,
                               const std::string& value,
@@ -809,7 +829,7 @@ void _parse_key_value_r4_point(const std::string& key,
     "[FATAL ERROR] Invalid R4 Point Argument for \"", key, "\" in Tracking Script.\n"
     "              Expected 4 arguments \"T, X, Y, Z\" but received ", size, ".\n");
   try {
-    out = {
+    out = r4_point{
       (use_units ? units::time   : 1.0L) * static_cast<real>(std::stold(point[0])),
       (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[1])),
       (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[2])),
@@ -886,7 +906,7 @@ const tracking_options read(const std::string& path) {
         util::error::exit_when(value != _continuation_string,
           "[FATAL ERROR] \"Geometry Map\" Key Requires Continuation String \"",
           _continuation_string, "\" Before Map Entries.\n");
-
+        // TODO: implement ...
       } else if (key == "data-directory") {
         _parse_key_value_file_path(key, value, out.data_directory);
       } else if (key == "data-file-extension") {
@@ -911,6 +931,12 @@ const tracking_options read(const std::string& path) {
         out.default_time_error *= units::time;
       } else if (key == "time-smearing") {
         _parse_key_value_boolean(key, value, out.time_smearing);
+      } else if (key == "simulated-efficiency") {
+        _parse_key_value_positive_real(key, value, out.simulated_efficiency);
+      } else if (key == "simulated-noise-rate") {
+        _parse_key_value_positive_real(key, value, out.simulated_noise_rate);
+      } else if (key == "event-time-window") {
+        _parse_key_value_real_range(key, value, out.event_time_window);
       } else if (key == "layer-axis") {
         _parse_key_value_r3_coordinate(key, value, out.layer_axis);
       } else if (key == "layer-depth") {

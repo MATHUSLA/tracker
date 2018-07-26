@@ -4,29 +4,31 @@ verbose-output: true
 draw-events: false
 
 # Thresholds and Settings
-time-smearing:        true
-layer-axis:           Z
-layer-depth:          1
-line-width:           32
-seed-size:            3
-event-density-limit:  0.25
+time-smearing:         true
+simulated-efficiency:  0.9
+simulated-noise-rate:  1e-6
+event-time-window:     300, 900
+layer-axis:            Z
+layer-depth:           10
+line-width:            40
+seed-size:             3
+event-density-limit:   0.25
 
 # Data Setup
-data-directory:           .temp/box_data
-data-file-extension:      root
-data-position-keys:       Time, X, Y, Z
-data-position-error-keys: dT, dX, dY, dZ
-data-detector-key:        Detector
-data-track-id-key:        Track
-data-parent-id-key:       Parent
-data-momentum-keys:       E, PX, PY, PZ
+data-directory:            .temp/box_data
+data-file-extension:       root
+data-position-keys:        Time, X, Y, Z
+data-position-error-keys:  dT, dX, dY, dZ
+data-detector-key:         Detector
+data-track-id-key:         Track
+data-parent-id-key:        Parent
+data-momentum-keys:        E, PX, PY, PZ
 
 # Statistics Setup
-statistics-directory:      .temp/box_stat
-statistics-file-prefix:    statistics
-statistics-file-extension: root
+statistics-directory:       .temp/box_stat
+statistics-file-prefix:     statistics
+statistics-file-extension:  root
 
 # Geometry Setup
-geometry-file:               demo/box/resources/world.box.gdml
-# geometry-map-file:           demo/box/resources/
-geometry-default-time-error: 1.5
+geometry-file:                demo/box/resources/world.box.gdml
+geometry-default-time-error:  1.5

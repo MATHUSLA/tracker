@@ -62,6 +62,9 @@ struct tracking_options {
   std::string  statistics_file_extension  = "root";
 
   bool         time_smearing              = true;
+  real         simulated_efficiency       = 1;
+  real         simulated_noise_rate       = 0;
+  real_range   event_time_window          = {0, 0};
   Coordinate   layer_axis                 = Coordinate::Z;
   real         layer_depth                = 0;
   real         line_width                 = 1;

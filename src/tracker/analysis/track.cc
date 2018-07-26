@@ -627,16 +627,6 @@ const std::vector<hit> track::event() const {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Get Detectors from Track Hits_______________________________________________________________
-const geometry::structure_vector track::detectors() const {
-  geometry::structure_vector out;
-  out.reserve(size());
-  util::algorithm::back_insert_transform(_full_event, out,
-    [&](const auto& point) { return geometry::volume(reduce_to_r3(point)); });
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Reset Track_________________________________________________________________________________
 std::size_t track::reset(const analysis::event& points) {
   return reset(add_width(points));

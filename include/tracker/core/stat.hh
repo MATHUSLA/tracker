@@ -537,10 +537,10 @@ struct student_t         : public distribution_parameters<Distribution::StudentT
 // struct discrete : public distribution_parameters<Distribution::Discrete> {
 //   real_vector probabilities;
 // };
-// TODO: finish
-// struct piecewise_constant : public distribution_parameters<Distribution::PiecewiseConstant> {
-//   real_vector intervals, densities;
-// };
+struct piecewise_constant : public distribution_parameters<Distribution::PiecewiseConstant> {
+  real_vector intervals, densities;
+  piecewise_constant(real_vector i, real_vector d) : intervals(i), densities(d) {}
+};
 // TODO: finish
 // struct piecewise_linear : public distribution_parameters<Distribution::PiecewiseLinear> {
 //   real_vector intervals, densities;
@@ -640,162 +640,216 @@ UnaryFunction distribution_apply(const Distribution type,
 }
 //----------------------------------------------------------------------------------------------
 
+template<class Dist, class ...Args>
+void reconstruct_distribution(Dist& dist,
+                              Args&& ...args) {
+  new (&dist) Dist(std::forward<Args>(args)...);
+}
+//----------------------------------------------------------------------------------------------
+
+inline void destruct_distribution(const Distribution type,
+                                  distribution_union& dist) {
+  distribution_apply(type, dist, [](auto& d) {
+    using old_type = std::remove_reference_t<decltype(d)>;
+    d.~old_type();
+  });
+}
+//----------------------------------------------------------------------------------------------
+
+template<class Dist, class ...Args>
+void set_distribution(const Distribution old_type,
+                      distribution_union& dist_union,
+                      Dist& new_dist,
+                      Args&& ...args) {
+  destruct_distribution(old_type, dist_union);
+  reconstruct_distribution(new_dist, std::forward<Args>(args)...);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Set Distribution Parameter Vector___________________________________________________________
 template<class ParameterType>
 void set_distribution_parameters(ParameterType&& parameters,
-                                 distribution_union& distribution);
+                                 distribution_union& distribution,
+                                 const Distribution previous_type);
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Uniform Integer Distribution________________________________
 template<>
 inline void set_distribution_parameters<uniform_int>(uniform_int&& parameters,
-                                                     distribution_union& distribution) {
-  distribution.uniform_int.param(decltype(distribution.uniform_int)::param_type{
-    parameters.a, parameters.b});
+                                                     distribution_union& distribution,
+                                                     const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.uniform_int,
+    parameters.a, parameters.b);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Uniform Real Distribution___________________________________
 template<>
 inline void set_distribution_parameters<uniform_real>(uniform_real&& parameters,
-                                                      distribution_union& distribution) {
-  distribution.uniform_real.param(decltype(distribution.uniform_real)::param_type{
-    parameters.a, parameters.b});
+                                                      distribution_union& distribution,
+                                                      const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.uniform_real,
+    parameters.a, parameters.b);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Bernoulli Distribution______________________________________
 template<>
 inline void set_distribution_parameters<bernoulli>(bernoulli&& parameters,
-                                                   distribution_union& distribution) {
-  distribution.bernoulli.param(decltype(distribution.bernoulli)::param_type{
-    static_cast<double>(parameters.p)});
+                                                   distribution_union& distribution,
+                                                   const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.bernoulli,
+    parameters.p);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Binomial Distribution_______________________________________
 template<>
 inline void set_distribution_parameters<binomial>(binomial&& parameters,
-                                                  distribution_union& distribution) {
-  distribution.binomial.param(decltype(distribution.binomial)::param_type{
-    parameters.t, static_cast<double>(parameters.p)});
+                                                  distribution_union& distribution,
+                                                  const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.binomial,
+    parameters.t, parameters.p);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Negative Binomial Distribution______________________________
 template<>
 inline void set_distribution_parameters<negative_binomial>(negative_binomial&& parameters,
-                                                           distribution_union& distribution) {
-  distribution.negative_binomial.param(decltype(distribution.negative_binomial)::param_type{
-    parameters.k, static_cast<double>(parameters.p)});
+                                                           distribution_union& distribution,
+                                                           const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.negative_binomial,
+    parameters.k, parameters.p);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Geometric Distribution______________________________________
 template<>
 inline void set_distribution_parameters<geometric>(geometric&& parameters,
-                                                   distribution_union& distribution) {
-  distribution.geometric.param(decltype(distribution.geometric)::param_type{
-    static_cast<double>(parameters.p)});
+                                                   distribution_union& distribution,
+                                                   const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.geometric,
+    parameters.p);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Poisson Distribution________________________________________
 template<>
 inline void set_distribution_parameters<poisson>(poisson&& parameters,
-                                                 distribution_union& distribution) {
-  distribution.poisson.param(decltype(distribution.poisson)::param_type{
-    static_cast<double>(parameters.mean)});
+                                                 distribution_union& distribution,
+                                                 const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.poisson,
+    parameters.mean);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Exponential Distribution____________________________________
 template<>
 inline void set_distribution_parameters<exponential>(exponential&& parameters,
-                                                     distribution_union& distribution) {
-  distribution.exponential.param(decltype(distribution.exponential)::param_type{
-    parameters.lambda});
+                                                     distribution_union& distribution,
+                                                     const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.exponential,
+    parameters.lambda);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Gamma Distribution__________________________________________
 template<>
 inline void set_distribution_parameters<gamma>(gamma&& parameters,
-                                               distribution_union& distribution) {
-  distribution.gamma.param(decltype(distribution.gamma)::param_type{
-    parameters.alpha, parameters.beta});
+                                               distribution_union& distribution,
+                                               const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.gamma,
+    parameters.alpha, parameters.beta);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Weibull Distribution________________________________________
 template<>
 inline void set_distribution_parameters<weibull>(weibull&& parameters,
-                                                 distribution_union& distribution) {
-  distribution.weibull.param(decltype(distribution.weibull)::param_type{
-    parameters.a, parameters.b});
+                                                 distribution_union& distribution,
+                                                 const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.weibull,
+    parameters.a, parameters.b);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Extreme Value Distribution__________________________________
 template<>
 inline void set_distribution_parameters<extreme_value>(extreme_value&& parameters,
-                                                       distribution_union& distribution) {
-  distribution.extreme_value.param(decltype(distribution.extreme_value)::param_type{
-    parameters.a, parameters.b});
+                                                       distribution_union& distribution,
+                                                       const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.extreme_value,
+    parameters.a, parameters.b);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Normal Distribution_________________________________________
 template<>
 inline void set_distribution_parameters<normal>(normal&& parameters,
-                                                distribution_union& distribution) {
-  distribution.normal.param(decltype(distribution.normal)::param_type{
-    parameters.mean, parameters.stddev});
+                                                distribution_union& distribution,
+                                                const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.normal,
+    parameters.mean, parameters.stddev);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for LogNormal Distribution______________________________________
 template<>
 inline void set_distribution_parameters<lognormal>(lognormal&& parameters,
-                                                   distribution_union& distribution) {
-  distribution.lognormal.param(decltype(distribution.lognormal)::param_type{
-    parameters.mean, parameters.stddev});
+                                                   distribution_union& distribution,
+                                                   const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.lognormal,
+    parameters.mean, parameters.stddev);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Chi Squared Distribution____________________________________
 template<>
 inline void set_distribution_parameters<chi_squared>(chi_squared&& parameters,
-                                                     distribution_union& distribution) {
-  distribution.chi_squared.param(decltype(distribution.chi_squared)::param_type{
-    parameters.n});
+                                                     distribution_union& distribution,
+                                                     const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.chi_squared,
+    parameters.n);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Cauchy Distribution_________________________________________
 template<>
 inline void set_distribution_parameters<cauchy>(cauchy&& parameters,
-                                                distribution_union& distribution) {
-  distribution.cauchy.param(decltype(distribution.cauchy)::param_type{
-    parameters.a, parameters.b});
+                                                distribution_union& distribution,
+                                                const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.cauchy,
+    parameters.a, parameters.b);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Fisher F Distribution_______________________________________
 template<>
 inline void set_distribution_parameters<fisher_f>(fisher_f&& parameters,
-                                                  distribution_union& distribution) {
-  distribution.fisher_f.param(decltype(distribution.fisher_f)::param_type{
-    parameters.m, parameters.n});
+                                                  distribution_union& distribution,
+                                                  const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.fisher_f,
+    parameters.m, parameters.n);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Student T Distribution______________________________________
 template<>
 inline void set_distribution_parameters<student_t>(student_t&& parameters,
-                                                   distribution_union& distribution) {
-  distribution.student_t.param(decltype(distribution.student_t)::param_type{
-    parameters.n});
+                                                   distribution_union& distribution,
+                                                   const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.student_t,
+    parameters.n);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Distribution Parameters for Student T Distribution______________________________________
+template<>
+inline void set_distribution_parameters<piecewise_constant>(piecewise_constant&& parameters,
+                                                            distribution_union& distribution,
+                                                            const Distribution previous_type) {
+  set_distribution(previous_type, distribution, distribution.piecewise_constant,
+    parameters.intervals.begin(), parameters.intervals.end(), parameters.densities.begin());
 }
 //----------------------------------------------------------------------------------------------
 
@@ -817,6 +871,14 @@ template<>
 inline const uniform_real get_distribution_parameters<uniform_real>(const distribution_union& distribution) {
   const auto& dist = distribution.uniform_real;
   return uniform_real(dist.a(), dist.b());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Build Normal Distribution Parameter Type from Distribution Parameters_______________________
+template<>
+inline const poisson get_distribution_parameters<poisson>(const distribution_union& distribution) {
+  const auto& dist = distribution.poisson;
+  return poisson(dist.mean());
 }
 //----------------------------------------------------------------------------------------------
 
@@ -853,8 +915,8 @@ public:
 
   template<class Type>
   void distribution(Type&& dist) {
+    detail::set_distribution_parameters(std::forward<Type>(dist), _distribution, _type);
     _type = dist.type;
-    detail::set_distribution_parameters(std::forward<Type>(dist), _distribution);
     reset();
   }
 
@@ -862,8 +924,8 @@ public:
   real max() const;
 
   real operator()();
-
   operator real() { return (*this)(); };
+  real next() { return (*this)(); }
 
   void seed(const std::uint_least32_t seed);
   void seed(std::seed_seq& seq);
@@ -872,6 +934,31 @@ public:
 
   bool operator==(const generator& other) const;
   bool operator!=(const generator& other) const { return !(*this == other); }
+
+  template<class Container, class FillFunction>
+  FillFunction fill_container(const std::size_t count,
+                              Container& c,
+                              FillFunction f) {
+    for (std::size_t i{}; i < count; ++i)
+      f(c, next());
+    return std::move(f);
+  }
+
+  template<class Container, class FillFunction>
+  FillFunction fill_container_until(const std::size_t count,
+                                    Container& c,
+                                    FillFunction f) {
+    for (std::size_t i{}; i < count; ++i)
+      if (!f(c, next())) break;
+    return std::move(f);
+  }
+
+  template<class Container, class FillFunction>
+  FillFunction fill_container_until(Container& c,
+                                    FillFunction f) {
+    while (f(c, next())) {}
+    return std::move(f);
+  }
 
 private:
   std::mt19937 _engine;

@@ -142,8 +142,8 @@ int prototype_tracking(int argc,
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 
-      const auto compressed_event = options.time_smearing ? analysis::simulation::time_smear(analysis::simulation::compress(event))
-                                                          : analysis::simulation::compress(event);
+      const auto compressed_event = options.time_smearing ? analysis::mc::time_smear(analysis::mc::compress(event))
+                                                          : analysis::mc::compress(event);
       const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
       if (event_size == 0UL || compression_size == event_size)
@@ -158,7 +158,7 @@ int prototype_tracking(int argc,
       plot::canvas canvas("event" + event_counter_string, path + event_counter_string);
       if (options.draw_events) {
         draw_detector_centers(canvas);
-        draw_mc_tracks(canvas, analysis::mc::convert(mc_imported_events[event_counter]));
+        draw_mc_tracks(canvas, analysis::mc::convert_events(mc_imported_events[event_counter]));
         canvas.add_points(compressed_event, 0.8, plot::color::BLACK);
       }
 
