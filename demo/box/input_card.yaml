@@ -7,6 +7,7 @@ draw-events: false
 time-smearing:         true
 simulated-efficiency:  0.9
 simulated-noise-rate:  1e-6
+layer-count:           5
 event-time-window:     300, 900
 layer-axis:            Z
 layer-depth:           10

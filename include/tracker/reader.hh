@@ -28,7 +28,9 @@
 #include <tracker/analysis/monte_carlo.hh>
 #include <tracker/geometry.hh>
 
+#include <tracker/util/command_line_parser.hh>
 #include <tracker/util/error.hh>
+#include <tracker/util/io.hh>
 #include <tracker/util/string.hh>
 
 namespace MATHUSLA { namespace TRACKER {
@@ -329,14 +331,18 @@ void read_lines(const std::string& path,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Tracking Script Options Parser______________________________________________________________
-const tracking_options read(const std::string& path);
+//__Default Tracking Script Options Extension Parser____________________________________________
+inline void default_extension_parser(const std::string& key,
+                                     const std::string&,
+                                     tracking_options&) {
+  util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n");
+}
 //----------------------------------------------------------------------------------------------
 
 //__Tracking Script Options Parser______________________________________________________________
-template<class AdditionalParser>
+template<class ExtensionParser=decltype(default_extension_parser)>
 const tracking_options read(const std::string& path,
-                            AdditionalParser parser) {
+                            ExtensionParser& parser=default_extension_parser) {
   tracking_options out{};
   read_lines(path, [&](const auto& key, const auto& value) {
     if (key.empty()) return;
@@ -417,18 +423,40 @@ const tracking_options read(const std::string& path,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Tracking Script Options Parser______________________________________________________________
-inline const tracking_options read(const std::string& path) {
-  return read(path, [](const auto& key, const auto&, auto&) {
-    util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n"); });
-}
-//----------------------------------------------------------------------------------------------
-
 } /* namespace script */ ///////////////////////////////////////////////////////////////////////
 
 //__Parse Command Line Arguments________________________________________________________________
+template<class ExtensionParser=decltype(script::default_extension_parser)>
 const tracking_options parse_input(int& argc,
-                                   char* argv[]);
+                                   char* argv[],
+                                   ExtensionParser& parser=script::default_extension_parser) {
+  using util::cli::option;
+  option help_opt    ('h', "help",        "MATHUSLA Tracking Algorithm", option::no_arguments);
+  option verbose_opt ('v', "verbose",     "Verbose Output",              option::no_arguments);
+  option quiet_opt   ('q', "quiet",       "Quiet Output",                option::no_arguments);
+  option event_opt   ( 0 , "draw-events", "Draw Events",                 option::no_arguments);
+  option script_opt  ('s', "script",      "Tracking Script",             option::required_arguments);
+
+  util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &event_opt, &script_opt});
+  util::error::exit_when(!script_opt.count || argc == 1,
+    "[FATAL ERROR] Insufficient Arguments:\n",
+    "              Must include arguments for a tracking script (-s).\n");
+  util::error::exit_when(!util::io::path_exists(script_opt.argument),
+    "[FATAL ERROR] Tracking Script Missing: The file \"", script_opt.argument, "\" cannot be found.\n");
+
+  auto out = script::read(script_opt.argument, parser);
+
+  if (!quiet_opt.count) {
+    out.verbose_output |= verbose_opt.count;
+  } else {
+    out.verbose_output = false;
+  }
+
+  if (event_opt.count)
+    out.draw_events |= event_opt.count;
+
+  return out;
+}
 //----------------------------------------------------------------------------------------------
 
 } /* namespace reader */ ///////////////////////////////////////////////////////////////////////

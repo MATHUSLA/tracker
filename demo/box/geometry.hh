@@ -85,6 +85,9 @@ struct geometry {
   static type::real time_resolution_of(const tracker_geometry::structure_value& name);
   static type::real time_resolution_of_volume(const type::r3_point point);
   static type::real time_resolution_of_volume(const type::r4_point point);
+
+  static const analysis::full_event restrict_layer_count(const analysis::full_event& event,
+                                                         const std::size_t layers);
 };
 //----------------------------------------------------------------------------------------------
 

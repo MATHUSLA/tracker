@@ -25,7 +25,7 @@
 #include <tracker/util/io.hh>
 
 #include "geometry.hh"
-#include "logging.hh"
+#include "io.hh"
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
@@ -95,7 +95,8 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
 //__Box Tracking Algorithm______________________________________________________________________
 int box_tracking(int argc,
                  char* argv[]) {
-  const auto options = reader::parse_input(argc, argv);
+  box::extension_parser extension;
+  const auto options = reader::parse_input(argc, argv, extension);
 
   plot::init(options.draw_events);
   geometry::open(options.geometry_file,
@@ -134,7 +135,6 @@ int box_tracking(int argc,
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 
-      // TODO: compression does not detect correct detector
       const auto compressed_event = options.time_smearing ? analysis::mc::time_smear<box::geometry>(analysis::mc::compress<box::geometry>(event))
                                                           : analysis::mc::compress<box::geometry>(event);
       const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
@@ -142,11 +142,14 @@ int box_tracking(int argc,
       if (event_size == 0UL || compression_size == event_size)
         continue;
 
-      const auto altered_event = analysis::mc::add_noise<box::geometry>(
-        analysis::mc::use_efficiency(compressed_event, options.simulated_efficiency),
-        options.simulated_noise_rate,
-        options.event_time_window.begin,
-        options.event_time_window.end);
+      const auto altered_event =
+        box::geometry::restrict_layer_count(
+          analysis::mc::add_noise<box::geometry>(
+            analysis::mc::use_efficiency(compressed_event, options.simulated_efficiency),
+            options.simulated_noise_rate,
+            options.event_time_window.begin,
+            options.event_time_window.end),
+          extension.layer_count);
 
       const auto event_density = box::geometry::event_density(altered_event);
       box::print_event_summary(event_counter, altered_event.size(), compression_size, event_density);

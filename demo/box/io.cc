@@ -1,5 +1,5 @@
 /*
- * demo/box/logging.cc
+ * demo/box/io.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "logging.hh"
+#include "io.hh"
 
 #include <tracker/core/units.hh>
 
@@ -25,6 +25,18 @@
 namespace MATHUSLA {
 
 namespace box { ////////////////////////////////////////////////////////////////////////////////
+
+//__Extension Parser for Tracking Script________________________________________________________
+void extension_parser::operator()(const std::string& key,
+                                  const std::string& value,
+                                  reader::tracking_options& options) {
+  if (key == "layer-count") {
+    reader::script::parse_size_type(key, value, layer_count);
+  } else {
+    reader::script::default_extension_parser(key, value, options);
+  }
+}
+//----------------------------------------------------------------------------------------------
 
 //__Draw Main Detector To Canvas________________________________________________________________
 void draw_detector(plot::canvas& canvas) {

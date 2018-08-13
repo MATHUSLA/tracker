@@ -1,5 +1,5 @@
 /*
- * demo/prototype/logging.cc
+ * demo/prototype/io.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "logging.hh"
+#include "io.hh"
 
 #include <tracker/core/units.hh>
 

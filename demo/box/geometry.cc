@@ -136,6 +136,17 @@ type::real geometry::time_resolution_of_volume(const type::r4_point point) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Restrict Number of Layers in Geometry_______________________________________________________
+const analysis::full_event geometry::restrict_layer_count(const analysis::full_event& event,
+                                                          const std::size_t layers) {
+  analysis::full_event out;
+  util::algorithm::back_insert_copy_if(event, out, [&](const auto& hit) {
+    return std::stoul(volume(type::reduce_to_r3(hit)).substr(0, 1)) <= layers;
+  });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace box */ //////////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */

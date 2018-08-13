@@ -18,12 +18,7 @@
 
 #include <tracker/reader.hh>
 
-#include <array>
-
 #include <tracker/core/units.hh>
-
-#include <tracker/util/command_line_parser.hh>
-#include <tracker/util/io.hh>
 
 #include "helper/root.hh"
 
@@ -880,38 +875,6 @@ void parse_line(const std::string& line,
 //----------------------------------------------------------------------------------------------
 
 } /* namespace script */ ///////////////////////////////////////////////////////////////////////
-
-//__Parse Command Line Arguments________________________________________________________________
-const tracking_options parse_input(int& argc,
-                                   char* argv[]) {
-  using util::cli::option;
-  option help_opt    ('h', "help",        "MATHUSLA Tracking Algorithm", option::no_arguments);
-  option verbose_opt ('v', "verbose",     "Verbose Output",              option::no_arguments);
-  option quiet_opt   ('q', "quiet",       "Quiet Output",                option::no_arguments);
-  option event_opt   ( 0 , "draw-events", "Draw Events",                 option::no_arguments);
-  option script_opt  ('s', "script",      "Tracking Script",             option::required_arguments);
-
-  util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &event_opt, &script_opt});
-  util::error::exit_when(!script_opt.count || argc == 1,
-    "[FATAL ERROR] Insufficient Arguments:\n",
-    "              Must include arguments for a tracking script (-s).\n");
-  util::error::exit_when(!util::io::path_exists(script_opt.argument),
-    "[FATAL ERROR] Tracking Script Missing: The file \"", script_opt.argument, "\" cannot be found.\n");
-
-  auto out = script::read(script_opt.argument);
-
-  if (!quiet_opt.count) {
-    out.verbose_output |= verbose_opt.count;
-  } else {
-    out.verbose_output = false;
-  }
-
-  if (event_opt.count)
-    out.draw_events |= event_opt.count;
-
-  return out;
-}
-//----------------------------------------------------------------------------------------------
 
 } /* namespace reader */ ///////////////////////////////////////////////////////////////////////
 
