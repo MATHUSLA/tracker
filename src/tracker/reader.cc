@@ -971,8 +971,8 @@ const tracking_options parse_input(int& argc,
                                    char* argv[]) {
   using util::cli::option;
   option help_opt    ('h', "help",      "MATHUSLA Tracking Algorithm", option::no_arguments);
-  option verbose_opt ('v', "",          "Verbose Output",              option::no_arguments);
-  option quiet_opt   ('q', "",          "Quiet Output",                option::no_arguments);
+  option verbose_opt ('v', "verbose",   "Verbose Output",              option::no_arguments);
+  option quiet_opt   ('q', "quiet",     "Quiet Output",                option::no_arguments);
   option event_opt   (0, "draw-events", "Draw Events",                 option::no_arguments);
   option script_opt  ('s', "script",    "Tracking Script",             option::required_arguments);
 
