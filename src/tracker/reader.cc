@@ -966,16 +966,6 @@ const tracking_options read(const std::string& path) {
 
 } /* namespace script */ ///////////////////////////////////////////////////////////////////////
 
-namespace { ////////////////////////////////////////////////////////////////////////////////////
-//__Missing Path Exit Command___________________________________________________________________
-void _exit_on_missing_path(const std::string& path,
-                           const std::string& name) {
-  util::error::exit_when(!util::io::path_exists(path),
-    "[FATAL ERROR] ", name, " Missing: The file \"", path, "\" cannot be found.\n");
-}
-//----------------------------------------------------------------------------------------------
-} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
-
 //__Parse Command Line Arguments________________________________________________________________
 const tracking_options parse_input(int& argc,
                                    char* argv[]) {
@@ -984,46 +974,16 @@ const tracking_options parse_input(int& argc,
   option verbose_opt ('v', "",          "Verbose Output",              option::no_arguments);
   option quiet_opt   ('q', "",          "Quiet Output",                option::no_arguments);
   option event_opt   (0, "draw-events", "Draw Events",                 option::no_arguments);
-
-  // TODO: remove
-  option geo_opt     ('g', "geometry",  "Geometry Import",             option::required_arguments);
-  option map_opt     ('m', "map",       "Detector Map",                option::required_arguments);
-  option data_opt    ('d', "data",      "ROOT Data Directory",         option::required_arguments);
-
   option script_opt  ('s', "script",    "Tracking Script",             option::required_arguments);
 
-  util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &event_opt, &geo_opt, &data_opt, &map_opt, &script_opt});
-
-   // TODO: remove
-  util::error::exit_when((geo_opt.count && !data_opt.count)
-                      || (data_opt.count && !geo_opt.count)
-                      || !(script_opt.count || geo_opt.count || data_opt.count)
-                      || argc == 1,
+  util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &event_opt, &script_opt});
+  util::error::exit_when(!script_opt.count || argc == 1,
     "[FATAL ERROR] Insufficient Arguments:\n",
-    "              Must include arguments for geometry ",
-                  "and ROOT directory (-gd) or arguments for a tracking script (-s).\n");
+    "              Must include arguments for a tracking script (-s).\n");
+  util::error::exit_when(!util::io::path_exists(script_opt.argument),
+    "[FATAL ERROR] Tracking Script Missing: The file \"", script_opt.argument, "\" cannot be found.\n");
 
-  if (script_opt.count)
-    _exit_on_missing_path(script_opt.argument, "Tracking Script");
-
-  reader::tracking_options out;
-
-  if (script_opt.count) {
-    out = script::read(script_opt.argument);
-    geo_opt.count += !out.geometry_file.empty();
-    map_opt.count += !out.geometry_map_file.empty();
-    data_opt.count += !out.data_directory.empty();
-  } else {
-     // TODO: remove
-    out.geometry_file = geo_opt.count ? geo_opt.argument : "";
-    out.geometry_map_file = map_opt.count ? map_opt.argument : "";
-    out.data_directory = data_opt.count ? data_opt.argument : "";
-  }
-
-   // TODO: remove
-  if (geo_opt.count) _exit_on_missing_path(out.geometry_file, "Geometry File");
-  if (map_opt.count) _exit_on_missing_path(out.geometry_map_file, "Geometry Map");
-  if (data_opt.count) _exit_on_missing_path(out.data_directory, "ROOT Directory");
+  auto out = script::read(script_opt.argument);
 
   if (!quiet_opt.count) {
     out.verbose_output |= verbose_opt.count;
