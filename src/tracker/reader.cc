@@ -23,7 +23,6 @@
 #include <tracker/core/units.hh>
 
 #include <tracker/util/command_line_parser.hh>
-#include <tracker/util/error.hh>
 #include <tracker/util/io.hh>
 
 #include "helper/root.hh"
@@ -880,101 +879,17 @@ void parse_line(const std::string& line,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Tracking Script Options Parser______________________________________________________________
-const tracking_options read(const std::string& path) {
-  tracking_options out{};
-  read_lines(path, [&](const auto& key, const auto& value) {
-    if (key.empty()) return;
-    if (value.empty()) {
-      util::error::exit("[FATAL ERROR] Missing Value For Key: \"", key, "\".\n");
-    } else {
-      if (key == "geometry-file") {
-        parse_file_path(key, value, out.geometry_file);
-      } else if (key == "geometry-map-file") {
-        parse_file_path(key, value, out.geometry_map_file);
-      } else if (key == "geometry-map") {
-        util::error::exit_when(value != reserved::continuation_string,
-          "[FATAL ERROR] \"Geometry Map\" Key Requires Continuation String \"",
-          reserved::continuation_string, "\" Before Map Entries.\n");
-        // TODO: implement ...
-      } else if (key == "data-directory") {
-        parse_file_path(key, value, out.data_directory);
-      } else if (key == "data-file-extension") {
-        out.data_file_extension = value;
-      } else if (key == "data-position-keys") {
-        parse_data_keys(key, value,
-          out.data_t_key, out.data_x_key, out.data_y_key, out.data_z_key);
-      } else if (key == "data-position-error-keys") {
-        parse_data_keys(key, value,
-          out.data_dt_key, out.data_dx_key, out.data_dy_key, out.data_dz_key);
-      } else if (key == "data-detector-key") {
-        out.data_detector_key = value;
-      } else if (key == "data-track-id-key") {
-        out.data_track_id_key = value;
-      } else if (key == "data-parent-id-key") {
-        out.data_parent_id_key = value;
-      } else if (key == "data-momentum-keys") {
-        parse_data_keys(key, value,
-          out.data_e_key, out.data_px_key, out.data_py_key, out.data_pz_key);
-      } else if (key == "geometry-default-time-error") {
-        parse_positive_real(key, value, out.default_time_error);
-        out.default_time_error *= units::time;
-      } else if (key == "time-smearing") {
-        parse_boolean(key, value, out.time_smearing);
-      } else if (key == "simulated-efficiency") {
-        parse_positive_real(key, value, out.simulated_efficiency);
-      } else if (key == "simulated-noise-rate") {
-        parse_positive_real(key, value, out.simulated_noise_rate);
-      } else if (key == "event-time-window") {
-        parse_real_range(key, value, out.event_time_window);
-      } else if (key == "layer-axis") {
-        parse_r3_coordinate(key, value, out.layer_axis);
-      } else if (key == "layer-depth") {
-        parse_positive_real(key, value, out.layer_depth);
-        out.layer_depth *= units::length;
-      } else if (key == "line-width") {
-        parse_positive_real(key, value, out.line_width);
-        out.line_width *= units::length;
-      } else if (key == "seed-size") {
-        parse_size_type(key, value, out.seed_size);
-      } else if (key == "event-density-limit") {
-        parse_positive_real(key, value, out.event_density_limit);
-      } else if (key == "event-overload-limit") {
-        parse_positive_real(key, value, out.event_overload_limit);
-      } else if (key == "track-density-limit") {
-        parse_positive_real(key, value, out.track_density_limit);
-      } else if (key == "statistics-directory") {
-        parse_file_path(key, value, out.statistics_directory);
-      } else if (key == "statistics-file-prefix") {
-        // FIXME: add checking parser
-        out.statistics_file_prefix = value;
-      } else if (key == "statistics-file-extension") {
-        // FIXME: add checking parser
-        out.statistics_file_extension = value;
-      } else if (key == "verbose-output") {
-        parse_boolean(key, value, out.verbose_output);
-      } else if (key == "draw-events") {
-        parse_boolean(key, value, out.draw_events);
-      } else {
-        util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n");
-      }
-    }
-  });
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 } /* namespace script */ ///////////////////////////////////////////////////////////////////////
 
 //__Parse Command Line Arguments________________________________________________________________
 const tracking_options parse_input(int& argc,
                                    char* argv[]) {
   using util::cli::option;
-  option help_opt    ('h', "help",      "MATHUSLA Tracking Algorithm", option::no_arguments);
-  option verbose_opt ('v', "verbose",   "Verbose Output",              option::no_arguments);
-  option quiet_opt   ('q', "quiet",     "Quiet Output",                option::no_arguments);
-  option event_opt   (0, "draw-events", "Draw Events",                 option::no_arguments);
-  option script_opt  ('s', "script",    "Tracking Script",             option::required_arguments);
+  option help_opt    ('h', "help",        "MATHUSLA Tracking Algorithm", option::no_arguments);
+  option verbose_opt ('v', "verbose",     "Verbose Output",              option::no_arguments);
+  option quiet_opt   ('q', "quiet",       "Quiet Output",                option::no_arguments);
+  option event_opt   ( 0 , "draw-events", "Draw Events",                 option::no_arguments);
+  option script_opt  ('s', "script",      "Tracking Script",             option::required_arguments);
 
   util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &event_opt, &script_opt});
   util::error::exit_when(!script_opt.count || argc == 1,
