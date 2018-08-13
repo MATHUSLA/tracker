@@ -41,7 +41,9 @@ namespace box { ////////////////////////////////////////////////////////////////
 //__Extension Parser for Tracking Script________________________________________________________
 struct extension_parser {
   std::size_t layer_count;
+  type::real scintillator_x_width, scintillator_y_width;
 
+  extension_parser();
   void operator()(const std::string& key,
                   const std::string& value,
                   reader::tracking_options& options);
@@ -49,7 +51,8 @@ struct extension_parser {
 //----------------------------------------------------------------------------------------------
 
 //__Draw Main Detector To Canvas________________________________________________________________
-void draw_detector(plot::canvas& canvas);
+void draw_detector(plot::canvas& canvas,
+                   std::size_t layer_count);
 //----------------------------------------------------------------------------------------------
 
 //__Add Track and Intersecting Geometry to Canvas_______________________________________________

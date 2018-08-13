@@ -24,6 +24,11 @@ namespace MATHUSLA {
 
 namespace box { ////////////////////////////////////////////////////////////////////////////////
 
+//__Default Geometry Components____________________________________________________________________
+type::real geometry::scintillator_x_width = constants::scintillator_x_width;
+type::real geometry::scintillator_y_width = constants::scintillator_y_width;
+//----------------------------------------------------------------------------------------------
+
 //__Index Triple Constructor____________________________________________________________________
 geometry::index_triple::index_triple(const type::r3_point point) {
   namespace cn = constants;
@@ -38,10 +43,10 @@ geometry::index_triple::index_triple(const type::r3_point point) {
 const tracker_geometry::box_volume geometry::index_triple::limits() const {
   namespace cn = constants;
   tracker_geometry::box_volume out;
-  out.min.x = cn::x_displacement + cn::scintillator_x_width * x;
-  out.max.x = out.min.x + cn::scintillator_x_width;
-  out.min.y = cn::y_displacement + cn::scintillator_y_width * y;
-  out.max.y = out.min.y + cn::scintillator_y_width;
+  out.min.x = cn::x_displacement + scintillator_x_width * x;
+  out.max.x = out.min.x + scintillator_x_width;
+  out.min.y = cn::y_displacement + scintillator_y_width * y;
+  out.max.y = out.min.y + scintillator_y_width;
   out.max.z = -(cn::scintillator_height + cn::layer_spacing) * (z - 1UL);
   out.min.z = out.max.z - cn::scintillator_height;
   out.center = 0.5L * (out.min + out.max);
@@ -63,8 +68,8 @@ const tracker_geometry::structure_value geometry::index_triple::name() const {
 const tracker_geometry::structure_vector& geometry::full() {
   static tracker_geometry::structure_vector out;
   if (out.empty()) {
-    out.reserve(constants::x_total_count * constants::y_total_count * constants::layer_count);
-    for (std::size_t z{}; z < constants::layer_count; ++z) {
+    out.reserve(constants::x_total_count * constants::y_total_count * constants::total_layer_count);
+    for (std::size_t z{}; z < constants::total_layer_count; ++z) {
       const auto z_fullname = std::to_string(1UL + z);
       for (std::size_t y{}; y < constants::y_total_count; ++y) {
         const auto y_name = std::to_string(y);

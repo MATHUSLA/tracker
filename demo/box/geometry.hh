@@ -48,20 +48,22 @@ static const auto scintillator_height           =   1.00L*units::cm;
 static const auto scintillator_casing_thickness =   0.10L*units::cm;
 
 static const auto layer_spacing                 = 1.50L*units::m;
-static const auto layer_count                   = 5UL;
+static const auto total_layer_count             = 5UL;
 static const auto x_total_count                 = static_cast<std::size_t>(std::ceil(x_edge_length / scintillator_x_width));
 static const auto y_total_count                 = static_cast<std::size_t>(std::ceil(y_edge_length / scintillator_y_width));
-static const auto total_count                   = x_total_count * y_total_count * layer_count;
+static const auto total_count                   = x_total_count * y_total_count * total_layer_count;
 
 static const auto half_x_edge_length            = 0.5L * x_edge_length;
 static const auto half_y_edge_length            = 0.5L * y_edge_length;
-static const auto full_detector_height          = steel_height + layer_count * (layer_spacing + scintillator_height) - layer_spacing;
+static const auto full_detector_height          = steel_height + total_layer_count * (layer_spacing + scintillator_height) - layer_spacing;
 static const auto half_detector_height          = 0.5L * full_detector_height;
 
 } /* namespace constants */ ////////////////////////////////////////////////////////////////////
 
 //__Geometry Structure__________________________________________________________________________
 struct geometry {
+  static type::real scintillator_x_width;
+  static type::real scintillator_y_width;
 
   struct index_triple {
     std::size_t x, y, z;

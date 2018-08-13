@@ -7,13 +7,16 @@ draw-events: false
 time-smearing:         true
 simulated-efficiency:  0.9
 simulated-noise-rate:  1e-6
-layer-count:           5
 event-time-window:     300, 900
 layer-axis:            Z
 layer-depth:           10
 line-width:            40
 seed-size:             3
 event-density-limit:   0.25
+
+layer-count:           5
+scintillator_x_width:  20
+scintillator_y_width:  20
 
 # Data Setup
 data-directory:            .temp/box_data

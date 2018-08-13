@@ -95,7 +95,7 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
 //__Box Tracking Algorithm______________________________________________________________________
 int box_tracking(int argc,
                  char* argv[]) {
-  box::extension_parser extension;
+  box::extension_parser extension{};
   const auto options = reader::parse_input(argc, argv, extension);
 
   plot::init(options.draw_events);
@@ -106,6 +106,10 @@ int box_tracking(int argc,
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
   const plot::value_tag filetype_tag("FILETYPE", "MATHUSLA TRACKING STATFILE");
   const plot::value_tag project_tag("PROJECT", "Box");
+
+  const plot::value_tag layer_count_tag("LAYER_COUNT", std::to_string(extension.layer_count));
+  const plot::value_tag scintillator_x_tag("SCINTILLATOR_X_WIDTH", std::to_string(extension.scintillator_x_width) + units::length_string);
+  const plot::value_tag scintillator_y_tag("SCINTILLATOR_Y_WIDTH", std::to_string(extension.scintillator_y_width) + units::length_string);
 
   std::size_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
@@ -159,7 +163,7 @@ int box_tracking(int argc,
 
       plot::canvas canvas("event" + event_counter_string, path + event_counter_string);
       if (options.draw_events) {
-        box::draw_detector(canvas);
+        box::draw_detector(canvas, extension.layer_count);
         box::draw_mc_tracks(canvas, analysis::mc::convert_events(mc_imported_events[event_counter]));
         for (const auto hit : altered_event)
           canvas.add_point(type::reduce_to_r3(hit), 0.8, plot::color::BLACK);
@@ -198,7 +202,10 @@ int box_tracking(int argc,
       filetype_tag,
       project_tag,
       plot::value_tag{"DATAPATH", path},
-      plot::value_tag{"EVENTS", std::to_string(import_size)});
+      plot::value_tag{"EVENTS", std::to_string(import_size)},
+      layer_count_tag,
+      scintillator_x_tag,
+      scintillator_y_tag);
     track_tree.save(statistics_save_path);
     vertex_tree.save(statistics_save_path);
   }
