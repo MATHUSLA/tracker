@@ -29,6 +29,7 @@
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
+namespace mc       = analysis::mc;
 namespace geometry = MATHUSLA::TRACKER::geometry;
 namespace plot     = MATHUSLA::TRACKER::plot;
 namespace reader   = MATHUSLA::TRACKER::reader;
@@ -135,8 +136,8 @@ int box_tracking(int argc,
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 
-      const auto compressed_event = options.time_smearing ? analysis::mc::time_smear<box::geometry>(analysis::mc::compress<box::geometry>(event))
-                                                          : analysis::mc::compress<box::geometry>(event);
+      const auto compressed_event = options.time_smearing ? mc::time_smear<box::geometry>(mc::compress<box::geometry>(event))
+                                                          : mc::compress<box::geometry>(event);
       const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
       if (event_size == 0UL || compression_size == event_size)
@@ -144,8 +145,8 @@ int box_tracking(int argc,
 
       const auto altered_event =
         box::geometry::restrict_layer_count(
-          analysis::mc::add_noise<box::geometry>(
-            analysis::mc::use_efficiency(compressed_event, options.simulated_efficiency),
+          mc::add_noise<box::geometry>(
+            mc::use_efficiency(compressed_event, options.simulated_efficiency),
             options.simulated_noise_rate,
             options.event_time_window.begin,
             options.event_time_window.end),
@@ -160,7 +161,7 @@ int box_tracking(int argc,
       plot::canvas canvas("event" + event_counter_string, path + event_counter_string);
       if (options.draw_events) {
         box::draw_detector(canvas, extension.layer_count);
-        box::draw_mc_tracks(canvas, analysis::mc::convert_events(mc_imported_events[event_counter]));
+        box::draw_mc_tracks(canvas, mc::convert_events(mc_imported_events[event_counter]));
         for (const auto hit : altered_event)
           canvas.add_point(type::reduce_to_r3(hit), 0.8, plot::color::BLACK);
       }
