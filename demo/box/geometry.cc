@@ -180,14 +180,14 @@ const analysis::full_event geometry::restrict_layer_count(const analysis::full_e
 const plot::value_tag_vector geometry::value_tags() {
   return plot::value_tag_vector{
     {"LAYER_COUNT",          std::to_string(layer_count)},
-    {"SCINTILLATOR_X_WIDTH", std::to_string(scintillator_x_width) + " " + units::length_string},
-    {"SCINTILLATOR_Y_WIDTH", std::to_string(scintillator_y_width) + " " + units::length_string},
-    {"SCINTILLATOR_HEIGHT",  std::to_string(scintillator_height)  + " " + units::length_string},
-    {"LAYER_SPACING",        std::to_string(layer_spacing)        + " " + units::length_string},
-    {"X_DISPLACEMENT",       std::to_string(x_displacement)       + " " + units::length_string},
-    {"Y_DISPLACEMENT",       std::to_string(y_displacement)       + " " + units::length_string},
-    {"X_EDGE_LENGTH",        std::to_string(x_edge_length)        + " " + units::length_string},
-    {"Y_EDGE_LENGTH",        std::to_string(y_edge_length)        + " " + units::length_string}
+    {"SCINTILLATOR_X_WIDTH", std::to_string(scintillator_x_width / units::length) + " " + units::length_string},
+    {"SCINTILLATOR_Y_WIDTH", std::to_string(scintillator_y_width / units::length) + " " + units::length_string},
+    {"SCINTILLATOR_HEIGHT",  std::to_string(scintillator_height  / units::length) + " " + units::length_string},
+    {"LAYER_SPACING",        std::to_string(layer_spacing        / units::length) + " " + units::length_string},
+    {"X_DISPLACEMENT",       std::to_string(x_displacement       / units::length) + " " + units::length_string},
+    {"Y_DISPLACEMENT",       std::to_string(y_displacement       / units::length) + " " + units::length_string},
+    {"X_EDGE_LENGTH",        std::to_string(x_edge_length        / units::length) + " " + units::length_string},
+    {"Y_EDGE_LENGTH",        std::to_string(y_edge_length        / units::length) + " " + units::length_string}
   };
 }
 //----------------------------------------------------------------------------------------------
