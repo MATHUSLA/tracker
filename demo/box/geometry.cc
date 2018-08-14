@@ -104,8 +104,7 @@ const tracker_geometry::structure_vector& geometry::full() {
       for (std::size_t y{}; y < y_total_count(); ++y) {
         const auto y_name = std::to_string(y);
         for (std::size_t x{}; x < x_total_count(); ++x) {
-          const auto x_name = std::to_string(x);
-          out.push_back(z_name + x_name + y_name);
+          out.push_back(z_name + "_" + std::to_string(x) + "_" + y_name);
         }
       }
     }
