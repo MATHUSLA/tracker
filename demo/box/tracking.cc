@@ -200,6 +200,8 @@ int box_tracking(int argc,
       project_tag,
       plot::value_tag{"DATAPATH", path},
       plot::value_tag{"EVENTS", std::to_string(import_size)},
+      plot::value_tag{"EFFICIENCY", std::to_string(options.simulated_efficiency)},
+      plot::value_tag{"NOISE", std::to_string(options.simulated_noise_rate * units::time) + " / " + units::time_string},
       box::geometry::value_tags());
     track_tree.save(statistics_save_path);
     vertex_tree.save(statistics_save_path);
