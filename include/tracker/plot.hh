@@ -400,14 +400,22 @@ private:
 };
 //----------------------------------------------------------------------------------------------
 
+//__Value Tag Vector Type_______________________________________________________________________
+using value_tag_vector = std::vector<value_tag>;
+//----------------------------------------------------------------------------------------------
+
 //__Draw All Drawable Objects___________________________________________________________________
 template<class T>
 auto draw_all(T& t) -> decltype(t.draw()) {
   t.draw();
 }
 template<class T>
-auto draw_all(T& t) -> decltype (t.draw_all()) {
+auto draw_all(T& t) -> decltype(t.draw_all()) {
   t.draw_all();
+}
+template<class T>
+auto draw_all(T& t) -> decltype(std::begin(t), void()) {
+  std::for_each(std::begin(t), std::end(t), [](auto& e) { e.draw(); });
 }
 template<class T, class ...Ts>
 void draw_all(T& t,
@@ -425,6 +433,10 @@ auto clear_all(T& t) -> decltype(t.clear()) {
 template<class T>
 auto clear_all(T& t) -> decltype(t.clear_all()) {
   t.clear_all();
+}
+template<class T>
+auto clear_all(T& t) -> decltype(std::begin(t), void()) {
+  std::for_each(std::begin(t), std::end(t), [](auto& e) { e.clear(); });
 }
 template<class T, class ...Ts>
 void clear_all(T& t,
@@ -444,6 +456,12 @@ template<class T>
 auto save_all(const std::string& path,
               const T& t) -> decltype(t.save_all(path)) {
   return t.save_all(path);
+}
+template<class T>
+auto save_all(const std::string& path,
+              const T& t) -> decltype(std::cbegin(t), bool()) {
+  return std::accumulate(std::cbegin(t), std::cend(t), true,
+    [&](const auto saved, const auto& e) { return saved && e.save(path); });
 }
 template<class T, class ...Ts>
 bool save_all(const std::string& path,

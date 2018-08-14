@@ -99,28 +99,13 @@ int box_tracking(int argc,
   const auto options = reader::parse_input(argc, argv, extension);
 
   plot::init(options.draw_events);
-  geometry::open(options.geometry_file,
-                 options.default_time_error);
+  geometry::open(options.geometry_file, options.default_time_error);
+  box::geometry::import(extension);
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
   const plot::value_tag filetype_tag("FILETYPE", "MATHUSLA TRACKING STATFILE");
   const plot::value_tag project_tag("PROJECT", "Box");
-
-  const plot::value_tag layer_count_tag("LAYER_COUNT", std::to_string(extension.layer_count));
-  const plot::value_tag scintillator_x_tag("SCINTILLATOR_X_WIDTH", std::to_string(extension.scintillator_x_width) + units::length_string);
-  const plot::value_tag scintillator_y_tag("SCINTILLATOR_Y_WIDTH", std::to_string(extension.scintillator_y_width) + units::length_string);
-
-  // TODO: improve encapsulation here
-  box::geometry::layer_count = extension.layer_count;
-  box::geometry::scintillator_x_width = extension.scintillator_x_width;
-  box::geometry::scintillator_y_width = extension.scintillator_y_width;
-  box::geometry::scintillator_height = extension.scintillator_height;
-  box::geometry::layer_spacing = extension.layer_spacing;
-  box::geometry::x_displacement = extension.x_displacement;
-  box::geometry::y_displacement = extension.y_displacement;
-  box::geometry::x_edge_length = extension.x_edge_length;
-  box::geometry::y_edge_length = extension.y_edge_length;
 
   std::size_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
@@ -214,9 +199,7 @@ int box_tracking(int argc,
       project_tag,
       plot::value_tag{"DATAPATH", path},
       plot::value_tag{"EVENTS", std::to_string(import_size)},
-      layer_count_tag,
-      scintillator_x_tag,
-      scintillator_y_tag);
+      box::geometry::value_tags());
     track_tree.save(statistics_save_path);
     vertex_tree.save(statistics_save_path);
   }

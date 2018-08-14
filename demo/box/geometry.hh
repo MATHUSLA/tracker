@@ -22,10 +22,12 @@
 
 #include <tracker/analysis/type.hh>
 #include <tracker/geometry.hh>
+#include <tracker/plot.hh>
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace tracker_geometry = MATHUSLA::TRACKER::geometry;
+namespace plot = MATHUSLA::TRACKER::plot;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
@@ -76,6 +78,19 @@ struct geometry {
   static type::real y_total_count();
   static type::real total_count();
 
+  template<class Geometry>
+  static void import(const Geometry& g) {
+    layer_count = g.layer_count;
+    scintillator_x_width = g.scintillator_x_width;
+    scintillator_y_width = g.scintillator_y_width;
+    scintillator_height = g.scintillator_height;
+    layer_spacing = g.layer_spacing;
+    x_displacement = g.x_displacement;
+    y_displacement = g.y_displacement;
+    x_edge_length = g.x_edge_length;
+    y_edge_length = g.y_edge_length;
+  }
+
   struct index_triple {
     std::size_t x, y, z;
     index_triple() = default;
@@ -103,6 +118,7 @@ struct geometry {
 
   static const analysis::full_event restrict_layer_count(const analysis::full_event& event,
                                                          const std::size_t layers);
+  static const plot::value_tag_vector value_tags();
 };
 //----------------------------------------------------------------------------------------------
 
