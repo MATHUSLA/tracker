@@ -56,6 +56,14 @@ struct event_vector_bundle { event_vector true_events; analysis::event_vector ev
 struct full_event_vector_bundle { event_vector true_events; analysis::full_event_vector events; };
 //----------------------------------------------------------------------------------------------
 
+//__Reduce Event Vector to Event________________________________________________________________
+const event reduce(const event_vector& events);
+const event_bundle reduce(const event_bundle_vector& bundles);
+const full_event_bundle reduce(const full_event_bundle_vector& bundles);
+const event_bundle reduce(const event_vector_bundle& bundle);
+const full_event_bundle reduce(const full_event_vector_bundle& bundle);
+//----------------------------------------------------------------------------------------------
+
 //__Type Conversion Helper Functions____________________________________________________________
 const track_vector convert_events(const event& points);
 // TODO: const event convert(const track& points);

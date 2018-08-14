@@ -28,6 +28,11 @@ namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
+//__Reduce Event Vector to Event________________________________________________________________
+const event reduce(const event_vector& events);
+const full_event reduce(const full_event_vector& full_events);
+//----------------------------------------------------------------------------------------------
+
 //__Calculate Number of Hits per unit Length____________________________________________________
 const r4_point event_density(const event& points);
 const r4_point event_density(const full_event& points);
