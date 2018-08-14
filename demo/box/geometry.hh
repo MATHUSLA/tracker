@@ -22,10 +22,12 @@
 
 #include <tracker/analysis/type.hh>
 #include <tracker/geometry.hh>
+#include <tracker/plot.hh>
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace tracker_geometry = MATHUSLA::TRACKER::geometry;
+namespace plot = MATHUSLA::TRACKER::plot;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
@@ -62,6 +64,32 @@ static const auto half_detector_height          = 0.5L * full_detector_height;
 
 //__Geometry Structure__________________________________________________________________________
 struct geometry {
+  static std::size_t layer_count;
+  static type::real scintillator_x_width;
+  static type::real scintillator_y_width;
+  static type::real scintillator_height;
+  static type::real layer_spacing;
+  static type::real x_displacement;
+  static type::real y_displacement;
+  static type::real x_edge_length;
+  static type::real y_edge_length;
+
+  static type::real x_total_count();
+  static type::real y_total_count();
+  static type::real total_count();
+
+  template<class Geometry>
+  static void import(const Geometry& g) {
+    layer_count = g.layer_count;
+    scintillator_x_width = g.scintillator_x_width;
+    scintillator_y_width = g.scintillator_y_width;
+    scintillator_height = g.scintillator_height;
+    layer_spacing = g.layer_spacing;
+    x_displacement = g.x_displacement;
+    y_displacement = g.y_displacement;
+    x_edge_length = g.x_edge_length;
+    y_edge_length = g.y_edge_length;
+  }
 
   struct index_triple {
     std::size_t x, y, z;
@@ -70,6 +98,8 @@ struct geometry {
                  std::size_t y_index,
                  std::size_t z_index) : x(x_index), y(y_index), z(z_index) {}
     index_triple(const type::r3_point point);
+    index_triple(const std::string& name,
+                 const std::string& delimeter="_");
     const tracker_geometry::box_volume limits() const;
     const tracker_geometry::structure_value name() const;
   };
@@ -85,6 +115,10 @@ struct geometry {
   static type::real time_resolution_of(const tracker_geometry::structure_value& name);
   static type::real time_resolution_of_volume(const type::r3_point point);
   static type::real time_resolution_of_volume(const type::r4_point point);
+
+  static const analysis::full_event restrict_layer_count(const analysis::full_event& event,
+                                                         const std::size_t layers);
+  static const plot::value_tag_vector value_tags();
 };
 //----------------------------------------------------------------------------------------------
 

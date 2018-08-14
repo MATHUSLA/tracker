@@ -18,15 +18,7 @@
 
 #include <tracker/reader.hh>
 
-#include <array>
-#include <fstream>
-
 #include <tracker/core/units.hh>
-
-#include <tracker/util/command_line_parser.hh>
-#include <tracker/util/error.hh>
-#include <tracker/util/io.hh>
-#include <tracker/util/string.hh>
 
 #include "helper/root.hh"
 
@@ -651,55 +643,30 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
 
 namespace script { /////////////////////////////////////////////////////////////////////////////
 
-namespace { ////////////////////////////////////////////////////////////////////////////////////
-
-//__Reserved Symbols____________________________________________________________________________
-const char _comment_character           = '#';
-const char _space_character             = ' ';
-const char _key_value_separator         = ':';
-const std::string& _continuation_string = "...";
-//----------------------------------------------------------------------------------------------
-
-//__Parse Line from Script Into Key-Value Pair__________________________________________________
-void _parse_script_line(const std::string& line,
-                        std::string& key,
-                        std::string& value) {
-  bool on_key = true;
-  for (const auto& ch : line) {
-    if (ch == _comment_character) break;
-    if (ch == _space_character) continue;
-    if (ch == _key_value_separator) {
-      on_key = false;
-      continue;
-    }
-    if (on_key) key.push_back(ch);
-    else value.push_back(ch);
-  }
-}
-//----------------------------------------------------------------------------------------------
-
 //__Parse Key Value Pair into File Path_________________________________________________________
-void _parse_key_value_file_path(const std::string& key,
-                                const std::string& value,
-                                std::string& out) {
-  util::error::exit_when(!util::io::path_exists(value),
+void parse_file_path(const std::string& key,
+                     const std::string& value,
+                     std::string& out,
+                     bool exit_on_error) {
+  util::error::exit_when(exit_on_error && !util::io::path_exists(value),
     "[FATAL ERROR] Missing File Path \"", value, "\" for Key \"", key, "\" in Tracking Script.\n");
   out = value;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Parse Data Key Value Pair___________________________________________________________________
-void _parse_key_value_data_keys(const std::string& key,
-                                const std::string& value,
-                                std::string& t_key,
-                                std::string& x_key,
-                                std::string& y_key,
-                                std::string& z_key) {
+void parse_data_keys(const std::string& key,
+                     const std::string& value,
+                     std::string& t_key,
+                     std::string& x_key,
+                     std::string& y_key,
+                     std::string& z_key,
+                     bool exit_on_error) {
   std::vector<std::string> data_keys;
   util::string::split(value, data_keys, ",;");
   const auto size = data_keys.size();
   const auto& end = data_keys.cend();
-  util::error::exit_when(std::find(data_keys.cbegin(), end, "") != end,
+  util::error::exit_when(exit_on_error && std::find(data_keys.cbegin(), end, "") != end,
     "[FATAL ERROR] Invalid Data Argument for \"", key, "\" in Tracking Script.\n"
     "              Expected 1 argument \"T\" or 4 arguments \"T, X, Y, Z\".\n");
   if (size == 1) {
@@ -709,7 +676,7 @@ void _parse_key_value_data_keys(const std::string& key,
     x_key = data_keys[1];
     y_key = data_keys[2];
     z_key = data_keys[3];
-  } else {
+  } else if (exit_on_error) {
     util::error::exit(
       "[FATAL ERROR] Invalid Data Argument for \"", key, "\" in Tracking Script.\n"
       "              Expected 1 argument \"T\" or 4 arguments \"T, X, Y, Z\" "
@@ -719,15 +686,16 @@ void _parse_key_value_data_keys(const std::string& key,
 //----------------------------------------------------------------------------------------------
 
 //__Parse Boolean Key Value_____________________________________________________________________
-void _parse_key_value_boolean(const std::string& key,
-                              const std::string& value,
-                              bool& out) {
+void parse_boolean(const std::string& key,
+                   const std::string& value,
+                   bool& out,
+                   bool exit_on_error) {
   const auto value_lowercase = util::string::tolower(value);
   if (value_lowercase == "true" || value_lowercase == "t" || value_lowercase == "1") {
     out = true;
   } else if (value_lowercase == "false" || value_lowercase == "f" || value_lowercase == "0") {
     out = false;
-  } else {
+  } else if (exit_on_error) {
     util::error::exit(
       "[FATAL ERROR] Invalid Boolean Argument for \"", key, "\" in Tracking Script.\n"
       "              Expected argument convertible boolean value.\n");
@@ -736,13 +704,14 @@ void _parse_key_value_boolean(const std::string& key,
 //----------------------------------------------------------------------------------------------
 
 //__Parse Real Key Value________________________________________________________________________
-void _parse_key_value_real(const std::string& key,
-                           const std::string& value,
-                           real& out) {
+void parse_real(const std::string& key,
+                const std::string& value,
+                real& out,
+                bool exit_on_error) {
   try {
     out = static_cast<real>(std::stold(value));
   } catch (...) {
-    util::error::exit(
+    util::error::exit_when(exit_on_error,
       "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
       "              Expected argument convertible to floating point value.\n");
   }
@@ -750,9 +719,10 @@ void _parse_key_value_real(const std::string& key,
 //----------------------------------------------------------------------------------------------
 
 //__Parse Positive Real Key Value_______________________________________________________________
-void _parse_key_value_positive_real(const std::string& key,
-                                    const std::string& value,
-                                    real& out) {
+void parse_positive_real(const std::string& key,
+                         const std::string& value,
+                         real& out,
+                         bool exit_on_error) {
   try {
     out = static_cast<real>(std::stold(value));
     if (out < 0) {
@@ -760,7 +730,7 @@ void _parse_key_value_positive_real(const std::string& key,
       throw std::invalid_argument{"Real Number Must be Greater than or Equal to Zero."};
     }
   } catch (...) {
-    util::error::exit(
+    util::error::exit_when(exit_on_error,
       "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
       "              Expected argument convertible to positive floating point value.\n");
   }
@@ -768,9 +738,10 @@ void _parse_key_value_positive_real(const std::string& key,
 //----------------------------------------------------------------------------------------------
 
 //__Parse Real Range Key Value__________________________________________________________________
-void _parse_key_value_real_range(const std::string& key,
-                                 const std::string& value,
-                                 real_range& out) {
+void parse_real_range(const std::string& key,
+                      const std::string& value,
+                      real_range& out,
+                      bool exit_on_error) {
   try {
     std::vector<std::string> values;
     util::string::split(value, values, ",;");
@@ -781,7 +752,7 @@ void _parse_key_value_real_range(const std::string& key,
                      static_cast<real>(std::stold(values[1]))};
 
   } catch (...) {
-    util::error::exit(
+    util::error::exit_when(exit_on_error,
       "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
       "              Expected argument convertible to Real range (min, max).\n");
   }
@@ -789,13 +760,14 @@ void _parse_key_value_real_range(const std::string& key,
 //----------------------------------------------------------------------------------------------
 
 //__Parse Integer Key Value_____________________________________________________________________
-void _parse_key_value_integer(const std::string& key,
-                              const std::string& value,
-                              integer& out) {
+void parse_integer(const std::string& key,
+                   const std::string& value,
+                   integer& out,
+                   bool exit_on_error) {
   try {
     out = static_cast<integer>(std::stoll(value));
   } catch (...) {
-    util::error::exit(
+    util::error::exit_when(exit_on_error,
       "[FATAL ERROR] Invalid Integer Argument for \"", key, "\" in Tracking Script.\n"
       "              Expected argument convertible to integral value.\n");
   }
@@ -803,13 +775,14 @@ void _parse_key_value_integer(const std::string& key,
 //----------------------------------------------------------------------------------------------
 
 //__Parse Size Type Key Value___________________________________________________________________
-void _parse_key_value_size_type(const std::string& key,
-                                const std::string& value,
-                                std::size_t& out) {
+void parse_size_type(const std::string& key,
+                     const std::string& value,
+                     std::size_t& out,
+                     bool exit_on_error) {
   try {
     out = static_cast<std::size_t>(std::stoull(value));
   } catch (...) {
-    util::error::exit(
+    util::error::exit_when(exit_on_error,
       "[FATAL ERROR] Invalid Size Type Argument for \"", key, "\" in Tracking Script.\n"
       "              Expected argument convertible to positive integral value.\n");
   }
@@ -817,15 +790,16 @@ void _parse_key_value_size_type(const std::string& key,
 //----------------------------------------------------------------------------------------------
 
 //__Parse R4 Key Value__________________________________________________________________________
-void _parse_key_value_r4_point(const std::string& key,
-                               const std::string& value,
-                               r4_point& out,
-                               bool use_units) {
+void parse_r4_point(const std::string& key,
+                    const std::string& value,
+                    r4_point& out,
+                    bool use_units,
+                    bool exit_on_error) {
   std::vector<std::string> point;
   util::string::split(value, point, ",;");
   const auto size = point.size();
   const auto& end = point.cend();
-  util::error::exit_when(size != 4 || (std::find(point.cbegin(), end, "") != end),
+  util::error::exit_when(exit_on_error && (size != 4 || (std::find(point.cbegin(), end, "") != end)),
     "[FATAL ERROR] Invalid R4 Point Argument for \"", key, "\" in Tracking Script.\n"
     "              Expected 4 arguments \"T, X, Y, Z\" but received ", size, ".\n");
   try {
@@ -835,7 +809,7 @@ void _parse_key_value_r4_point(const std::string& key,
       (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[2])),
       (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[3])) };
   } catch (...) {
-    util::error::exit(
+    util::error::exit_when(exit_on_error,
       "[FATAL ERROR] Invalid R4 Point Argument for \"", key, "\" in Tracking Script.\n"
       "              Expected 4 arguments \"T, X, Y, Z\" convertible to floating point values.\n");
   }
@@ -843,9 +817,10 @@ void _parse_key_value_r4_point(const std::string& key,
 //----------------------------------------------------------------------------------------------
 
 //__Parse R3 Coordinate Key Value_______________________________________________________________
-void _parse_key_value_r3_coordinate(const std::string& key,
-                                    const std::string& value,
-                                    Coordinate& coordinate) {
+void parse_r3_coordinate(const std::string& key,
+                         const std::string& value,
+                         Coordinate& coordinate,
+                         bool exit_on_error) {
   if (value == "x" || value == "X") {
     coordinate = Coordinate::X;
   } else if (value == "y" || value == "Y") {
@@ -853,16 +828,18 @@ void _parse_key_value_r3_coordinate(const std::string& key,
   } else if (value == "z" || value == "Z") {
     coordinate = Coordinate::Z;
   } else {
-    util::error::exit("[FATAL ERROR] Invalid R3 Coordinate Argument for \"", key, "\" in Tracking Script.\n",
-                      "              Expected X/x, Y/y, or Z/z but received \"", value, "\".\n");
+    util::error::exit_when(exit_on_error,
+      "[FATAL ERROR] Invalid R3 Coordinate Argument for \"", key, "\" in Tracking Script.\n",
+      "              Expected X/x, Y/y, or Z/z but received \"", value, "\".\n");
   }
 }
 //----------------------------------------------------------------------------------------------
 
 //__Parse R4 Coordinate Key Value_______________________________________________________________
-void _parse_key_value_r4_coordinate(const std::string& key,
-                                    const std::string& value,
-                                    Coordinate& coordinate) {
+void parse_r4_coordinate(const std::string& key,
+                         const std::string& value,
+                         Coordinate& coordinate,
+                         bool exit_on_error) {
   if (value == "t" || value == "T") {
     coordinate = Coordinate::T;
   } else if (value == "x" || value == "X") {
@@ -872,181 +849,32 @@ void _parse_key_value_r4_coordinate(const std::string& key,
   } else if (value == "z" || value == "Z") {
     coordinate = Coordinate::Z;
   } else {
-    util::error::exit("[FATAL ERROR] Invalid R4 Coordinate Argument for \"", key, "\" in Tracking Script.\n",
-                      "              Expected T/t, X/x, Y/y, or Z/z but received \"", value, "\".\n");
+    util::error::exit_when(exit_on_error,
+      "[FATAL ERROR] Invalid R4 Coordinate Argument for \"", key, "\" in Tracking Script.\n",
+      "              Expected T/t, X/x, Y/y, or Z/z but received \"", value, "\".\n");
   }
 }
 //----------------------------------------------------------------------------------------------
 
-} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
-
-//__Tracking Script Options Parser______________________________________________________________
-const tracking_options read(const std::string& path) {
-  std::ifstream file(path);
-  tracking_options out{};
-
-  std::string line;
-  // TODO: use for in-place map reader -> `uint_fast64_t line_counter{};`
-  while (std::getline(file, line)) {
-    if (line.empty()) continue;
-
-    std::string key, value;
-    _parse_script_line(line, key, value);
-
-    if (key.empty()) continue;
-
-    if (value.empty()) {
-      util::error::exit("[FATAL ERROR] Missing Value For Key: \"", key, "\".\n");
-    } else {
-      if (key == "geometry-file") {
-        _parse_key_value_file_path(key, value, out.geometry_file);
-      } else if (key == "geometry-map-file") {
-        _parse_key_value_file_path(key, value, out.geometry_map_file);
-      } else if (key == "geometry-map") {
-        util::error::exit_when(value != _continuation_string,
-          "[FATAL ERROR] \"Geometry Map\" Key Requires Continuation String \"",
-          _continuation_string, "\" Before Map Entries.\n");
-        // TODO: implement ...
-      } else if (key == "data-directory") {
-        _parse_key_value_file_path(key, value, out.data_directory);
-      } else if (key == "data-file-extension") {
-        out.data_file_extension = value;
-      } else if (key == "data-position-keys") {
-        _parse_key_value_data_keys(key, value,
-          out.data_t_key, out.data_x_key, out.data_y_key, out.data_z_key);
-      } else if (key == "data-position-error-keys") {
-        _parse_key_value_data_keys(key, value,
-          out.data_dt_key, out.data_dx_key, out.data_dy_key, out.data_dz_key);
-      } else if (key == "data-detector-key") {
-        out.data_detector_key = value;
-      } else if (key == "data-track-id-key") {
-        out.data_track_id_key = value;
-      } else if (key == "data-parent-id-key") {
-        out.data_parent_id_key = value;
-      } else if (key == "data-momentum-keys") {
-        _parse_key_value_data_keys(key, value,
-          out.data_e_key, out.data_px_key, out.data_py_key, out.data_pz_key);
-      } else if (key == "geometry-default-time-error") {
-        _parse_key_value_positive_real(key, value, out.default_time_error);
-        out.default_time_error *= units::time;
-      } else if (key == "time-smearing") {
-        _parse_key_value_boolean(key, value, out.time_smearing);
-      } else if (key == "simulated-efficiency") {
-        _parse_key_value_positive_real(key, value, out.simulated_efficiency);
-      } else if (key == "simulated-noise-rate") {
-        _parse_key_value_positive_real(key, value, out.simulated_noise_rate);
-      } else if (key == "event-time-window") {
-        _parse_key_value_real_range(key, value, out.event_time_window);
-      } else if (key == "layer-axis") {
-        _parse_key_value_r3_coordinate(key, value, out.layer_axis);
-      } else if (key == "layer-depth") {
-        _parse_key_value_positive_real(key, value, out.layer_depth);
-        out.layer_depth *= units::length;
-      } else if (key == "line-width") {
-        _parse_key_value_positive_real(key, value, out.line_width);
-        out.line_width *= units::length;
-      } else if (key == "seed-size") {
-        _parse_key_value_size_type(key, value, out.seed_size);
-      } else if (key == "event-density-limit") {
-        _parse_key_value_positive_real(key, value, out.event_density_limit);
-      } else if (key == "event-overload-limit") {
-        _parse_key_value_positive_real(key, value, out.event_overload_limit);
-      } else if (key == "track-density-limit") {
-        _parse_key_value_positive_real(key, value, out.track_density_limit);
-      } else if (key == "statistics-directory") {
-        _parse_key_value_file_path(key, value, out.statistics_directory);
-      } else if (key == "statistics-file-prefix") {
-        // FIXME: add checking parser
-        out.statistics_file_prefix = value;
-      } else if (key == "statistics-file-extension") {
-        // FIXME: add checking parser
-        out.statistics_file_extension = value;
-      } else if (key == "verbose-output") {
-        _parse_key_value_boolean(key, value, out.verbose_output);
-      } else if (key == "draw-events") {
-        _parse_key_value_boolean(key, value, out.draw_events);
-      } else {
-        util::error::exit("[FATAL ERROR] Invalid Key in Tracking Script: \"", key, "\".\n");
-      }
+//__Parse Line from Tracking Script_____________________________________________________________
+void parse_line(const std::string& line,
+                std::string& key,
+                std::string& value) {
+  bool on_key = true;
+  for (const auto& ch : line) {
+    if (ch == reserved::comment_character) break;
+    if (ch == reserved::space_character) continue;
+    if (ch == reserved::key_value_separator) {
+      on_key = false;
+      continue;
     }
+    if (on_key) key.push_back(ch);
+    else value.push_back(ch);
   }
-  return out;
 }
 //----------------------------------------------------------------------------------------------
 
 } /* namespace script */ ///////////////////////////////////////////////////////////////////////
-
-namespace { ////////////////////////////////////////////////////////////////////////////////////
-//__Missing Path Exit Command___________________________________________________________________
-void _exit_on_missing_path(const std::string& path,
-                           const std::string& name) {
-  util::error::exit_when(!util::io::path_exists(path),
-    "[FATAL ERROR] ", name, " Missing: The file \"", path, "\" cannot be found.\n");
-}
-//----------------------------------------------------------------------------------------------
-} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
-
-//__Parse Command Line Arguments________________________________________________________________
-const tracking_options parse_input(int& argc,
-                                   char* argv[]) {
-  using util::cli::option;
-  option help_opt    ('h', "help",      "MATHUSLA Tracking Algorithm", option::no_arguments);
-  option verbose_opt ('v', "",          "Verbose Output",              option::no_arguments);
-  option quiet_opt   ('q', "",          "Quiet Output",                option::no_arguments);
-  option event_opt   (0, "draw-events", "Draw Events",                 option::no_arguments);
-
-  // TODO: remove
-  option geo_opt     ('g', "geometry",  "Geometry Import",             option::required_arguments);
-  option map_opt     ('m', "map",       "Detector Map",                option::required_arguments);
-  option data_opt    ('d', "data",      "ROOT Data Directory",         option::required_arguments);
-
-  option script_opt  ('s', "script",    "Tracking Script",             option::required_arguments);
-
-  util::cli::parse(argv, {&help_opt, &verbose_opt, &quiet_opt, &event_opt, &geo_opt, &data_opt, &map_opt, &script_opt});
-
-   // TODO: remove
-  util::error::exit_when((geo_opt.count && !data_opt.count)
-                      || (data_opt.count && !geo_opt.count)
-                      || !(script_opt.count || geo_opt.count || data_opt.count)
-                      || argc == 1,
-    "[FATAL ERROR] Insufficient Arguments:\n",
-    "              Must include arguments for geometry ",
-                  "and ROOT directory (-gd) or arguments for a tracking script (-s).\n");
-
-  if (script_opt.count)
-    _exit_on_missing_path(script_opt.argument, "Tracking Script");
-
-  reader::tracking_options out;
-
-  if (script_opt.count) {
-    out = script::read(script_opt.argument);
-    geo_opt.count += !out.geometry_file.empty();
-    map_opt.count += !out.geometry_map_file.empty();
-    data_opt.count += !out.data_directory.empty();
-  } else {
-     // TODO: remove
-    out.geometry_file = geo_opt.count ? geo_opt.argument : "";
-    out.geometry_map_file = map_opt.count ? map_opt.argument : "";
-    out.data_directory = data_opt.count ? data_opt.argument : "";
-  }
-
-   // TODO: remove
-  if (geo_opt.count) _exit_on_missing_path(out.geometry_file, "Geometry File");
-  if (map_opt.count) _exit_on_missing_path(out.geometry_map_file, "Geometry Map");
-  if (data_opt.count) _exit_on_missing_path(out.data_directory, "ROOT Directory");
-
-  if (!quiet_opt.count) {
-    out.verbose_output |= verbose_opt.count;
-  } else {
-    out.verbose_output = false;
-  }
-
-  if (event_opt.count)
-    out.draw_events |= event_opt.count;
-
-  return out;
-}
-//----------------------------------------------------------------------------------------------
 
 } /* namespace reader */ ///////////////////////////////////////////////////////////////////////
 

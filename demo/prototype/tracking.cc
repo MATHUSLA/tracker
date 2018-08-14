@@ -27,7 +27,7 @@
 #include <tracker/util/io.hh>
 
 #include "geometry.hh"
-#include "logging.hh"
+#include "io.hh"
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;

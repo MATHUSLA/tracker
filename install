@@ -19,6 +19,7 @@
 CONFIG_CMAKE=0
 CLEAN_BUILD=0
 RUN_BUILD=0
+PASS_HELP=0
 declare -a OTHER_ARGS
 OTHER_ARGS_INDEX=0
 
@@ -32,12 +33,16 @@ while [[ $# -gt 0 ]]; do
         --run | run) RUN_BUILD=1
             shift;;
         --help | help | -h)
-            echo -e "usage: ./install [--clean] [--cmake] [--run [args]]"
-            echo -e "  clean      : rebuild all source files"
-            echo -e "  cmake      : rebuild with CMake"
-            echo -e "  run [args] : run executable after building with \"args\""
-            echo -e "  help       : open this help screen"
-            exit;;
+            if [[ RUN_BUILD -eq 0 ]]; then
+              echo -e "usage: ./install [--clean] [--cmake] [--run [args]]"
+              echo -e "  clean      : rebuild all source files"
+              echo -e "  cmake      : rebuild with CMake"
+              echo -e "  run [args] : run executable after building with \"args\""
+              echo -e "  help       : open this help screen"
+              exit
+            fi
+            PASS_HELP=1
+            shift;;
         *) OTHER_ARGS[OTHER_ARGS_INDEX++]="$arg"
             shift;;
     esac
@@ -68,10 +73,12 @@ else
         cd ..;
         NAME=${OTHER_ARGS[0]}
         unset OTHER_ARGS[0]
+        ARGS=${OTHER_ARGS[*]}
+        if [[ PASS_HELP -eq 1 ]]; then ARGS="--help"; fi
         case $NAME in
-          prototype)  ./build/demo/prototype/prototype   ${OTHER_ARGS[*]}; ;;
-          box)        ./build/demo/box/box               ${OTHER_ARGS[*]}; ;;
-          module_box) ./build/demo/module_box/module_box ${OTHER_ARGS[*]}; ;;
+          prototype)  ./build/demo/prototype/prototype   ${ARGS}; ;;
+          box)        ./build/demo/box/box               ${ARGS}; ;;
+          module_box) ./build/demo/module_box/module_box ${ARGS}; ;;
           *) echo -e "ERROR: No Project Named: $NAME"; ;;
         esac
     fi;

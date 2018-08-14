@@ -138,7 +138,12 @@ void _print_help_message(const std::string& argv0,
   for (const auto& option : options) {
     if (option == help) continue;
 
-    std::cout << "  -" << option->short_name;
+    if (option->short_name != 0) {
+      std::cout << "  -" << option->short_name;
+    } else {
+      std::cout << "    ";
+    }
+
     if (!option->long_name.empty())
       std::cout << " --" << option->long_name;
     if (!option->description.empty()) {

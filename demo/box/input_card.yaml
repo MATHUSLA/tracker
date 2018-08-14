@@ -14,6 +14,19 @@ line-width:            40
 seed-size:             3
 event-density-limit:   0.25
 
+# Geometry Setup
+geometry-file:                demo/box/resources/world.box.gdml
+geometry-default-time-error:  1.5
+layer-count:                  5
+scintillator_x_width:         10
+scintillator_y_width:         10
+scintillator_height:          1
+layer_spacing:                150
+x_displacement:               10000
+y_displacement:              -5000
+x_edge_length:                10000
+y_edge_length:                10000
+
 # Data Setup
 data-directory:            .temp/box_data
 data-file-extension:       root
@@ -28,7 +41,3 @@ data-momentum-keys:        E, PX, PY, PZ
 statistics-directory:       .temp/box_stat
 statistics-file-prefix:     statistics
 statistics-file-extension:  root
-
-# Geometry Setup
-geometry-file:                demo/box/resources/world.box.gdml
-geometry-default-time-error:  1.5

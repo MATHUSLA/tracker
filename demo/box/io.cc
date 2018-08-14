@@ -1,5 +1,5 @@
 /*
- * demo/box/logging.cc
+ * demo/box/io.cc
  *
  * Copyright 2018 Brandon Gomes
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "logging.hh"
+#include "io.hh"
 
 #include <tracker/core/units.hh>
 
@@ -26,8 +26,58 @@ namespace MATHUSLA {
 
 namespace box { ////////////////////////////////////////////////////////////////////////////////
 
+//__Extension Parser Default Constructor________________________________________________________
+extension_parser::extension_parser()
+    : layer_count(constants::layer_count),
+      scintillator_x_width(constants::scintillator_x_width),
+      scintillator_y_width(constants::scintillator_y_width),
+      scintillator_height(constants::scintillator_height),
+      layer_spacing(constants::layer_spacing),
+      x_displacement(constants::x_displacement),
+      y_displacement(constants::y_displacement),
+      x_edge_length(constants::x_edge_length),
+      y_edge_length(constants::y_edge_length) {}
+//----------------------------------------------------------------------------------------------
+
+//__Extension Parser for Tracking Script________________________________________________________
+void extension_parser::operator()(const std::string& key,
+                                  const std::string& value,
+                                  reader::tracking_options& options) {
+  if (key == "layer-count") {
+    reader::script::parse_size_type(key, value, layer_count);
+  } else if (key == "scintillator_x_width") {
+    reader::script::parse_positive_real(key, value, scintillator_x_width);
+    scintillator_x_width *= units::length;
+  } else if (key == "scintillator_y_width") {
+    reader::script::parse_positive_real(key, value, scintillator_y_width);
+    scintillator_y_width *= units::length;
+  } else if (key == "scintillator_height") {
+    reader::script::parse_positive_real(key, value, scintillator_height);
+    scintillator_height *= units::length;
+  } else if (key == "layer_spacing") {
+    reader::script::parse_positive_real(key, value, layer_spacing);
+    layer_spacing *= units::length;
+  } else if (key == "x_displacement") {
+    reader::script::parse_real(key, value, x_displacement);
+    x_displacement *= units::length;
+  } else if (key == "y_displacement") {
+    reader::script::parse_real(key, value, y_displacement);
+    y_displacement *= units::length;
+  } else if (key == "x_edge_length") {
+    reader::script::parse_positive_real(key, value, x_edge_length);
+    x_edge_length *= units::length;
+  } else if (key == "y_edge_length") {
+    reader::script::parse_positive_real(key, value, y_edge_length);
+    y_edge_length *= units::length;
+  } else {
+    reader::script::default_extension_parser(key, value, options);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
 //__Draw Main Detector To Canvas________________________________________________________________
-void draw_detector(plot::canvas& canvas) {
+void draw_detector(plot::canvas& canvas,
+                   std::size_t layer_count) {
   for (const auto& volume : tracker_geometry::full_structure_except({"World",
                                                                      "Box",
                                                                      "SteelPlate",
@@ -36,12 +86,21 @@ void draw_detector(plot::canvas& canvas) {
                                                                      "Mix",
                                                                      "Earth"})) {
     const auto limits = tracker_geometry::limits_of(volume);
+    plot::color color;
+    type::real size;
+    if (std::stoul(geometry::volume(limits.center).substr(0, 1)) <= layer_count) {
+      color = plot::color{210, 10, 210};
+      size = 3;
+    } else {
+      color = plot::color::MAGENTA;
+      size = 1.25;
+    }
     canvas.add_box(limits.center,
                    limits.max.x - limits.min.x,
                    limits.max.y - limits.min.y,
                    limits.max.z - limits.min.z,
-                   2.5,
-                   plot::color::MAGENTA);
+                   size,
+                   color);
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -75,13 +134,6 @@ void draw_mc_tracks(plot::canvas& canvas,
     for (const auto& point : hits) {
       const auto center = type::reduce_to_r3(point);
       canvas.add_point(center, 0.5, plot::color::BLUE);
-      const auto box = geometry::limits_of_volume(center);
-      canvas.add_box(box.center,
-                     box.max.x - box.min.x,
-                     box.max.y - box.min.y,
-                     box.max.z - box.min.z,
-                     5,
-                     plot::color::BLUE);
     }
     for (std::size_t i = 0; i < size - 1; ++i)
       canvas.add_line(type::reduce_to_r3(hits[i]), type::reduce_to_r3(hits[i+1]), 1, plot::color::BLUE);

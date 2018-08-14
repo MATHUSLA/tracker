@@ -138,6 +138,20 @@ constexpr bool within(const T& first,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Count Number of Digits in Number____________________________________________________________
+template<class T>
+std::size_t digits(T t) {
+  if (t < 0) t = -t;
+  if (t < 10) return 1UL;
+  if (t < 100) return 2UL;
+  if (t < 1000) return 3UL;
+  if (t < 10000) return 4UL;
+  if (t < 100000) return 5UL;
+  if (t < 1000000) return 6UL;
+  return 6UL + digits(t / 1000000);
+}
+//----------------------------------------------------------------------------------------------
+
 } } /* namespace util::math */ /////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */

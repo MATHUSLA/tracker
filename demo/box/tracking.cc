@@ -25,10 +25,11 @@
 #include <tracker/util/io.hh>
 
 #include "geometry.hh"
-#include "logging.hh"
+#include "io.hh"
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
+namespace mc       = analysis::mc;
 namespace geometry = MATHUSLA::TRACKER::geometry;
 namespace plot     = MATHUSLA::TRACKER::plot;
 namespace reader   = MATHUSLA::TRACKER::reader;
@@ -95,11 +96,12 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
 //__Box Tracking Algorithm______________________________________________________________________
 int box_tracking(int argc,
                  char* argv[]) {
-  const auto options = reader::parse_input(argc, argv);
+  box::extension_parser extension{};
+  const auto options = reader::parse_input(argc, argv, extension);
 
   plot::init(options.draw_events);
-  geometry::open(options.geometry_file,
-                 options.default_time_error);
+  geometry::open(options.geometry_file, options.default_time_error);
+  box::geometry::import(extension);
 
   std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
@@ -134,19 +136,21 @@ int box_tracking(int argc,
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 
-      // TODO: compression does not detect correct detector
-      const auto compressed_event = options.time_smearing ? analysis::mc::time_smear<box::geometry>(analysis::mc::compress<box::geometry>(event))
-                                                          : analysis::mc::compress<box::geometry>(event);
+      const auto compressed_event = options.time_smearing ? mc::time_smear<box::geometry>(mc::compress<box::geometry>(event))
+                                                          : mc::compress<box::geometry>(event);
       const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
       if (event_size == 0UL || compression_size == event_size)
         continue;
 
-      const auto altered_event = analysis::mc::add_noise<box::geometry>(
-        analysis::mc::use_efficiency(compressed_event, options.simulated_efficiency),
-        options.simulated_noise_rate,
-        options.event_time_window.begin,
-        options.event_time_window.end);
+      const auto altered_event =
+        box::geometry::restrict_layer_count(
+          mc::add_noise<box::geometry>(
+            mc::use_efficiency(compressed_event, options.simulated_efficiency),
+            options.simulated_noise_rate,
+            options.event_time_window.begin,
+            options.event_time_window.end),
+          extension.layer_count);
 
       const auto event_density = box::geometry::event_density(altered_event);
       box::print_event_summary(event_counter, altered_event.size(), compression_size, event_density);
@@ -156,8 +160,8 @@ int box_tracking(int argc,
 
       plot::canvas canvas("event" + event_counter_string, path + event_counter_string);
       if (options.draw_events) {
-        box::draw_detector(canvas);
-        box::draw_mc_tracks(canvas, analysis::mc::convert_events(mc_imported_events[event_counter]));
+        box::draw_detector(canvas, extension.layer_count);
+        box::draw_mc_tracks(canvas, mc::convert_events(mc_imported_events[event_counter]));
         for (const auto hit : altered_event)
           canvas.add_point(type::reduce_to_r3(hit), 0.8, plot::color::BLACK);
       }
@@ -195,7 +199,8 @@ int box_tracking(int argc,
       filetype_tag,
       project_tag,
       plot::value_tag{"DATAPATH", path},
-      plot::value_tag{"EVENTS", std::to_string(import_size)});
+      plot::value_tag{"EVENTS", std::to_string(import_size)},
+      box::geometry::value_tags());
     track_tree.save(statistics_save_path);
     vertex_tree.save(statistics_save_path);
   }

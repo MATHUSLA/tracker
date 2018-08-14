@@ -17,7 +17,7 @@
 
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
-add_executable(box tracking.cc geometry.cc logging.cc)
+add_executable(box tracking.cc geometry.cc io.cc)
 target_compile_features(box PUBLIC cxx_std_14)
 
 target_link_libraries(box PUBLIC tracker)
