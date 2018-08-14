@@ -41,7 +41,14 @@ namespace box { ////////////////////////////////////////////////////////////////
 //__Extension Parser for Tracking Script________________________________________________________
 struct extension_parser {
   std::size_t layer_count;
-  type::real scintillator_x_width, scintillator_y_width;
+  type::real scintillator_x_width;
+  type::real scintillator_y_width;
+  type::real scintillator_height;
+  type::real layer_spacing;
+  type::real x_displacement;
+  type::real y_displacement;
+  type::real x_edge_length;
+  type::real y_edge_length;
 
   extension_parser();
   void operator()(const std::string& key,

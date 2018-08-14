@@ -28,9 +28,15 @@ namespace box { ////////////////////////////////////////////////////////////////
 
 //__Extension Parser Default Constructor________________________________________________________
 extension_parser::extension_parser()
-    : layer_count(constants::total_layer_count),
+    : layer_count(constants::layer_count),
       scintillator_x_width(constants::scintillator_x_width),
-      scintillator_y_width(constants::scintillator_y_width) {}
+      scintillator_y_width(constants::scintillator_y_width),
+      scintillator_height(constants::scintillator_height),
+      layer_spacing(constants::layer_spacing),
+      x_displacement(constants::x_displacement),
+      y_displacement(constants::y_displacement),
+      x_edge_length(constants::x_edge_length),
+      y_edge_length(constants::y_edge_length) {}
 //----------------------------------------------------------------------------------------------
 
 //__Extension Parser for Tracking Script________________________________________________________
@@ -41,8 +47,28 @@ void extension_parser::operator()(const std::string& key,
     reader::script::parse_size_type(key, value, layer_count);
   } else if (key == "scintillator_x_width") {
     reader::script::parse_positive_real(key, value, scintillator_x_width);
+    scintillator_x_width *= units::length;
   } else if (key == "scintillator_y_width") {
     reader::script::parse_positive_real(key, value, scintillator_y_width);
+    scintillator_y_width *= units::length;
+  } else if (key == "scintillator_height") {
+    reader::script::parse_positive_real(key, value, scintillator_height);
+    scintillator_height *= units::length;
+  } else if (key == "layer_spacing") {
+    reader::script::parse_positive_real(key, value, layer_spacing);
+    layer_spacing *= units::length;
+  } else if (key == "x_displacement") {
+    reader::script::parse_real(key, value, x_displacement);
+    x_displacement *= units::length;
+  } else if (key == "y_displacement") {
+    reader::script::parse_real(key, value, y_displacement);
+    y_displacement *= units::length;
+  } else if (key == "x_edge_length") {
+    reader::script::parse_positive_real(key, value, x_edge_length);
+    x_edge_length *= units::length;
+  } else if (key == "y_edge_length") {
+    reader::script::parse_positive_real(key, value, y_edge_length);
+    y_edge_length *= units::length;
   } else {
     reader::script::default_extension_parser(key, value, options);
   }

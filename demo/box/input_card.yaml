@@ -15,8 +15,14 @@ seed-size:             3
 event-density-limit:   0.25
 
 layer-count:           5
-scintillator_x_width:  20
-scintillator_y_width:  20
+scintillator_x_width:  10
+scintillator_y_width:  10
+scintillator_height:   1
+layer_spacing:         150
+x_displacement:        10000
+y_displacement:       -5000
+x_edge_length:         10000
+y_edge_length:         10000
 
 # Data Setup
 data-directory:            .temp/box_data

@@ -48,22 +48,33 @@ static const auto scintillator_height           =   1.00L*units::cm;
 static const auto scintillator_casing_thickness =   0.10L*units::cm;
 
 static const auto layer_spacing                 = 1.50L*units::m;
-static const auto total_layer_count             = 5UL;
+static const auto layer_count                   = 5UL;
 static const auto x_total_count                 = static_cast<std::size_t>(std::ceil(x_edge_length / scintillator_x_width));
 static const auto y_total_count                 = static_cast<std::size_t>(std::ceil(y_edge_length / scintillator_y_width));
-static const auto total_count                   = x_total_count * y_total_count * total_layer_count;
+static const auto total_count                   = x_total_count * y_total_count * layer_count;
 
 static const auto half_x_edge_length            = 0.5L * x_edge_length;
 static const auto half_y_edge_length            = 0.5L * y_edge_length;
-static const auto full_detector_height          = steel_height + total_layer_count * (layer_spacing + scintillator_height) - layer_spacing;
+static const auto full_detector_height          = steel_height + layer_count * (layer_spacing + scintillator_height) - layer_spacing;
 static const auto half_detector_height          = 0.5L * full_detector_height;
 
 } /* namespace constants */ ////////////////////////////////////////////////////////////////////
 
 //__Geometry Structure__________________________________________________________________________
 struct geometry {
+  static std::size_t layer_count;
   static type::real scintillator_x_width;
   static type::real scintillator_y_width;
+  static type::real scintillator_height;
+  static type::real layer_spacing;
+  static type::real x_displacement;
+  static type::real y_displacement;
+  static type::real x_edge_length;
+  static type::real y_edge_length;
+
+  static type::real x_total_count();
+  static type::real y_total_count();
+  static type::real total_count();
 
   struct index_triple {
     std::size_t x, y, z;
@@ -72,6 +83,8 @@ struct geometry {
                  std::size_t y_index,
                  std::size_t z_index) : x(x_index), y(y_index), z(z_index) {}
     index_triple(const type::r3_point point);
+    index_triple(const std::string& name,
+                 const std::string& delimeter="_");
     const tracker_geometry::box_volume limits() const;
     const tracker_geometry::structure_value name() const;
   };
