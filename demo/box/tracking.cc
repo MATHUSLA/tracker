@@ -112,17 +112,6 @@ int box_tracking(int argc,
   const plot::value_tag scintillator_y_tag("SCINTILLATOR_Y_WIDTH", std::to_string(extension.scintillator_y_width) + units::length_string);
 
   // TODO: improve encapsulation here
-
-  std::cout << box::geometry::layer_count << "\n"
-            << box::geometry::scintillator_x_width << "\n"
-            << box::geometry::scintillator_y_width << "\n"
-            << box::geometry::scintillator_height << "\n"
-            << box::geometry::layer_spacing << "\n"
-            << box::geometry::x_displacement << "\n"
-            << box::geometry::y_displacement << "\n"
-            << box::geometry::x_edge_length << "\n"
-            << box::geometry::y_edge_length << "\n";
-
   box::geometry::layer_count = extension.layer_count;
   box::geometry::scintillator_x_width = extension.scintillator_x_width;
   box::geometry::scintillator_y_width = extension.scintillator_y_width;
@@ -132,16 +121,6 @@ int box_tracking(int argc,
   box::geometry::y_displacement = extension.y_displacement;
   box::geometry::x_edge_length = extension.x_edge_length;
   box::geometry::y_edge_length = extension.y_edge_length;
-
-  std::cout << box::geometry::layer_count << "\n"
-            << box::geometry::scintillator_x_width << "\n"
-            << box::geometry::scintillator_y_width << "\n"
-            << box::geometry::scintillator_height << "\n"
-            << box::geometry::layer_spacing << "\n"
-            << box::geometry::x_displacement << "\n"
-            << box::geometry::y_displacement << "\n"
-            << box::geometry::x_edge_length << "\n"
-            << box::geometry::y_edge_length << "\n";
 
   std::size_t path_counter{};
   for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
