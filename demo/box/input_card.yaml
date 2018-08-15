@@ -28,7 +28,9 @@ x_edge_length:                10000
 y_edge_length:                10000
 
 # Data Setup
-data-directory:            .temp/box_data
+data-directories: ...
+  - .temp/box_data, -10000
+
 data-file-extension:       root
 data-position-keys:        Time, X, Y, Z
 data-position-error-keys:  dT, dX, dY, dZ

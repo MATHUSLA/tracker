@@ -202,7 +202,7 @@ plot::histogram_collection generate_histograms() {
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
                  analysis::track::tree& tree,
-                 const reader::tracking_options& options) {
+                 const script::tracking_options& options) {
   for (const auto& track : tracks) {
     if (options.verbose_output)
       std::cout << track << "\n";
@@ -217,7 +217,7 @@ void save_tracks(const analysis::track_vector& tracks,
 void save_vertices(const analysis::vertex_vector& vertices,
                    plot::canvas& canvas,
                    analysis::vertex::tree& tree,
-                   const reader::tracking_options& options) {
+                   const script::tracking_options& options) {
   for (const auto& vertex : vertices) {
     if (options.verbose_output)
       std::cout << vertex << "\n";

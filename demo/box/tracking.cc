@@ -21,8 +21,7 @@
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
-
-#include <tracker/util/io.hh>
+#include <tracker/script.hh>
 
 #include "geometry.hh"
 #include "io.hh"
@@ -33,13 +32,14 @@ namespace mc       = analysis::mc;
 namespace geometry = MATHUSLA::TRACKER::geometry;
 namespace plot     = MATHUSLA::TRACKER::plot;
 namespace reader   = MATHUSLA::TRACKER::reader;
+namespace script   = MATHUSLA::TRACKER::script;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
 
 //__Find Primary Tracks for Box_________________________________________________________________
 const analysis::track_vector find_primary_tracks(const analysis::full_event& event,
-                                                 const reader::tracking_options& options,
+                                                 const script::tracking_options& options,
                                                  plot::canvas& canvas,
                                                  analysis::full_event& non_track_points) {
   const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
@@ -66,7 +66,7 @@ const analysis::track_vector find_primary_tracks(const analysis::full_event& eve
 
 //__Find Tracks for Box_________________________________________________________________________
 const analysis::track_vector find_tracks(const analysis::full_event& event,
-                                         const reader::tracking_options& options,
+                                         const script::tracking_options& options,
                                          const type::real limit_chi_squared,
                                          const std::size_t overlap,
                                          plot::canvas& canvas,
@@ -97,19 +97,45 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
 int box_tracking(int argc,
                  char* argv[]) {
   box::extension_parser extension{};
-  const auto options = reader::parse_input(argc, argv, extension);
+  const auto options = script::parse_command_line(argc, argv, extension);
 
   plot::init(options.draw_events);
   geometry::open(options.geometry_file, options.default_time_error);
   box::geometry::import(extension);
 
-  std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
+  const auto directory_count = options.data_directories.size();
+
+  if (directory_count <= 1UL) {
+    std::cout << "Begin Tracking in " << options.data_directories.front() << ":\n\n";
+  } else {
+    std::cout << "Begin Parallel Tracking in: \n";
+    for (const auto& path : options.data_directories)
+      std::cout << "  - " << path << "\n";
+    std::cout << "\n";
+  }
+
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
   const plot::value_tag filetype_tag("FILETYPE", "MATHUSLA TRACKING STATFILE");
   const plot::value_tag project_tag("PROJECT", "Box");
 
   std::size_t path_counter{};
-  for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
+  // FIXME: use parallel import
+  /*
+  for (const auto& paths : reader::root::transpose_search_directories(options.data_directories, options.data_file_extension)) {
+    const auto path_count = paths.size();
+    std::vector<mc::event_vector_bundle> bundles;
+    bundles.reserve(path_count);
+    for (std::size_t i{}; i < path_count; ++i) {
+      if (!paths[i].empty())
+        bundles.push_back(
+          reader::root::import_event_mc_bundle(paths[i],
+            options.data_track_id_key, options.data_t_key, options.data_x_key, options.data_y_key, options.data_z_key));
+    }
+    mc::align(bundles, options.data_timing_offsets, type::Coordinate::T);
+  }
+  */
+
+  for (const auto& path : reader::root::search_directory(options.data_directories.front(), options.data_file_extension)) {
     const auto path_counter_string = std::to_string(path_counter++);
     const auto statistics_save_path = statistics_path_prefix
                                     + path_counter_string

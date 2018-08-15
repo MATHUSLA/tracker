@@ -64,6 +64,27 @@ const event_bundle reduce(const event_vector_bundle& bundle);
 const full_event_bundle reduce(const full_event_vector_bundle& bundle);
 //----------------------------------------------------------------------------------------------
 
+//__Align Bundles By Offsets____________________________________________________________________
+void align(event_bundle_vector& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(full_event_bundle_vector& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(event_vector_bundle& bundle,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(full_event_vector_bundle& bundle,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(std::vector<event_vector_bundle>& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(std::vector<full_event_vector_bundle>& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+//----------------------------------------------------------------------------------------------
+
 //__Type Conversion Helper Functions____________________________________________________________
 const track_vector convert_events(const event& points);
 // TODO: const event convert(const track& points);

@@ -26,12 +26,12 @@
 #include <tracker/analysis/track.hh>
 #include <tracker/analysis/vertex.hh>
 #include <tracker/plot.hh>
-#include <tracker/reader.hh>
+#include <tracker/script.hh>
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace plot     = MATHUSLA::TRACKER::plot;
-namespace reader   = MATHUSLA::TRACKER::reader;
+namespace script   = MATHUSLA::TRACKER::script;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
@@ -53,7 +53,7 @@ struct extension_parser {
   extension_parser();
   void operator()(const std::string& key,
                   const std::string& value,
-                  reader::tracking_options& options);
+                  script::tracking_options& options);
 };
 //----------------------------------------------------------------------------------------------
 
@@ -81,14 +81,14 @@ void draw_vertex_and_guess(plot::canvas& canvas,
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
                  analysis::track::tree& tree,
-                 const reader::tracking_options& options);
+                 const script::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
 //__Show and Add Vertices to Statistics_________________________________________________________
 void save_vertices(const analysis::vertex_vector& vertices,
                    plot::canvas& canvas,
                    analysis::vertex::tree& tree,
-                   const reader::tracking_options& options);
+                   const script::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
 //__Print Bar___________________________________________________________________________________

@@ -78,6 +78,80 @@ const full_event_bundle reduce(const full_event_vector_bundle& bundle) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Align Bundles By Offsets____________________________________________________________________
+template<class EventBundleVector>
+void align(EventBundleVector& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  const auto size = bundles.size();
+  for (std::size_t i{}; i < size; ++i) {
+    auto& bundle = bundles[i];
+    for (auto& true_point : bundle.true_hits)
+      select(true_point, coordinate) += offsets[i];
+    for (auto& point : bundle.hits)
+      select(point, coordinate) += offsets[i];
+  }
+}
+void align(event_bundle_vector& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  align<>(bundles, offsets, coordinate);
+}
+void align(full_event_bundle_vector& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  align<>(bundles, offsets, coordinate);
+}
+template<class EventVectorBundle, class EventBundle>
+void align(EventVectorBundle& bundle,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  const auto size = bundle.true_events.size();
+  for (std::size_t i{}; i < size; ++i) {
+    for (auto& true_point : bundle.true_events[i])
+      select(true_point, coordinate) += offsets[i];
+    for (auto& point : bundle.events[i])
+      select(point, coordinate) += offsets[i];
+  }
+}
+void align(event_vector_bundle& bundle,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  align<event_vector_bundle, event_bundle>(bundle, offsets, coordinate);
+}
+void align(full_event_vector_bundle& bundle,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  align<full_event_vector_bundle, full_event_bundle>(bundle, offsets, coordinate);
+}
+template<class EventVectorBundleVector, class EventVectorBundle, class EventBundle>
+void align(EventVectorBundleVector& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  const auto size = bundles.size();
+  for (std::size_t i{}; i < size; ++i) {
+    auto& bundle = bundles[i];
+    const auto bundle_size = bundle.true_events.size();
+    for (std::size_t j{}; j < bundle_size; ++j) {
+      for (auto& true_point : bundle.true_events[j])
+        select(true_point, coordinate) += offsets[i];
+      for (auto& point : bundle.events[j])
+        select(point, coordinate) += offsets[i];
+    }
+  }
+}
+void align(std::vector<event_vector_bundle>& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  align<decltype(bundles), event_vector_bundle, event_bundle>(bundles, offsets, coordinate);
+}
+void align(std::vector<full_event_vector_bundle>& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate) {
+  align<decltype(bundles), full_event_vector_bundle, full_event_bundle>(bundles, offsets, coordinate);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Type Conversion Helper Functions____________________________________________________________
 const track_vector convert_events(const event& points) {
   const auto size = points.size();

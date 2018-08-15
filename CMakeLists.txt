@@ -43,6 +43,7 @@ add_library(tracker SHARED
     src/tracker/plot/value_tag.cc
 
     src/tracker/reader.cc
+    src/tracker/script.cc
 
     src/tracker/core/stat.cc
 
@@ -55,7 +56,8 @@ target_compile_options(tracker PUBLIC -Wno-unknown-warning-option
                                       -Wunused-function
                                       -Wno-unused-value
                                       -Wno-unused-parameter
-                                      -Wno-unused-but-set-parameter)
+                                      -Wno-unused-but-set-parameter
+                                      -Wno-switch)
 
 set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 
