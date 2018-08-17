@@ -36,7 +36,7 @@ namespace script   = MATHUSLA::TRACKER::script;
 
 namespace MATHUSLA {
 
-namespace box { ////////////////////////////////////////////////////////////////////////////////
+namespace box { namespace io { /////////////////////////////////////////////////////////////////
 
 //__Extension Parser for Tracking Script________________________________________________________
 struct extension_parser {
@@ -91,10 +91,41 @@ void save_vertices(const analysis::vertex_vector& vertices,
                    const script::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
+//__Calculate Value Tags for Paths______________________________________________________________
+const plot::value_tag_vector data_paths_value_tags(const script::path_vector& paths,
+                                                   const type::real_vector& timing_offsets,
+                                                   const std::size_t starting_index=0UL);
+//----------------------------------------------------------------------------------------------
+
 //__Print Bar___________________________________________________________________________________
 inline void print_bar(const size_t count=99,
                       const char b='=') {
   std::cout << "\n" << std::string(count, b) << "\n\n";
+}
+//----------------------------------------------------------------------------------------------
+
+//__Print Directories For Tracking______________________________________________________________
+inline void print_tracking_directories(const script::path_vector& directories) {
+  if (directories.size() <= 1UL) {
+    std::cout << "Begin Tracking in " << directories.front() << ":\n\n";
+  } else {
+    std::cout << "Begin Parallel Tracking in: \n";
+    for (const auto& path : directories)
+      std::cout << "  - " << path << "\n";
+    std::cout << "\n";
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Print Paths For Tracking____________________________________________________________________
+inline void print_tracking_paths(const script::path_vector& paths) {
+  if (paths.size() <= 1UL) {
+    std::cout << "Read Path: " << paths.front() << "\n";
+  } else {
+    std::cout << "Read Paths: \n";
+    for (const auto& path : paths)
+      std::cout << "  - " << path << "\n";
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -118,7 +149,7 @@ inline void print_tracking_summary(const analysis::full_event& event,
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace box */ //////////////////////////////////////////////////////////////////////////
+} } /* namespace box::io */ ////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 

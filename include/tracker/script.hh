@@ -36,50 +36,55 @@ namespace script { /////////////////////////////////////////////////////////////
 
 using namespace type;
 
+//__Path Types__________________________________________________________________________________
+using path_type = std::string;
+using path_vector = std::vector<path_type>;
+//----------------------------------------------------------------------------------------------
+
 //__Tracking Options Structure__________________________________________________________________
 struct tracking_options {
-  std::string               geometry_file              = "";
-  std::string               geometry_map_file          = "";
-  std::string               geometry_time_file         = "";
-  real                      default_time_error         = 2 * units::time;
+  path_type    geometry_file              = "";
+  path_type    geometry_map_file          = "";
+  path_type    geometry_time_file         = "";
+  real         default_time_error         = 2 * units::time;
 
-  std::vector<std::string>  data_directories           = {""};
-  real_vector               data_timing_offsets        = {0};
-  std::string               data_file_extension        = "root";
-  std::string               data_t_key                 = "";
-  std::string               data_x_key                 = "";
-  std::string               data_y_key                 = "";
-  std::string               data_z_key                 = "";
-  std::string               data_dt_key                = "";
-  std::string               data_dx_key                = "";
-  std::string               data_dy_key                = "";
-  std::string               data_dz_key                = "";
-  std::string               data_detector_key          = "Detector";
-  std::string               data_track_id_key          = "Track";
-  std::string               data_parent_id_key         = "Parent";
-  std::string               data_e_key                 = "";
-  std::string               data_px_key                = "";
-  std::string               data_py_key                = "";
-  std::string               data_pz_key                = "";
+  path_vector  data_directories           = {""};
+  real_vector  data_timing_offsets        = {0};
+  std::string  data_file_extension        = "root";
+  std::string  data_t_key                 = "";
+  std::string  data_x_key                 = "";
+  std::string  data_y_key                 = "";
+  std::string  data_z_key                 = "";
+  std::string  data_dt_key                = "";
+  std::string  data_dx_key                = "";
+  std::string  data_dy_key                = "";
+  std::string  data_dz_key                = "";
+  std::string  data_detector_key          = "Detector";
+  std::string  data_track_id_key          = "Track";
+  std::string  data_parent_id_key         = "Parent";
+  std::string  data_e_key                 = "";
+  std::string  data_px_key                = "";
+  std::string  data_py_key                = "";
+  std::string  data_pz_key                = "";
 
-  std::string               statistics_directory       = "";
-  std::string               statistics_file_prefix     = "statistics";
-  std::string               statistics_file_extension  = "root";
+  path_type    statistics_directory       = "";
+  path_type    statistics_file_prefix     = "statistics";
+  std::string  statistics_file_extension  = "root";
 
-  bool                      time_smearing              = true;
-  real                      simulated_efficiency       = 1;
-  real                      simulated_noise_rate       = 0;
-  real_range                event_time_window          = {0, 0};
-  Coordinate                layer_axis                 = Coordinate::Z;
-  real                      layer_depth                = 0;
-  real                      line_width                 = 1;
-  size_t                    seed_size                  = 3;
-  real                      event_density_limit        = 1;
-  real                      event_overload_limit       = 2;
-  real                      track_density_limit        = 1;
+  bool         time_smearing              = true;
+  real         simulated_efficiency       = 1;
+  real         simulated_noise_rate       = 0;
+  real_range   event_time_window          = {0, 0};
+  Coordinate   layer_axis                 = Coordinate::Z;
+  real         layer_depth                = 0;
+  real         line_width                 = 1;
+  size_t       seed_size                  = 3;
+  real         event_density_limit        = 1;
+  real         event_overload_limit       = 2;
+  real         track_density_limit        = 1;
 
-  bool                      verbose_output             = false;
-  bool                      draw_events                = false;
+  bool         verbose_output             = false;
+  bool         draw_events                = false;
 };
 //----------------------------------------------------------------------------------------------
 
@@ -117,7 +122,7 @@ void parse_continuation_line(const std::string& line,
 //__Parse Key Value Pair into File Path_________________________________________________________
 void parse_file_path(const std::string& key,
                      const std::string& value,
-                     std::string& out,
+                     path_type& out,
                      bool exit_on_error=true);
 //----------------------------------------------------------------------------------------------
 
@@ -210,7 +215,7 @@ void parse_lines(std::ifstream& file,
   }
 }
 template<class LineKeyValueParser>
-void parse_lines(const std::string& path,
+void parse_lines(const path_type& path,
                  LineKeyValueParser f) {
   std::ifstream file{path};
   parse_lines(file, f);
@@ -238,7 +243,7 @@ void read_lines(std::ifstream& file,
   });
 }
 template<class KeyValueParser>
-void read_lines(const std::string& path,
+void read_lines(const path_type& path,
                 KeyValueParser f) {
   std::ifstream file{path};
   read_lines(file, f);
@@ -259,7 +264,7 @@ using default_extension_parser_t = decltype(default_extension_parser);
 
 //__Tracking Script Options Parser______________________________________________________________
 template<class ExtensionParser=default_extension_parser_t>
-const tracking_options read(const std::string& path,
+const tracking_options read(const path_type& path,
                             ExtensionParser& parser=default_extension_parser) {
   tracking_options out{};
   read_lines(path, [&](const auto& key, const auto& value) {

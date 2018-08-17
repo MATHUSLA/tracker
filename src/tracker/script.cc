@@ -25,7 +25,7 @@ namespace script { /////////////////////////////////////////////////////////////
 //__Parse Key Value Pair into File Path_________________________________________________________
 void parse_file_path(const std::string& key,
                      const std::string& value,
-                     std::string& out,
+                     path_type& out,
                      bool exit_on_error) {
   util::error::exit_when(exit_on_error && !util::io::path_exists(value),
     "[FATAL ERROR] Missing File Path \"", value, "\" for Key \"", key, "\" in Tracking Script.\n");

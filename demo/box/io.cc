@@ -22,7 +22,7 @@
 
 namespace MATHUSLA {
 
-namespace box { ////////////////////////////////////////////////////////////////////////////////
+namespace box { namespace io { /////////////////////////////////////////////////////////////////
 
 //__Extension Parser Default Constructor________________________________________________________
 extension_parser::extension_parser()
@@ -183,6 +183,24 @@ void save_vertices(const analysis::vertex_vector& vertices,
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace box */ //////////////////////////////////////////////////////////////////////////
+//__Calculate Value Tags for Paths______________________________________________________________
+const plot::value_tag_vector data_paths_value_tags(const script::path_vector& paths,
+                                                   const type::real_vector& timing_offsets,
+                                                   const std::size_t starting_index) {
+  const auto size = paths.size();
+  if (size == 1UL)
+    return plot::value_tag_vector{{"DATAPATH", paths.front()}};
+
+  plot::value_tag_vector out;
+  out.reserve(size);
+  for (std::size_t i{}; i < size; ++i)
+    out.emplace_back("DATAPATH_" + std::to_string(i),
+                     paths[i] + " with offset " + std::to_string(timing_offsets[i] / units::time)
+                                                + " " + units::time_string);
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+} } /* namespace box::io */ ////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */

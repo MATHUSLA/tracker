@@ -30,34 +30,29 @@ namespace reader { /////////////////////////////////////////////////////////////
 
 using namespace type;
 
-//__Path Types__________________________________________________________________________________
-using path_type = std::string;
-using path_vector = std::vector<path_type>;
-//----------------------------------------------------------------------------------------------
-
 //__Detector Map Import_________________________________________________________________________
-const geometry::detector_map import_detector_map(const path_type& path);
+const geometry::detector_map import_detector_map(const script::path_type& path);
 //----------------------------------------------------------------------------------------------
 
 //__Detector Time Resolution Map Import_________________________________________________________
-const geometry::time_resolution_map import_time_resolution_map(const path_type& path);
+const geometry::time_resolution_map import_time_resolution_map(const script::path_type& path);
 //----------------------------------------------------------------------------------------------
 
 namespace root { ///////////////////////////////////////////////////////////////////////////////
 
 //__Search and Collect File Paths_______________________________________________________________
-const path_vector search_directory(const path_type& path,
-                                   const std::string& ext="root");
+const script::path_vector search_directory(const script::path_type& path,
+                                           const std::string& ext="root");
 //----------------------------------------------------------------------------------------------
 
 //__Search and Collect File Paths_______________________________________________________________
-const std::vector<path_vector> search_directories(const path_vector& paths,
-                                                  const std::string& ext="root");
+const std::vector<script::path_vector> search_directories(const script::path_vector& paths,
+                                                          const std::string& ext="root");
 //----------------------------------------------------------------------------------------------
 
 //__Transpose Search Directories________________________________________________________________
-const std::vector<path_vector> transpose_search_directories(const path_vector& paths,
-                                                            const std::string& ext="root");
+const std::vector<script::path_vector> transpose_search_directories(const script::path_vector& paths,
+                                                                    const std::string& ext="root");
 //----------------------------------------------------------------------------------------------
 
 //__Import Mode Type____________________________________________________________________________
@@ -65,25 +60,45 @@ enum class ImportMode { Detector, Widths };
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import___________________________________________________________________________
-const analysis::event_vector import_events(const path_type& path,
+const analysis::event_vector import_events(const script::path_type& path,
                                            const std::string& t_key,
                                            const std::string& x_key,
                                            const std::string& y_key,
                                            const std::string& z_key);
-const analysis::event_vector import_events(const path_type& path,
+const analysis::event_vector import_events(const script::path_type& path,
                                            const std::string& t_key,
                                            const std::string& detector_key,
                                            const geometry::detector_map& map);
-const analysis::event_vector import_events(const path_type& path,
+const analysis::event_vector import_events(const script::path_type& path,
                                            const script::tracking_options& options,
                                            const geometry::detector_map& map);
-const analysis::event_vector import_events(const path_type& path,
+const analysis::event_vector import_events(const script::path_type& path,
+                                           const script::tracking_options& options,
+                                           const ImportMode mode);
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Parallel Import__________________________________________________________________
+const analysis::event_vector import_events(const script::path_vector& paths,
+                                           const real_vector& timing_offsets,
+                                           const std::string& t_key,
+                                           const std::string& x_key,
+                                           const std::string& y_key,
+                                           const std::string& z_key);
+const analysis::event_vector import_events(const script::path_vector& paths,
+                                           const real_vector& timing_offsets,
+                                           const std::string& t_key,
+                                           const std::string& detector_key,
+                                           const geometry::detector_map& map);
+const analysis::event_vector import_events(const script::path_vector& paths,
+                                           const script::tracking_options& options,
+                                           const geometry::detector_map& map);
+const analysis::event_vector import_events(const script::path_vector& paths,
                                            const script::tracking_options& options,
                                            const ImportMode mode);
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Full Event Import______________________________________________________________________
-const analysis::full_event_vector import_full_events(const path_type& path,
+const analysis::full_event_vector import_full_events(const script::path_type& path,
                                                      const std::string& t_key,
                                                      const std::string& x_key,
                                                      const std::string& y_key,
@@ -92,26 +107,52 @@ const analysis::full_event_vector import_full_events(const path_type& path,
                                                      const std::string& dx_key,
                                                      const std::string& dy_key,
                                                      const std::string& dz_key);
-const analysis::full_event_vector import_full_events(const path_type& path,
+const analysis::full_event_vector import_full_events(const script::path_type& path,
                                                      const std::string& t_key,
+                                                     const std::string& dt_key,
                                                      const std::string& detector_key,
                                                      const geometry::detector_map& map);
-const analysis::full_event_vector import_full_events(const path_type& path,
+const analysis::full_event_vector import_full_events(const script::path_type& path,
                                                      const script::tracking_options& options,
                                                      const geometry::detector_map& map);
-const analysis::full_event_vector import_full_events(const path_type& path,
+const analysis::full_event_vector import_full_events(const script::path_type& path,
+                                                     const script::tracking_options& options,
+                                                     const ImportMode mode);
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Parallel Import_____________________________________________________________
+const analysis::full_event_vector import_full_events(const script::path_vector& paths,
+                                                     const real_vector& timing_offsets,
+                                                     const std::string& t_key,
+                                                     const std::string& x_key,
+                                                     const std::string& y_key,
+                                                     const std::string& z_key,
+                                                     const std::string& dt_key,
+                                                     const std::string& dx_key,
+                                                     const std::string& dy_key,
+                                                     const std::string& dz_key);
+const analysis::full_event_vector import_full_events(const script::path_vector& paths,
+                                                     const real_vector& timing_offsets,
+                                                     const std::string& t_key,
+                                                     const std::string& dt_key,
+                                                     const std::string& detector_key,
+                                                     const geometry::detector_map& map);
+const analysis::full_event_vector import_full_events(const script::path_vector& paths,
+                                                     const script::tracking_options& options,
+                                                     const geometry::detector_map& map);
+const analysis::full_event_vector import_full_events(const script::path_vector& paths,
                                                      const script::tracking_options& options,
                                                      const ImportMode mode);
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
-const analysis::mc::event_vector_bundle import_event_mc_bundle(const path_type& path,
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_type& path,
                                                                const std::string& track_key,
                                                                const std::string& t_key,
                                                                const std::string& x_key,
                                                                const std::string& y_key,
                                                                const std::string& z_key);
-const analysis::mc::event_vector_bundle import_event_mc_bundle(const path_type& path,
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_type& path,
                                                                const std::string& track_key,
                                                                const std::string& t_key,
                                                                const std::string& x_key,
@@ -119,16 +160,41 @@ const analysis::mc::event_vector_bundle import_event_mc_bundle(const path_type& 
                                                                const std::string& z_key,
                                                                const std::string& detector_key,
                                                                const geometry::detector_map& map);
-const analysis::mc::event_vector_bundle import_event_mc_bundle(const path_type& path,
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_type& path,
                                                                const script::tracking_options& options,
                                                                const geometry::detector_map& map);
-const analysis::mc::event_vector_bundle import_event_mc_bundle(const path_type& path,
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_type& path,
+                                                               const script::tracking_options& options,
+                                                               const ImportMode mode);
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Parallel Import with Monte-Carlo Tracks__________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_vector& paths,
+                                                               const real_vector& timing_offsets,
+                                                               const std::string& track_key,
+                                                               const std::string& t_key,
+                                                               const std::string& x_key,
+                                                               const std::string& y_key,
+                                                               const std::string& z_key);
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_vector& paths,
+                                                               const real_vector& timing_offsets,
+                                                               const std::string& track_key,
+                                                               const std::string& t_key,
+                                                               const std::string& x_key,
+                                                               const std::string& y_key,
+                                                               const std::string& z_key,
+                                                               const std::string& detector_key,
+                                                               const geometry::detector_map& map);
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_vector& paths,
+                                                               const script::tracking_options& options,
+                                                               const geometry::detector_map& map);
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_vector& paths,
                                                                const script::tracking_options& options,
                                                                const ImportMode mode);
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
-const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const path_type& path,
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_type& path,
                                                                          const std::string& track_key,
                                                                          const std::string& t_key,
                                                                          const std::string& x_key,
@@ -138,7 +204,7 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const p
                                                                          const std::string& dx_key,
                                                                          const std::string& dy_key,
                                                                          const std::string& dz_key);
-const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const path_type& path,
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_type& path,
                                                                          const std::string& track_key,
                                                                          const std::string& t_key,
                                                                          const std::string& x_key,
@@ -147,10 +213,40 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const p
                                                                          const std::string& dt_key,
                                                                          const std::string& detector_key,
                                                                          const geometry::detector_map& map);
-const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const path_type& path,
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_type& path,
                                                                          const script::tracking_options& options,
                                                                          const geometry::detector_map& map);
-const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const path_type& path,
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_type& path,
+                                                                         const script::tracking_options& options,
+                                                                         const ImportMode mode);
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Parallel Import with Monte-Carlo Tracks_____________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_vector& paths,
+                                                                         const real_vector& timing_offsets,
+                                                                         const std::string& track_key,
+                                                                         const std::string& t_key,
+                                                                         const std::string& x_key,
+                                                                         const std::string& y_key,
+                                                                         const std::string& z_key,
+                                                                         const std::string& dt_key,
+                                                                         const std::string& dx_key,
+                                                                         const std::string& dy_key,
+                                                                         const std::string& dz_key);
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_vector& paths,
+                                                                         const real_vector& timing_offsets,
+                                                                         const std::string& track_key,
+                                                                         const std::string& t_key,
+                                                                         const std::string& x_key,
+                                                                         const std::string& y_key,
+                                                                         const std::string& z_key,
+                                                                         const std::string& dt_key,
+                                                                         const std::string& detector_key,
+                                                                         const geometry::detector_map& map);
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_vector& paths,
+                                                                         const script::tracking_options& options,
+                                                                         const geometry::detector_map& map);
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_vector& paths,
                                                                          const script::tracking_options& options,
                                                                          const ImportMode mode);
 //----------------------------------------------------------------------------------------------
