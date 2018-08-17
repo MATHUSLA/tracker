@@ -24,8 +24,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 find_package(Geant4 REQUIRED COMPONENTS gdml)
 find_package(ROOT   REQUIRED COMPONENTS MathCore Minuit)
 
-include(${Geant4_USE_FILE})
-
 add_library(tracker SHARED
     src/tracker/analysis/event.cc
     src/tracker/analysis/join.cc
