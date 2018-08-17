@@ -18,7 +18,7 @@
 
 #include <tracker/reader.hh>
 
-#include <tracker/core/units.hh>
+#include <unordered_map>
 
 #include "helper/root.hh"
 
@@ -58,6 +58,7 @@ void _parse_time_resolution_map_entry(const uint_fast64_t line_count,
     return;
   } else {
     try {
+      // FIXME: clean up and add range check
       auto i = std::stold(line.substr(1 + colon));
       auto s = line.substr(0, colon);
       // std::cout << i << " " << s << "\n";
@@ -73,7 +74,7 @@ void _parse_time_resolution_map_entry(const uint_fast64_t line_count,
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
 //__Import Detector Map from File_______________________________________________________________
-const geometry::detector_map import_detector_map(const std::string& path) {
+const geometry::detector_map import_detector_map(const script::path_type& path) {
   std::ifstream file(path);
   geometry::detector_map out{};
   std::string line;
@@ -85,7 +86,7 @@ const geometry::detector_map import_detector_map(const std::string& path) {
 //----------------------------------------------------------------------------------------------
 
 //__Detector Time Resolution Map Import_________________________________________________________
-const geometry::time_resolution_map import_time_resolution_map(const std::string& path) {
+const geometry::time_resolution_map import_time_resolution_map(const script::path_type& path) {
   std::ifstream file(path);
   geometry::time_resolution_map out{};
   std::string line;
@@ -120,16 +121,233 @@ std::size_t _track_id(const Double_t track) {
 
 } /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
 
-//__Search and Collect ROOT File Paths__________________________________________________________
-const std::vector<std::string> search_directory(const std::string& path,
-                                                const std::string& ext) {
+//__Search and Collect File Paths_______________________________________________________________
+const script::path_vector search_directory(const script::path_type& path,
+                                           const std::string& ext) {
   helper::init();
   return helper::search_directory(path, ext);
 }
 //----------------------------------------------------------------------------------------------
 
+//__Search and Collect File Paths_______________________________________________________________
+const std::vector<script::path_vector> search_directories(const script::path_vector& paths,
+                                                          const std::string& ext) {
+  std::vector<script::path_vector> out;
+  out.reserve(paths.size());
+  util::algorithm::back_insert_transform(paths, out,
+    [&](const auto& path) { return search_directory(path, ext); });
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Transpose Search Directories________________________________________________________________
+const std::vector<script::path_vector> transpose_search_directories(const script::path_vector& paths,
+                                                                    const std::string& ext) {
+  const auto directories = search_directories(paths, ext);
+  std::vector<script::path_vector> transposed;
+  std::size_t path_counter{};
+  bool added_events = false;
+  do {
+    added_events = false;
+    transposed.emplace_back();
+    for (const auto& inner_paths : directories) {
+      if (inner_paths.size() <= path_counter) {
+        transposed.back().push_back("");
+      } else {
+        transposed.back().push_back(inner_paths[path_counter]);
+        added_events = true;
+      }
+    }
+    ++path_counter;
+  } while (added_events);
+  transposed.pop_back();
+  transposed.shrink_to_fit();
+  return transposed;
+}
+//----------------------------------------------------------------------------------------------
+
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+
+//__Fix Function Overload Selection Using Lambda________________________________________________
+#define _LAMBDA(f) [&](auto&&... args) { return f(std::forward<decltype(args)>(args)...); }
+//----------------------------------------------------------------------------------------------
+
+//__Append Events to EventVector________________________________________________________________
+template<class EventVector>
+void _merge_events(EventVector& front,
+                   const EventVector& back) {
+  const auto front_size = front.size();
+  const auto back_size = back.size();
+  const auto min_size = std::min(front_size, back_size);
+
+  std::size_t index{};
+  for (; index < min_size; ++index) {
+    auto& event = front[index];
+    auto& add_in = back[index];
+    event.reserve(event.size() + add_in.size());
+    event.insert(event.cend(), add_in.cbegin(), add_in.cend());
+  }
+  if (front_size < back_size) {
+    for (; index < back_size; ++index)
+      front.push_back(back[index]);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Time Shift Events By Offset_________________________________________________________________
+template<class EventVector>
+void _time_shift_events(EventVector& events,
+                        const real timing_offset) {
+  for (auto& event : events)
+    for (auto& hit : event)
+      hit.t += timing_offset;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Track ID Helper Types_______________________________________________________________________
+using _track_id_vector = std::vector<std::size_t>;
+using _track_id_map = std::unordered_map<std::size_t, std::size_t>;
+//----------------------------------------------------------------------------------------------
+
+//__Find Track IDs in Map without Matching Path Index___________________________________________
+const _track_id_vector _find_ids_without_matching_path_index(const _track_id_map& track_ids,
+                                                             const std::size_t path_index) {
+  _track_id_vector out{};
+  for (const auto& entry : track_ids) {
+    if (entry.second != path_index)
+      out.push_back(entry.first);
+  }
+  out.erase(std::unique(out.begin(), out.end()), out.cend());
+  return util::algorithm::sort_range(out);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reassign Track ID for Conflicting Track in Event from Parent Information____________________
+bool _change_track_id_from_parent(std::size_t& hit_id,
+                                  _track_id_vector& changed_ids,
+                                  _track_id_vector& resultant_ids) {
+  const auto search = util::algorithm::range_binary_find_first(changed_ids, hit_id);
+  if (search != changed_ids.cend()) {
+    hit_id = resultant_ids[search - changed_ids.cbegin()];
+    return true;
+  }
+  return false;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reassign Track IDs for Conflicting Tracks in Event__________________________________________
+template<class MCEvent>
+void _change_track_ids(const std::size_t path_index,
+                       MCEvent& true_event,
+                       _track_id_map& track_ids,
+                       _track_id_vector& changed_ids,
+                       _track_id_vector& resultant_ids) {
+  const auto size = true_event.size();
+  const auto reserved_ids = _find_ids_without_matching_path_index(track_ids, path_index);
+
+  for (std::size_t i{}; i < size; ++i) {
+    auto& hit_id = true_event[i].track_id;
+    if (_change_track_id_from_parent(hit_id, changed_ids, resultant_ids)) {
+      continue;
+    } else if (!util::algorithm::binary_search_range(reserved_ids, hit_id)) {
+      changed_ids.push_back(hit_id);
+      resultant_ids.push_back(hit_id);
+    }
+
+    auto attempt = hit_id + 1UL;
+    while (util::algorithm::binary_search_range(reserved_ids, attempt)
+        || util::algorithm::binary_search_range(changed_ids, attempt)
+        || util::algorithm::binary_search_range(resultant_ids, attempt)) {
+      ++attempt;
+    }
+    changed_ids.push_back(hit_id);
+    resultant_ids.push_back(attempt);
+    hit_id = attempt;
+    track_ids.emplace(hit_id, path_index);
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Reassign Track IDs for Conflicting Tracks___________________________________________________
+template<class MCEventVector>
+void _reassign_track_ids(const std::size_t path_index,
+                         MCEventVector& true_events,
+                         _track_id_map& track_ids) {
+  _track_id_vector changed_ids, resultant_ids;
+  for (auto& event : true_events) {
+    for (auto& hit : event) {
+      const auto search = track_ids.find(hit.track_id);
+      if (search != track_ids.cend()) {
+        if (search->second != path_index) {
+          if (changed_ids.empty() || !_change_track_id_from_parent(hit.track_id, changed_ids, resultant_ids)) {
+            _change_track_ids(path_index, event, track_ids, changed_ids, resultant_ids);
+            break;
+          }
+        }
+        continue;
+      }
+      track_ids.emplace(hit.track_id, path_index);
+    }
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parallel Import of Events___________________________________________________________________
+template<class EventVector, class Importer, class ...Args>
+const EventVector _merge_import_events(const script::path_vector& paths,
+                                       const real_vector& timing_offsets,
+                                       Importer import,
+                                       Args&& ...args) {
+  EventVector out{};
+  const auto path_count = paths.size();
+  if (path_count == 0UL || path_count != timing_offsets.size())
+    return out;
+
+  for (std::size_t i{}; i < path_count; ++i) {
+    if (paths[i].empty())
+      continue;
+    auto events = import(paths[i], std::forward<Args>(args)...);
+    _time_shift_events(events, timing_offsets[i]);
+    _merge_events(out, events);
+  }
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Parallel Import of Events and Monte Carlo___________________________________________________
+template<class EventVectorBundle, class Importer, class ...Args>
+const EventVectorBundle _merge_import_events_and_mc(const script::path_vector& paths,
+                                                    const real_vector& timing_offsets,
+                                                    Importer import,
+                                                    Args&& ...args) {
+  EventVectorBundle out{{}, {}};
+  const auto path_count = paths.size();
+  if (path_count == 0UL || path_count != timing_offsets.size())
+    return out;
+
+  _track_id_map track_ids;
+  for (std::size_t i{}; i < path_count; ++i) {
+    if (paths[i].empty())
+      continue;
+    auto bundle = import(paths[i], std::forward<Args>(args)...);
+    auto& events = bundle.events;
+    _time_shift_events(events, timing_offsets[i]);
+    _merge_events(out.events, events);
+    auto& true_events = bundle.true_events;
+    _time_shift_events(true_events, timing_offsets[i]);
+    _reassign_track_ids(i, true_events, track_ids);
+    _merge_events(out.true_events, true_events);
+  }
+
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
 //__Import Events from ROOT File________________________________________________________________
-const analysis::event_vector import_events(const std::string& path,
+const analysis::event_vector import_events(const script::path_type& path,
                                            const std::string& t_key,
                                            const std::string& x_key,
                                            const std::string& y_key,
@@ -169,7 +387,7 @@ const analysis::event_vector import_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-const analysis::event_vector import_events(const std::string& path,
+const analysis::event_vector import_events(const script::path_type& path,
                                            const std::string& t_key,
                                            const std::string& detector_key,
                                            const geometry::detector_map& map) {
@@ -207,16 +425,16 @@ const analysis::event_vector import_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-const analysis::event_vector import_events(const std::string& path,
-                                           const tracking_options& options,
+const analysis::event_vector import_events(const script::path_type& path,
+                                           const script::tracking_options& options,
                                            const geometry::detector_map& map) {
   return import_events(path, options.data_t_key, options.data_detector_key, map);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Import Events from ROOT File________________________________________________________________
-const analysis::event_vector import_events(const std::string& path,
-                                           const tracking_options& options,
+const analysis::event_vector import_events(const script::path_type& path,
+                                           const script::tracking_options& options,
                                            const ImportMode mode) {
   return mode == ImportMode::Detector
     ? import_events(path, options, import_detector_map(options.geometry_map_file))
@@ -224,8 +442,49 @@ const analysis::event_vector import_events(const std::string& path,
 }
 //----------------------------------------------------------------------------------------------
 
+//__ROOT Event Parallel Import__________________________________________________________________
+const analysis::event_vector import_events(const script::path_vector& paths,
+                                           const real_vector& timing_offsets,
+                                           const std::string& t_key,
+                                           const std::string& x_key,
+                                           const std::string& y_key,
+                                           const std::string& z_key) {
+  return _merge_import_events<analysis::event_vector>(paths, timing_offsets,
+    _LAMBDA(import_events), t_key, x_key, y_key, z_key);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Parallel Import__________________________________________________________________
+const analysis::event_vector import_events(const script::path_vector& paths,
+                                           const real_vector& timing_offsets,
+                                           const std::string& t_key,
+                                           const std::string& detector_key,
+                                           const geometry::detector_map& map) {
+  return _merge_import_events<analysis::event_vector>(paths, timing_offsets,
+    _LAMBDA(import_events), t_key, detector_key, map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Parallel Import__________________________________________________________________
+const analysis::event_vector import_events(const script::path_vector& paths,
+                                           const script::tracking_options& options,
+                                           const geometry::detector_map& map) {
+  return import_events(paths, options.data_timing_offsets, options.data_t_key, options.data_detector_key, map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Parallel Import__________________________________________________________________
+const analysis::event_vector import_events(const script::path_vector& paths,
+                                           const script::tracking_options& options,
+                                           const ImportMode mode) {
+  return mode == ImportMode::Detector
+    ? import_events(paths, options, import_detector_map(options.geometry_map_file))
+    : import_events(paths, options.data_timing_offsets, options.data_t_key, options.data_x_key, options.data_y_key, options.data_z_key);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Import Full Events from ROOT File___________________________________________________________
-const analysis::full_event_vector import_full_events(const std::string& path,
+const analysis::full_event_vector import_full_events(const script::path_type& path,
                                                      const std::string& t_key,
                                                      const std::string& x_key,
                                                      const std::string& y_key,
@@ -277,7 +536,7 @@ const analysis::full_event_vector import_full_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 //__Import Full Events from ROOT File___________________________________________________________
-const analysis::full_event_vector import_full_events(const std::string& path,
+const analysis::full_event_vector import_full_events(const script::path_type& path,
                                                      const std::string& t_key,
                                                      const std::string& dt_key,
                                                      const std::string& detector_key,
@@ -322,16 +581,16 @@ const analysis::full_event_vector import_full_events(const std::string& path,
 //----------------------------------------------------------------------------------------------
 
 //__Import Full Events from ROOT File___________________________________________________________
-const analysis::full_event_vector import_full_events(const std::string& path,
-                                                     const tracking_options& options,
+const analysis::full_event_vector import_full_events(const script::path_type& path,
+                                                     const script::tracking_options& options,
                                                      const geometry::detector_map& map) {
   return import_full_events(path, options.data_t_key, options.data_dt_key, options.data_detector_key, map);
 }
 //----------------------------------------------------------------------------------------------
 
 //__Import Full Events from ROOT File___________________________________________________________
-const analysis::full_event_vector import_full_events(const std::string& path,
-                                                     const tracking_options& options,
+const analysis::full_event_vector import_full_events(const script::path_type& path,
+                                                     const script::tracking_options& options,
                                                      const ImportMode mode) {
   return mode == ImportMode::Detector
     ? import_full_events(path, options, import_detector_map(options.geometry_map_file))
@@ -347,8 +606,63 @@ const analysis::full_event_vector import_full_events(const std::string& path,
 }
 //----------------------------------------------------------------------------------------------
 
+//__ROOT Full Event Parallel Import_____________________________________________________________
+const analysis::full_event_vector import_full_events(const script::path_vector& paths,
+                                                     const real_vector& timing_offsets,
+                                                     const std::string& t_key,
+                                                     const std::string& x_key,
+                                                     const std::string& y_key,
+                                                     const std::string& z_key,
+                                                     const std::string& dt_key,
+                                                     const std::string& dx_key,
+                                                     const std::string& dy_key,
+                                                     const std::string& dz_key) {
+  return _merge_import_events<analysis::full_event_vector>(paths, timing_offsets,
+    _LAMBDA(import_full_events), t_key, x_key, y_key, z_key, dt_key, dx_key, dy_key, dz_key);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Parallel Import_____________________________________________________________
+const analysis::full_event_vector import_full_events(const script::path_vector& paths,
+                                                     const real_vector& timing_offsets,
+                                                     const std::string& t_key,
+                                                     const std::string& dt_key,
+                                                     const std::string& detector_key,
+                                                     const geometry::detector_map& map) {
+  return _merge_import_events<analysis::full_event_vector>(paths, timing_offsets,
+    _LAMBDA(import_full_events), t_key, dt_key, detector_key, map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Parallel Import_____________________________________________________________
+const analysis::full_event_vector import_full_events(const script::path_vector& paths,
+                                                     const script::tracking_options& options,
+                                                     const geometry::detector_map& map) {
+  return import_full_events(paths, options.data_timing_offsets, options.data_t_key, options.data_dt_key, options.data_detector_key, map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Parallel Import_____________________________________________________________
+const analysis::full_event_vector import_full_events(const script::path_vector& paths,
+                                                     const script::tracking_options& options,
+                                                     const ImportMode mode) {
+  return mode == ImportMode::Detector
+    ? import_full_events(paths, options, import_detector_map(options.geometry_map_file))
+    : import_full_events(paths,
+        options.data_timing_offsets,
+        options.data_t_key,
+        options.data_x_key,
+        options.data_y_key,
+        options.data_z_key,
+        options.data_dt_key,
+        options.data_dx_key,
+        options.data_dy_key,
+        options.data_dz_key);
+}
+//----------------------------------------------------------------------------------------------
+
 //__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
-const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_type& path,
                                                                const std::string& track_key,
                                                                const std::string& t_key,
                                                                const std::string& x_key,
@@ -398,7 +712,7 @@ const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
-const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_type& path,
                                                                const std::string& track_key,
                                                                const std::string& t_key,
                                                                const std::string& x_key,
@@ -452,8 +766,8 @@ const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
-const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
-                                                               const tracking_options& options,
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_type& path,
+                                                               const script::tracking_options& options,
                                                                const geometry::detector_map& map) {
   return import_event_mc_bundle(path,
     options.data_track_id_key,
@@ -467,8 +781,8 @@ const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Event Import with Monte-Carlo Tracks___________________________________________________
-const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string& path,
-                                                               const tracking_options& options,
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_type& path,
+                                                               const script::tracking_options& options,
                                                                const ImportMode mode) {
   return mode == ImportMode::Detector
     ? import_event_mc_bundle(path, options, import_detector_map(options.geometry_map_file))
@@ -481,8 +795,68 @@ const analysis::mc::event_vector_bundle import_event_mc_bundle(const std::string
 }
 //----------------------------------------------------------------------------------------------
 
+//__ROOT Event Parallel Import with Monte-Carlo Tracks__________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_vector& paths,
+                                                               const real_vector& timing_offsets,
+                                                               const std::string& track_key,
+                                                               const std::string& t_key,
+                                                               const std::string& x_key,
+                                                               const std::string& y_key,
+                                                               const std::string& z_key) {
+  return _merge_import_events_and_mc<analysis::mc::event_vector_bundle>(paths, timing_offsets,
+    _LAMBDA(import_event_mc_bundle), track_key, t_key, x_key, y_key, z_key);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Parallel Import with Monte-Carlo Tracks__________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_vector& paths,
+                                                               const real_vector& timing_offsets,
+                                                               const std::string& track_key,
+                                                               const std::string& t_key,
+                                                               const std::string& x_key,
+                                                               const std::string& y_key,
+                                                               const std::string& z_key,
+                                                               const std::string& detector_key,
+                                                               const geometry::detector_map& map) {
+  return _merge_import_events_and_mc<analysis::mc::event_vector_bundle>(paths, timing_offsets,
+    _LAMBDA(import_event_mc_bundle), track_key, t_key, x_key, y_key, z_key, detector_key, map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Parallel Import with Monte-Carlo Tracks__________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_vector& paths,
+                                                               const script::tracking_options& options,
+                                                               const geometry::detector_map& map) {
+  return import_event_mc_bundle(paths,
+    options.data_timing_offsets,
+    options.data_track_id_key,
+    options.data_t_key,
+    options.data_x_key,
+    options.data_y_key,
+    options.data_z_key,
+    options.data_detector_key,
+    map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Event Parallel Import with Monte-Carlo Tracks__________________________________________
+const analysis::mc::event_vector_bundle import_event_mc_bundle(const script::path_vector& paths,
+                                                               const script::tracking_options& options,
+                                                               const ImportMode mode) {
+  return mode == ImportMode::Detector
+    ? import_event_mc_bundle(paths, options, import_detector_map(options.geometry_map_file))
+    : import_event_mc_bundle(paths,
+        options.data_timing_offsets,
+        options.data_track_id_key,
+        options.data_t_key,
+        options.data_x_key,
+        options.data_y_key,
+        options.data_z_key);
+}
+//----------------------------------------------------------------------------------------------
+
 //__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
-const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_type& path,
                                                                          const std::string& track_key,
                                                                          const std::string& t_key,
                                                                          const std::string& x_key,
@@ -543,7 +917,7 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
-const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_type& path,
                                                                          const std::string& track_key,
                                                                          const std::string& t_key,
                                                                          const std::string& x_key,
@@ -605,8 +979,8 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
-const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
-                                                                         const tracking_options& options,
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_type& path,
+                                                                         const script::tracking_options& options,
                                                                          const geometry::detector_map& map) {
   return import_full_event_mc_bundle(path,
     options.data_track_id_key,
@@ -621,9 +995,9 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
 //----------------------------------------------------------------------------------------------
 
 //__ROOT Full Event Import with Monte-Carlo Tracks______________________________________________
-const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const std::string& path,
-                                                             const tracking_options& options,
-                                                             const ImportMode mode) {
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_type& path,
+                                                                         const script::tracking_options& options,
+                                                                         const ImportMode mode) {
   return mode == ImportMode::Detector
     ? import_full_event_mc_bundle(path, options, import_detector_map(options.geometry_map_file))
     : import_full_event_mc_bundle(path,
@@ -639,242 +1013,77 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
 }
 //----------------------------------------------------------------------------------------------
 
+//__ROOT Full Event Parallel Import with Monte-Carlo Tracks_____________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_vector& paths,
+                                                                         const real_vector& timing_offsets,
+                                                                         const std::string& track_key,
+                                                                         const std::string& t_key,
+                                                                         const std::string& x_key,
+                                                                         const std::string& y_key,
+                                                                         const std::string& z_key,
+                                                                         const std::string& dt_key,
+                                                                         const std::string& dx_key,
+                                                                         const std::string& dy_key,
+                                                                         const std::string& dz_key) {
+  return _merge_import_events_and_mc<analysis::mc::full_event_vector_bundle>(paths, timing_offsets,
+    _LAMBDA(import_full_event_mc_bundle), track_key, t_key, x_key, y_key, z_key, dt_key, dx_key, dy_key, dz_key);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Parallel Import with Monte-Carlo Tracks_____________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_vector& paths,
+                                                                         const real_vector& timing_offsets,
+                                                                         const std::string& track_key,
+                                                                         const std::string& t_key,
+                                                                         const std::string& x_key,
+                                                                         const std::string& y_key,
+                                                                         const std::string& z_key,
+                                                                         const std::string& dt_key,
+                                                                         const std::string& detector_key,
+                                                                         const geometry::detector_map& map) {
+  return _merge_import_events_and_mc<analysis::mc::full_event_vector_bundle>(paths, timing_offsets,
+    _LAMBDA(import_full_event_mc_bundle), track_key, t_key, x_key, y_key, z_key, dt_key, detector_key, map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Parallel Import with Monte-Carlo Tracks_____________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_vector& paths,
+                                                                         const script::tracking_options& options,
+                                                                         const geometry::detector_map& map) {
+  return import_full_event_mc_bundle(paths,
+    options.data_timing_offsets,
+    options.data_track_id_key,
+    options.data_t_key,
+    options.data_x_key,
+    options.data_y_key,
+    options.data_z_key,
+    options.data_dt_key,
+    options.data_detector_key,
+    map);
+}
+//----------------------------------------------------------------------------------------------
+
+//__ROOT Full Event Parallel Import with Monte-Carlo Tracks_____________________________________
+const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const script::path_vector& paths,
+                                                                         const script::tracking_options& options,
+                                                                         const ImportMode mode) {
+  return mode == ImportMode::Detector
+    ? import_full_event_mc_bundle(paths, options, import_detector_map(options.geometry_map_file))
+    : import_full_event_mc_bundle(paths,
+        options.data_timing_offsets,
+        options.data_track_id_key,
+        options.data_t_key,
+        options.data_x_key,
+        options.data_y_key,
+        options.data_z_key,
+        options.data_dt_key,
+        options.data_dx_key,
+        options.data_dy_key,
+        options.data_dz_key);
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////
-
-namespace script { /////////////////////////////////////////////////////////////////////////////
-
-//__Parse Key Value Pair into File Path_________________________________________________________
-void parse_file_path(const std::string& key,
-                     const std::string& value,
-                     std::string& out,
-                     bool exit_on_error) {
-  util::error::exit_when(exit_on_error && !util::io::path_exists(value),
-    "[FATAL ERROR] Missing File Path \"", value, "\" for Key \"", key, "\" in Tracking Script.\n");
-  out = value;
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse Data Key Value Pair___________________________________________________________________
-void parse_data_keys(const std::string& key,
-                     const std::string& value,
-                     std::string& t_key,
-                     std::string& x_key,
-                     std::string& y_key,
-                     std::string& z_key,
-                     bool exit_on_error) {
-  std::vector<std::string> data_keys;
-  util::string::split(value, data_keys, ",;");
-  const auto size = data_keys.size();
-  const auto& end = data_keys.cend();
-  util::error::exit_when(exit_on_error && std::find(data_keys.cbegin(), end, "") != end,
-    "[FATAL ERROR] Invalid Data Argument for \"", key, "\" in Tracking Script.\n"
-    "              Expected 1 argument \"T\" or 4 arguments \"T, X, Y, Z\".\n");
-  if (size == 1) {
-    t_key = data_keys[0];
-  } else if (size == 4) {
-    t_key = data_keys[0];
-    x_key = data_keys[1];
-    y_key = data_keys[2];
-    z_key = data_keys[3];
-  } else if (exit_on_error) {
-    util::error::exit(
-      "[FATAL ERROR] Invalid Data Argument for \"", key, "\" in Tracking Script.\n"
-      "              Expected 1 argument \"T\" or 4 arguments \"T, X, Y, Z\" "
-                    "but received ", size, ".\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse Boolean Key Value_____________________________________________________________________
-void parse_boolean(const std::string& key,
-                   const std::string& value,
-                   bool& out,
-                   bool exit_on_error) {
-  const auto value_lowercase = util::string::tolower(value);
-  if (value_lowercase == "true" || value_lowercase == "t" || value_lowercase == "1") {
-    out = true;
-  } else if (value_lowercase == "false" || value_lowercase == "f" || value_lowercase == "0") {
-    out = false;
-  } else if (exit_on_error) {
-    util::error::exit(
-      "[FATAL ERROR] Invalid Boolean Argument for \"", key, "\" in Tracking Script.\n"
-      "              Expected argument convertible boolean value.\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse Real Key Value________________________________________________________________________
-void parse_real(const std::string& key,
-                const std::string& value,
-                real& out,
-                bool exit_on_error) {
-  try {
-    out = static_cast<real>(std::stold(value));
-  } catch (...) {
-    util::error::exit_when(exit_on_error,
-      "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
-      "              Expected argument convertible to floating point value.\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse Positive Real Key Value_______________________________________________________________
-void parse_positive_real(const std::string& key,
-                         const std::string& value,
-                         real& out,
-                         bool exit_on_error) {
-  try {
-    out = static_cast<real>(std::stold(value));
-    if (out < 0) {
-      out = 0;
-      throw std::invalid_argument{"Real Number Must be Greater than or Equal to Zero."};
-    }
-  } catch (...) {
-    util::error::exit_when(exit_on_error,
-      "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
-      "              Expected argument convertible to positive floating point value.\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse Real Range Key Value__________________________________________________________________
-void parse_real_range(const std::string& key,
-                      const std::string& value,
-                      real_range& out,
-                      bool exit_on_error) {
-  try {
-    std::vector<std::string> values;
-    util::string::split(value, values, ",;");
-    if (values.size() != 2)
-      throw std::invalid_argument{"Size Mismatch."};
-
-    out = real_range{static_cast<real>(std::stold(values[0])),
-                     static_cast<real>(std::stold(values[1]))};
-
-  } catch (...) {
-    util::error::exit_when(exit_on_error,
-      "[FATAL ERROR] Invalid Real Number Argument for \"", key, "\" in Tracking Script.\n"
-      "              Expected argument convertible to Real range (min, max).\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse Integer Key Value_____________________________________________________________________
-void parse_integer(const std::string& key,
-                   const std::string& value,
-                   integer& out,
-                   bool exit_on_error) {
-  try {
-    out = static_cast<integer>(std::stoll(value));
-  } catch (...) {
-    util::error::exit_when(exit_on_error,
-      "[FATAL ERROR] Invalid Integer Argument for \"", key, "\" in Tracking Script.\n"
-      "              Expected argument convertible to integral value.\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse Size Type Key Value___________________________________________________________________
-void parse_size_type(const std::string& key,
-                     const std::string& value,
-                     std::size_t& out,
-                     bool exit_on_error) {
-  try {
-    out = static_cast<std::size_t>(std::stoull(value));
-  } catch (...) {
-    util::error::exit_when(exit_on_error,
-      "[FATAL ERROR] Invalid Size Type Argument for \"", key, "\" in Tracking Script.\n"
-      "              Expected argument convertible to positive integral value.\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse R4 Key Value__________________________________________________________________________
-void parse_r4_point(const std::string& key,
-                    const std::string& value,
-                    r4_point& out,
-                    bool use_units,
-                    bool exit_on_error) {
-  std::vector<std::string> point;
-  util::string::split(value, point, ",;");
-  const auto size = point.size();
-  const auto& end = point.cend();
-  util::error::exit_when(exit_on_error && (size != 4 || (std::find(point.cbegin(), end, "") != end)),
-    "[FATAL ERROR] Invalid R4 Point Argument for \"", key, "\" in Tracking Script.\n"
-    "              Expected 4 arguments \"T, X, Y, Z\" but received ", size, ".\n");
-  try {
-    out = r4_point{
-      (use_units ? units::time   : 1.0L) * static_cast<real>(std::stold(point[0])),
-      (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[1])),
-      (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[2])),
-      (use_units ? units::length : 1.0L) * static_cast<real>(std::stold(point[3])) };
-  } catch (...) {
-    util::error::exit_when(exit_on_error,
-      "[FATAL ERROR] Invalid R4 Point Argument for \"", key, "\" in Tracking Script.\n"
-      "              Expected 4 arguments \"T, X, Y, Z\" convertible to floating point values.\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse R3 Coordinate Key Value_______________________________________________________________
-void parse_r3_coordinate(const std::string& key,
-                         const std::string& value,
-                         Coordinate& coordinate,
-                         bool exit_on_error) {
-  if (value == "x" || value == "X") {
-    coordinate = Coordinate::X;
-  } else if (value == "y" || value == "Y") {
-    coordinate = Coordinate::Y;
-  } else if (value == "z" || value == "Z") {
-    coordinate = Coordinate::Z;
-  } else {
-    util::error::exit_when(exit_on_error,
-      "[FATAL ERROR] Invalid R3 Coordinate Argument for \"", key, "\" in Tracking Script.\n",
-      "              Expected X/x, Y/y, or Z/z but received \"", value, "\".\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse R4 Coordinate Key Value_______________________________________________________________
-void parse_r4_coordinate(const std::string& key,
-                         const std::string& value,
-                         Coordinate& coordinate,
-                         bool exit_on_error) {
-  if (value == "t" || value == "T") {
-    coordinate = Coordinate::T;
-  } else if (value == "x" || value == "X") {
-    coordinate = Coordinate::X;
-  } else if (value == "y" || value == "Y") {
-    coordinate = Coordinate::Y;
-  } else if (value == "z" || value == "Z") {
-    coordinate = Coordinate::Z;
-  } else {
-    util::error::exit_when(exit_on_error,
-      "[FATAL ERROR] Invalid R4 Coordinate Argument for \"", key, "\" in Tracking Script.\n",
-      "              Expected T/t, X/x, Y/y, or Z/z but received \"", value, "\".\n");
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-//__Parse Line from Tracking Script_____________________________________________________________
-void parse_line(const std::string& line,
-                std::string& key,
-                std::string& value) {
-  bool on_key = true;
-  for (const auto& ch : line) {
-    if (ch == reserved::comment_character) break;
-    if (ch == reserved::space_character) continue;
-    if (ch == reserved::key_value_separator) {
-      on_key = false;
-      continue;
-    }
-    if (on_key) key.push_back(ch);
-    else value.push_back(ch);
-  }
-}
-//----------------------------------------------------------------------------------------------
-
-} /* namespace script */ ///////////////////////////////////////////////////////////////////////
 
 } /* namespace reader */ ///////////////////////////////////////////////////////////////////////
 

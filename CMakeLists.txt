@@ -24,8 +24,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 find_package(Geant4 REQUIRED COMPONENTS gdml)
 find_package(ROOT   REQUIRED COMPONENTS MathCore Minuit)
 
-include(${Geant4_USE_FILE})
-
 add_library(tracker SHARED
     src/tracker/analysis/event.cc
     src/tracker/analysis/join.cc
@@ -43,6 +41,7 @@ add_library(tracker SHARED
     src/tracker/plot/value_tag.cc
 
     src/tracker/reader.cc
+    src/tracker/script.cc
 
     src/tracker/core/stat.cc
 
@@ -55,7 +54,8 @@ target_compile_options(tracker PUBLIC -Wno-unknown-warning-option
                                       -Wunused-function
                                       -Wno-unused-value
                                       -Wno-unused-parameter
-                                      -Wno-unused-but-set-parameter)
+                                      -Wno-unused-but-set-parameter
+                                      -Wno-switch)
 
 set_target_properties(tracker PROPERTIES VERSION ${PROJECT_VERSION})
 

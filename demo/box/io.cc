@@ -18,13 +18,11 @@
 
 #include "io.hh"
 
-#include <tracker/core/units.hh>
-
 #include "geometry.hh"
 
 namespace MATHUSLA {
 
-namespace box { ////////////////////////////////////////////////////////////////////////////////
+namespace box { namespace io { /////////////////////////////////////////////////////////////////
 
 //__Extension Parser Default Constructor________________________________________________________
 extension_parser::extension_parser()
@@ -42,35 +40,35 @@ extension_parser::extension_parser()
 //__Extension Parser for Tracking Script________________________________________________________
 void extension_parser::operator()(const std::string& key,
                                   const std::string& value,
-                                  reader::tracking_options& options) {
+                                  script::tracking_options& options) {
   if (key == "layer-count") {
-    reader::script::parse_size_type(key, value, layer_count);
+    script::parse_size_type(key, value, layer_count);
   } else if (key == "scintillator_x_width") {
-    reader::script::parse_positive_real(key, value, scintillator_x_width);
+    script::parse_positive_real(key, value, scintillator_x_width);
     scintillator_x_width *= units::length;
   } else if (key == "scintillator_y_width") {
-    reader::script::parse_positive_real(key, value, scintillator_y_width);
+    script::parse_positive_real(key, value, scintillator_y_width);
     scintillator_y_width *= units::length;
   } else if (key == "scintillator_height") {
-    reader::script::parse_positive_real(key, value, scintillator_height);
+    script::parse_positive_real(key, value, scintillator_height);
     scintillator_height *= units::length;
   } else if (key == "layer_spacing") {
-    reader::script::parse_positive_real(key, value, layer_spacing);
+    script::parse_positive_real(key, value, layer_spacing);
     layer_spacing *= units::length;
   } else if (key == "x_displacement") {
-    reader::script::parse_real(key, value, x_displacement);
+    script::parse_real(key, value, x_displacement);
     x_displacement *= units::length;
   } else if (key == "y_displacement") {
-    reader::script::parse_real(key, value, y_displacement);
+    script::parse_real(key, value, y_displacement);
     y_displacement *= units::length;
   } else if (key == "x_edge_length") {
-    reader::script::parse_positive_real(key, value, x_edge_length);
+    script::parse_positive_real(key, value, x_edge_length);
     x_edge_length *= units::length;
   } else if (key == "y_edge_length") {
-    reader::script::parse_positive_real(key, value, y_edge_length);
+    script::parse_positive_real(key, value, y_edge_length);
     y_edge_length *= units::length;
   } else {
-    reader::script::default_extension_parser(key, value, options);
+    script::default_extension_parser(key, value, options);
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -159,7 +157,7 @@ void draw_vertex_and_guess(plot::canvas& canvas,
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
                  analysis::track::tree& tree,
-                 const reader::tracking_options& options) {
+                 const script::tracking_options& options) {
   for (const auto& track : tracks) {
     if (options.verbose_output)
       std::cout << track << "\n";
@@ -174,7 +172,7 @@ void save_tracks(const analysis::track_vector& tracks,
 void save_vertices(const analysis::vertex_vector& vertices,
                    plot::canvas& canvas,
                    analysis::vertex::tree& tree,
-                   const reader::tracking_options& options) {
+                   const script::tracking_options& options) {
   for (const auto& vertex : vertices) {
     if (options.verbose_output)
       std::cout << vertex << "\n";
@@ -185,6 +183,24 @@ void save_vertices(const analysis::vertex_vector& vertices,
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace box */ //////////////////////////////////////////////////////////////////////////
+//__Calculate Value Tags for Paths______________________________________________________________
+const plot::value_tag_vector data_paths_value_tags(const script::path_vector& paths,
+                                                   const type::real_vector& timing_offsets,
+                                                   const std::size_t starting_index) {
+  const auto size = paths.size();
+  if (size == 1UL)
+    return plot::value_tag_vector{{"DATAPATH", paths.front()}};
+
+  plot::value_tag_vector out;
+  out.reserve(size);
+  for (std::size_t i{}; i < size; ++i)
+    out.emplace_back("DATAPATH_" + std::to_string(i),
+                     paths[i] + " with offset " + std::to_string(timing_offsets[i] / units::time)
+                                                + " " + units::time_string);
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+} } /* namespace box::io */ ////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */

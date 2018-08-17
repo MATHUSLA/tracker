@@ -56,6 +56,40 @@ struct event_vector_bundle { event_vector true_events; analysis::event_vector ev
 struct full_event_vector_bundle { event_vector true_events; analysis::full_event_vector events; };
 //----------------------------------------------------------------------------------------------
 
+//__Reduce Event Vector to Event________________________________________________________________
+const event reduce(const event_vector& events);
+const event_vector reduce(const std::vector<event_vector>& event_vectors);
+const event_bundle reduce(const event_bundle_vector& bundles);
+const full_event_bundle reduce(const full_event_bundle_vector& bundles);
+const event_bundle_vector reduce(const std::vector<event_bundle_vector>& bundle_vectors);
+const full_event_bundle_vector reduce(const std::vector<full_event_bundle_vector>& bundle_vectors);
+const event_bundle reduce(const event_vector_bundle& bundle);
+const full_event_bundle reduce(const full_event_vector_bundle& bundle);
+const event_vector_bundle reduce(const std::vector<event_vector_bundle>& bundle_vector);
+const full_event_vector_bundle reduce(const std::vector<full_event_vector_bundle>& bundle_vector);
+//----------------------------------------------------------------------------------------------
+
+//__Align Bundles By Offsets____________________________________________________________________
+void align(event_bundle_vector& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(full_event_bundle_vector& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(event_vector_bundle& bundle,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(full_event_vector_bundle& bundle,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(std::vector<event_vector_bundle>& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+void align(std::vector<full_event_vector_bundle>& bundles,
+           const real_vector& offsets,
+           const Coordinate coordinate=Coordinate::T);
+//----------------------------------------------------------------------------------------------
+
 //__Type Conversion Helper Functions____________________________________________________________
 const track_vector convert_events(const event& points);
 // TODO: const event convert(const track& points);
@@ -235,16 +269,6 @@ inline integer_vector _get_poisson_vector(const real mean,
     }
     c.push_back(r);
   });
-  /*
-  for (std::size_t i{}; i < count; ++i) {
-    integer next = gen();
-    if (next <= 0LL) {
-      ++empty_count;
-      next = 0LL;
-    }
-    out.push_back(next);
-  }
-  */
   return empty_count == count ? integer_vector{} : out;
 }
 //----------------------------------------------------------------------------------------------

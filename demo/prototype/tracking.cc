@@ -21,9 +21,8 @@
 #include <tracker/geometry.hh>
 #include <tracker/plot.hh>
 #include <tracker/reader.hh>
+#include <tracker/script.hh>
 
-#include <tracker/util/index_vector.hh>
-#include <tracker/util/bit_vector.hh>
 #include <tracker/util/io.hh>
 
 #include "geometry.hh"
@@ -31,16 +30,18 @@
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
+namespace mc       = analysis::mc;
 namespace geometry = MATHUSLA::TRACKER::geometry;
 namespace plot     = MATHUSLA::TRACKER::plot;
 namespace reader   = MATHUSLA::TRACKER::reader;
+namespace script   = MATHUSLA::TRACKER::script;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
 
 //__Find Primary Tracks for Prototype___________________________________________________________
 const analysis::track_vector find_primary_tracks(const analysis::event& event,
-                                                 const reader::tracking_options& options,
+                                                 const script::tracking_options& options,
                                                  plot::canvas& canvas,
                                                  analysis::event& non_track_points) {
   namespace ash = analysis::seed_heuristic;
@@ -73,7 +74,7 @@ const analysis::track_vector find_primary_tracks(const analysis::event& event,
 
 //__Find Secondary Tracks for Prototype_________________________________________________________
 const analysis::track_vector find_secondary_tracks(const analysis::event& event,
-                                                   const reader::tracking_options& options,
+                                                   const script::tracking_options& options,
                                                    plot::canvas& canvas,
                                                    analysis::event& non_track_points) {
   analysis::event combined_rpc_hits;
@@ -103,7 +104,7 @@ const analysis::track_vector find_secondary_tracks(const analysis::event& event,
 //__Prototype Tracking Algorithm________________________________________________________________
 int prototype_tracking(int argc,
                        char* argv[]) {
-  const auto options = reader::parse_input(argc, argv);
+  const auto options = script::parse_command_line(argc, argv);
   const auto detector_map = reader::import_detector_map(options.geometry_map_file);
 
   plot::init(options.draw_events);
@@ -111,13 +112,15 @@ int prototype_tracking(int argc,
                  options.default_time_error,
                  reader::import_time_resolution_map(options.geometry_time_file));
 
-  std::cout << "Begin Tracking in " << options.data_directory << ":\n\n";
+  // FIXME: implement parallel import like box demo
+
+  std::cout << "Begin Tracking in " << options.data_directories.front() << ":\n\n";
   const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
   const plot::value_tag filetype_tag("FILETYPE", "MATHUSLA TRACKING STATFILE");
   const plot::value_tag project_tag("PROJECT", "Prototype");
 
   std::size_t path_counter{};
-  for (const auto& path : reader::root::search_directory(options.data_directory, options.data_file_extension)) {
+  for (const auto& path : reader::root::search_directory(options.data_directories.front(), options.data_file_extension)) {
     const auto path_counter_string = std::to_string(path_counter++);
     const auto statistics_save_path = statistics_path_prefix
                                     + path_counter_string
@@ -142,8 +145,8 @@ int prototype_tracking(int argc,
       const auto event_size = event.size();
       const auto event_counter_string = std::to_string(event_counter);
 
-      const auto compressed_event = options.time_smearing ? analysis::mc::time_smear(analysis::mc::compress(event))
-                                                          : analysis::mc::compress(event);
+      const auto compressed_event = options.time_smearing ? mc::time_smear(mc::compress(event))
+                                                          : mc::compress(event);
       const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
       if (event_size == 0UL || compression_size == event_size)
@@ -158,7 +161,7 @@ int prototype_tracking(int argc,
       plot::canvas canvas("event" + event_counter_string, path + event_counter_string);
       if (options.draw_events) {
         draw_detector_centers(canvas);
-        draw_mc_tracks(canvas, analysis::mc::convert_events(mc_imported_events[event_counter]));
+        draw_mc_tracks(canvas, mc::convert_events(mc_imported_events[event_counter]));
         canvas.add_points(compressed_event, 0.8, plot::color::BLACK);
       }
 

@@ -22,6 +22,26 @@ namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
 
+//__Reduce Event Vector to Event________________________________________________________________
+template<class EventVector,
+  typename Event = typename EventVector::value_type,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const Event reduce(const EventVector& events) {
+  Event out;
+  out.reserve(std::accumulate(events.cbegin(), events.cend(), 0ULL,
+    [](const auto size, const auto& hits) { return size + hits.size(); }));
+  for (const auto& hits : events)
+    out.insert(out.cend(), hits.cbegin(), hits.cend());
+  return out;
+}
+const event reduce(const event_vector& events) {
+  return reduce<>(events);
+}
+const full_event reduce(const full_event_vector& full_events) {
+  return reduce<>(full_events);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Calculate Number of Hits per unit Length____________________________________________________
 template<class Event,
   typename Point = typename Event::value_type,
@@ -150,14 +170,7 @@ template<class EventPartition,
   typename Event = typename EventPartition::parts::value_type,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const Event reduce_partition(const EventPartition& previous) {
-  const auto& parts = previous.parts;
-  Event out;
-  out.reserve(std::accumulate(parts.cbegin(), parts.cend(), 0ULL,
-    [](const auto size, const auto& event) { return size + event.size(); }));
-
-  for (const auto& event : parts)
-    out.insert(out.cend(), event.cbegin(), event.cend());
-  return out;
+  return reduce(previous.parts);
 }
 const event reduce_partition(const event_partition& previous) {
   return reduce_partition<event_partition, event>(previous);

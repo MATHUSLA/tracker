@@ -26,17 +26,17 @@
 #include <tracker/analysis/track.hh>
 #include <tracker/analysis/vertex.hh>
 #include <tracker/plot.hh>
-#include <tracker/reader.hh>
+#include <tracker/script.hh>
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace plot     = MATHUSLA::TRACKER::plot;
-namespace reader   = MATHUSLA::TRACKER::reader;
+namespace script   = MATHUSLA::TRACKER::script;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
 
-namespace box { ////////////////////////////////////////////////////////////////////////////////
+namespace box { namespace io { /////////////////////////////////////////////////////////////////
 
 //__Extension Parser for Tracking Script________________________________________________________
 struct extension_parser {
@@ -53,7 +53,7 @@ struct extension_parser {
   extension_parser();
   void operator()(const std::string& key,
                   const std::string& value,
-                  reader::tracking_options& options);
+                  script::tracking_options& options);
 };
 //----------------------------------------------------------------------------------------------
 
@@ -81,20 +81,51 @@ void draw_vertex_and_guess(plot::canvas& canvas,
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
                  analysis::track::tree& tree,
-                 const reader::tracking_options& options);
+                 const script::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
 //__Show and Add Vertices to Statistics_________________________________________________________
 void save_vertices(const analysis::vertex_vector& vertices,
                    plot::canvas& canvas,
                    analysis::vertex::tree& tree,
-                   const reader::tracking_options& options);
+                   const script::tracking_options& options);
+//----------------------------------------------------------------------------------------------
+
+//__Calculate Value Tags for Paths______________________________________________________________
+const plot::value_tag_vector data_paths_value_tags(const script::path_vector& paths,
+                                                   const type::real_vector& timing_offsets,
+                                                   const std::size_t starting_index=0UL);
 //----------------------------------------------------------------------------------------------
 
 //__Print Bar___________________________________________________________________________________
 inline void print_bar(const size_t count=99,
                       const char b='=') {
   std::cout << "\n" << std::string(count, b) << "\n\n";
+}
+//----------------------------------------------------------------------------------------------
+
+//__Print Directories For Tracking______________________________________________________________
+inline void print_tracking_directories(const script::path_vector& directories) {
+  if (directories.size() <= 1UL) {
+    std::cout << "Begin Tracking in " << directories.front() << ":\n\n";
+  } else {
+    std::cout << "Begin Parallel Tracking in: \n";
+    for (const auto& path : directories)
+      std::cout << "  - " << path << "\n";
+    std::cout << "\n";
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Print Paths For Tracking____________________________________________________________________
+inline void print_tracking_paths(const script::path_vector& paths) {
+  if (paths.size() <= 1UL) {
+    std::cout << "Read Path: " << paths.front() << "\n";
+  } else {
+    std::cout << "Read Paths: \n";
+    for (const auto& path : paths)
+      std::cout << "  - " << path << "\n";
+  }
 }
 //----------------------------------------------------------------------------------------------
 
@@ -118,7 +149,7 @@ inline void print_tracking_summary(const analysis::full_event& event,
 }
 //----------------------------------------------------------------------------------------------
 
-} /* namespace box */ //////////////////////////////////////////////////////////////////////////
+} } /* namespace box::io */ ////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
 

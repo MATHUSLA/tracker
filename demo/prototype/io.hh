@@ -26,12 +26,12 @@
 #include <tracker/analysis/track.hh>
 #include <tracker/analysis/vertex.hh>
 #include <tracker/plot.hh>
-#include <tracker/reader.hh>
+#include <tracker/script.hh>
 
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace plot     = MATHUSLA::TRACKER::plot;
-namespace reader   = MATHUSLA::TRACKER::reader;
+namespace script   = MATHUSLA::TRACKER::script;
 //----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
@@ -71,14 +71,14 @@ plot::histogram_collection generate_histograms();
 void save_tracks(const analysis::track_vector& tracks,
                  plot::canvas& canvas,
                  analysis::track::tree& tree,
-                 const reader::tracking_options& options);
+                 const script::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
 //__Show and Add Vertices to Statistics_________________________________________________________
 void save_vertices(const analysis::vertex_vector& vertices,
                    plot::canvas& canvas,
                    analysis::vertex::tree& tree,
-                   const reader::tracking_options& options);
+                   const script::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
 //__Print Bar___________________________________________________________________________________
