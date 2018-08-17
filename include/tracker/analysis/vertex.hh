@@ -147,6 +147,8 @@ public:
   bool operator==(const vertex& other) const noexcept { return _tracks == other._tracks; }
   bool operator!=(const vertex& other) const noexcept { return !(*this == other);        }
 
+  std::size_t hash() const;
+
 protected:
   fit_parameters _guess, _final;
   track_vector _tracks;
@@ -192,6 +194,8 @@ public:
               t_error, x_error, y_error, z_error,
               chi_squared, chi_squared_per_dof, chi_squared_p_value,
               size;
+
+  branch<std::vector<uint_fast64_t>> track_hash, hash;
 
   void insert(const vertex& vertex);
   void clear();

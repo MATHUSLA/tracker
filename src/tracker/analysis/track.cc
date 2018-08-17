@@ -854,6 +854,14 @@ void track::draw_guess(plot::canvas& canvas,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Hash Implementation_________________________________________________________________________
+std::size_t track::hash() const {
+  return util::functional::hash_combine(0x0239bb2d0cULL,
+    _full_event,
+    static_cast<std::size_t>(_direction));
+}
+//----------------------------------------------------------------------------------------------
+
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 //__Print Track Parameters with Units___________________________________________________________
 std::ostream& _print_track_parameters(std::ostream& os,
@@ -1005,6 +1013,11 @@ track::tree::tree(const std::string& name,
       beta_error(emplace_branch<branch_value_type>("beta_error")),
       angle(emplace_branch<branch_value_type>("angle")),
       angle_error(emplace_branch<branch_value_type>("angle_error")),
+      event_t(emplace_branch<branch_value_type>("event_t")),
+      event_x(emplace_branch<branch_value_type>("event_x")),
+      event_y(emplace_branch<branch_value_type>("event_y")),
+      event_z(emplace_branch<branch_value_type>("event_z")),
+      hash(emplace_branch<decltype(hash)::value_type>("hash")),
       _count(emplace_branch<decltype(_count)::value_type>("N")),
       _vector_branches({t0, x0, y0, z0, vx, vy, vz,
                         t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
@@ -1036,6 +1049,13 @@ void track::tree::insert(const track& track) {
   beta_error.get().push_back(track.beta_error());
   angle.get().push_back(track.angle());
   angle_error.get().push_back(track.angle_error());
+  for (const auto& points : track) {
+    event_t.get().push_back(points.t / units::time);
+    event_x.get().push_back(points.x / units::length);
+    event_y.get().push_back(points.y / units::length);
+    event_z.get().push_back(points.z / units::length);
+  }
+  hash.get().push_back(track.hash());
   ++_count;
 }
 //----------------------------------------------------------------------------------------------
@@ -1045,6 +1065,7 @@ void track::tree::clear() {
   _count = 0UL;
   for (auto& entry : _vector_branches)
     entry.get().get().clear();
+  hash.get().clear();
 }
 //----------------------------------------------------------------------------------------------
 
@@ -1052,6 +1073,7 @@ void track::tree::clear() {
 void track::tree::reserve(std::size_t capacity) {
   for (auto& entry : _vector_branches)
     entry.get().get().reserve(capacity);
+  hash.get().reserve(capacity);
 }
 //----------------------------------------------------------------------------------------------
 

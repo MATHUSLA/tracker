@@ -37,6 +37,20 @@ namespace script   = MATHUSLA::TRACKER::script;
 
 namespace MATHUSLA {
 
+//__Alter Event_________________________________________________________________________________
+const analysis::full_event alter_event(const analysis::full_event& event,
+                                       const script::tracking_options& options,
+                                       const box::io::extension_parser& extension) {
+  return box::geometry::restrict_layer_count(
+    mc::add_noise<box::geometry>(
+      mc::use_efficiency(event, options.simulated_efficiency),
+      options.simulated_noise_rate,
+      options.event_time_window.begin,
+      options.event_time_window.end),
+    extension.layer_count);
+}
+//----------------------------------------------------------------------------------------------
+
 //__Find Primary Tracks for Box_________________________________________________________________
 const analysis::track_vector find_primary_tracks(const analysis::full_event& event,
                                                  const script::tracking_options& options,
@@ -124,15 +138,7 @@ void track_event_bundle(const script::path_vector& paths,
     if (event_size == 0UL || compression_size == event_size)
       continue;
 
-    const auto altered_event =
-      box::geometry::restrict_layer_count(
-        mc::add_noise<box::geometry>(
-          mc::use_efficiency(compressed_event, options.simulated_efficiency),
-          options.simulated_noise_rate,
-          options.event_time_window.begin,
-          options.event_time_window.end),
-        extension.layer_count);
-
+    const auto altered_event = alter_event(compressed_event, options, extension);
     const auto event_density = box::geometry::event_density(altered_event);
     box::io::print_event_summary(event_counter, altered_event.size(), compression_size, event_density);
 
@@ -150,7 +156,6 @@ void track_event_bundle(const script::path_vector& paths,
 
     analysis::full_event non_primary_track_points, non_secondary_track_points;
     auto tracks = find_primary_tracks(altered_event, options, canvas, non_primary_track_points);
-
     auto secondary_tracks = find_tracks(non_primary_track_points,
                                         options,
                                         100.0L,

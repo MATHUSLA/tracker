@@ -492,6 +492,12 @@ void vertex::draw_guess(plot::canvas& canvas,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Hash Implementation_________________________________________________________________________
+std::size_t vertex::hash() const {
+  return util::functional::hash_combine_range(_tracks, 0x13c9ee801bULL);
+}
+//----------------------------------------------------------------------------------------------
+
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 //__Print Vertex Parameters with Units__________________________________________________________
 std::ostream& _print_vertex_parameters(std::ostream& os,
@@ -622,6 +628,8 @@ vertex::tree::tree(const std::string& name,
       chi_squared_per_dof(emplace_branch<branch_value_type>("chi_squared_per_dof")),
       chi_squared_p_value(emplace_branch<branch_value_type>("chi_squared_p_value")),
       size(emplace_branch<branch_value_type>("size")),
+      track_hash(emplace_branch<decltype(track_hash)::value_type>("track_hash")),
+      hash(emplace_branch<decltype(hash)::value_type>("hash")),
       _count(emplace_branch<decltype(_count)::value_type>("N")),
       _vector_branches({t, x, y, z,
                         t_error, x_error, y_error, z_error,
@@ -643,6 +651,9 @@ void vertex::tree::insert(const vertex& vertex) {
   chi_squared_per_dof.get().push_back(vertex.chi_squared_per_dof());
   chi_squared_p_value.get().push_back(vertex.chi_squared_p_value());
   size.get().push_back(vertex.size());
+  for (const auto& track : vertex.tracks())
+    track_hash.get().push_back(track.hash());
+  hash.get().push_back(vertex.hash());
   ++_count;
 }
 //----------------------------------------------------------------------------------------------
@@ -652,6 +663,8 @@ void vertex::tree::clear() {
   _count = 0UL;
   for (auto& entry : _vector_branches)
     entry.get().get().clear();
+  track_hash.get().clear();
+  hash.get().clear();
 }
 //----------------------------------------------------------------------------------------------
 
@@ -659,6 +672,7 @@ void vertex::tree::clear() {
 void vertex::tree::reserve(std::size_t capacity) {
   for (auto& entry : _vector_branches)
     entry.get().get().reserve(capacity);
+  hash.get().reserve(capacity);
 }
 //----------------------------------------------------------------------------------------------
 

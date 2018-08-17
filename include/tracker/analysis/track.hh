@@ -220,6 +220,8 @@ public:
     return !(*this == other);
   }
 
+  std::size_t hash() const;
+
 protected:
   fit_parameters _guess, _final;
   analysis::full_event _full_event;
@@ -268,7 +270,10 @@ public:
   branch_type t0, x0, y0, z0, vx, vy, vz,
               t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
               chi_squared, chi_squared_per_dof, chi_squared_p_value,
-              size, beta, beta_error, angle, angle_error;
+              size, beta, beta_error, angle, angle_error,
+              event_t, event_x, event_y, event_z;
+
+  branch<std::vector<uint_fast64_t>> hash;
 
   void insert(const track& track);
   void clear();
@@ -318,5 +323,7 @@ const full_event non_tracked_points(const full_event& points,
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */
+
+
 
 #endif /* TRACKER__ANALYSIS__TRACK_HH */
