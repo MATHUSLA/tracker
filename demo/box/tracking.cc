@@ -107,7 +107,7 @@ void track_event_bundle(const script::path_vector& paths,
   analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
 
   // TODO: fix
-  for (std::size_t event_counter=2025; event_counter < 2030/*import_size*/; ++event_counter) {
+  for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
     const auto event = analysis::add_width<box::geometry>(imported_events[event_counter]);
     const auto event_size = event.size();
     const auto event_counter_string = std::to_string(event_counter);
