@@ -21,7 +21,6 @@
 #pragma once
 
 #include <tracker/analysis/event.hh>
-
 #include <tracker/util/bit_vector.hh>
 
 namespace MATHUSLA { namespace TRACKER {
@@ -50,15 +49,16 @@ bool is_monotonic(const Event& points,
 
 //__Check if Points are Monotonic in One Coordinate_____________________________________________
 template<Coordinate C, class Event,
+  typename Point = typename Event::value_type,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 bool is_monotonic(const Event& points) {
   if (points.size() <= 2UL)
     return true;
 
   if (select_r1(points.front(), C) <= select_r1(points.back(), C)) {
-    return std::is_sorted(points.cbegin(), points.cend(), coordinate_ordered<C, Event>{});
+    return std::is_sorted(points.cbegin(), points.cend(), coordinate_ordered<C, Point>{});
   } else {
-    return std::is_sorted(points.crbegin(), points.crend(), coordinate_ordered<C, Event>{});
+    return std::is_sorted(points.crbegin(), points.crend(), coordinate_ordered<C, Point>{});
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -147,6 +147,27 @@ struct time_ordered {
 };
 //----------------------------------------------------------------------------------------------
 
+//__Speed Restriction Heuristic Type____________________________________________________________
+struct speed {
+  real min_rate, max_rate;
+  speed(const real min,
+        const real max=std::numeric_limits<real>::infinity())
+      : min_rate(min), max_rate(max) {}
+
+  template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    if (!is_monotonic<Coordinate::T>(points)) return false;
+    if (points.size() <= 1UL) return true;
+
+    const auto front = points.front();
+    const auto back = points.back();
+    const auto rate = norm(reduce_to_r3(back) - reduce_to_r3(front)) / std::abs(back.t - front.t);
+    return min_rate <= rate && rate <= max_rate;
+  }
+};
+//----------------------------------------------------------------------------------------------
+
 //__Cylinder Heuristic Type_____________________________________________________________________
 struct cylinder {
   real radius;
@@ -160,7 +181,8 @@ struct cylinder {
   template<class Event,
     typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
   bool operator()(const Event& points) {
-    if (points.size() <= 2UL) return true;
+    if (points.size() <= 2UL)
+      return true;
     const auto end = points.cend() - 1;
     for (auto iter = points.cbegin() + 1; iter != end; ++iter)
       if (radius > point_line_distance(*iter, points.front(), points.back(), c1, c2, c3))

@@ -51,33 +51,6 @@ const analysis::full_event alter_event(const analysis::full_event& event,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Find Primary Tracks for Box_________________________________________________________________
-const analysis::track_vector find_primary_tracks(const analysis::full_event& event,
-                                                 const script::tracking_options& options,
-                                                 plot::canvas& canvas,
-                                                 analysis::full_event& non_track_points) {
-  const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
-  const auto seeds = analysis::seed(options.seed_size, layers, analysis::seed_heuristic::double_cone{options.line_width});
-
-  /*
-  for (const auto& seed : seeds) {
-    for (std::size_t i{}; i < seed.size() - 1; ++i) {
-      canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
-    }
-  }
-  */
-
-  auto first_tracks = analysis::independent_fit_seeds(analysis::join_all(seeds), options.layer_axis);
-
-  for (auto& track : first_tracks)
-    track.prune_on_chi_squared(20.0L);
-
-  const auto out = analysis::overlap_fit_tracks(first_tracks, 1UL);
-  non_track_points = analysis::non_tracked_points(event, out, true);
-  return out;
-}
-//----------------------------------------------------------------------------------------------
-
 //__Find Tracks for Box_________________________________________________________________________
 const analysis::track_vector find_tracks(const analysis::full_event& event,
                                          const script::tracking_options& options,
@@ -85,8 +58,15 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
                                          const std::size_t overlap,
                                          plot::canvas& canvas,
                                          analysis::full_event& non_track_points) {
+  namespace ash = analysis::seed_heuristic;
   const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
-  const auto seeds = analysis::seed(options.seed_size, layers, analysis::seed_heuristic::double_cone{options.line_width});
+  const auto seeds = analysis::seed(
+    options.seed_size,
+    layers,
+    // ash::double_cone{options.line_width});
+    ash::both<ash::double_cone, ash::speed>{
+      {options.line_width},
+      {0.95L * units::speed_of_light}});
 
   /*
   for (const auto& seed : seeds) {
@@ -126,7 +106,8 @@ void track_event_bundle(const script::path_vector& paths,
   analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
   analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
 
-  for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
+  // TODO: fix
+  for (std::size_t event_counter=2025; event_counter < 2030/*import_size*/; ++event_counter) {
     const auto event = analysis::add_width<box::geometry>(imported_events[event_counter]);
     const auto event_size = event.size();
     const auto event_counter_string = std::to_string(event_counter);
@@ -155,7 +136,12 @@ void track_event_bundle(const script::path_vector& paths,
     }
 
     analysis::full_event non_primary_track_points, non_secondary_track_points;
-    auto tracks = find_primary_tracks(altered_event, options, canvas, non_primary_track_points);
+    auto tracks = find_tracks(altered_event,
+                              options,
+                              20.0L,
+                              1UL,
+                              canvas,
+                              non_primary_track_points);
     auto secondary_tracks = find_tracks(non_primary_track_points,
                                         options,
                                         100.0L,
@@ -177,7 +163,7 @@ void track_event_bundle(const script::path_vector& paths,
                  std::back_inserter(converged_tracks),
                  [](const auto& track) { return track.fit_converged(); });
 
-    box::io::save_vertices(analysis::pairwise_fit_tracks(converged_tracks), canvas, vertex_tree, options);
+    // box::io::save_vertices(analysis::pairwise_fit_tracks(converged_tracks), canvas, vertex_tree, options);
 
     canvas.draw();
   }

@@ -28,8 +28,6 @@
 
 #include "../helper/analysis.hh"
 
-#include <ROOT/TCanvas.h>
-
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
