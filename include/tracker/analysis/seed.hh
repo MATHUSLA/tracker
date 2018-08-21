@@ -21,8 +21,9 @@
 #pragma once
 
 #include <tracker/analysis/event.hh>
-
 #include <tracker/util/bit_vector.hh>
+
+#include <iostream> // TODO: remove
 
 namespace MATHUSLA { namespace TRACKER {
 
@@ -30,36 +31,68 @@ namespace analysis { ///////////////////////////////////////////////////////////
 
 namespace seed_heuristic { /////////////////////////////////////////////////////////////////////
 
-//__Check if Points are Monotonic in One Coordinate_____________________________________________
-template<class Event,
-  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-bool is_monotonic(const Event& points,
-                  const Coordinate c) {
-  if (points.size() <= 2UL)
-    return true;
+//__Sign Enum___________________________________________________________________________________
+enum class Sign : signed char {
+  Negative = -1,
+  Zero     =  0,
+  Positive =  1
+};
+//----------------------------------------------------------------------------------------------
 
-  if (select_r1(points.front(), c) <= select_r1(points.back(), c)) {
-    return std::is_sorted(points.cbegin(), points.cend(),
-      [&](const auto& left, const auto& right) { return select_r1(left, c) < select_r1(right, c); });
+//__Convert to Sign Enum________________________________________________________________________
+template<class T>
+constexpr Sign to_sign(const T& t) {
+  return t > 0 ? Sign::Positive : (t == 0 ? Sign::Zero : Sign::Negative);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Check Monotonicity of Points________________________________________________________________
+template<class Event,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+Sign monotonicity(const Event& points,
+                  const Coordinate c) {
+  if (points.size() <= 2UL) {
+    return to_sign(select_r1(points.back(), c) - select_r1(points.front(), c));
+  } else if (select_r1(points.front(), c) <= select_r1(points.back(), c)) {
+    return to_sign(std::is_sorted(points.cbegin(), points.cend(),
+      [&](const auto& left, const auto& right) { return select_r1(left, c) < select_r1(right, c); }));
   } else {
-    return std::is_sorted(points.crbegin(), points.crend(),
-      [&](const auto& left, const auto& right) { return select_r1(left, c) < select_r1(right, c); });
+    return to_sign(std::is_sorted(points.crbegin(), points.crend(),
+      [&](const auto& left, const auto& right) { return select_r1(left, c) < select_r1(right, c); }));
+  }
+}
+//----------------------------------------------------------------------------------------------
+
+//__Check Monotonicity of Points________________________________________________________________
+template<Coordinate C, class Event,
+    typename Point = typename Event::value_type,
+    typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+Sign monotonicity(const Event& points) {
+  if (points.size() <= 2UL) {
+    return to_sign(select_r1(points.back(), C) - select_r1(points.front(), C));
+  } else if (select_r1(points.front(), C) <= select_r1(points.back(), C)) {
+    return to_sign(std::is_sorted(points.cbegin(), points.cend(), coordinate_ordered<C, Point>{}));
+  } else {
+    return to_sign(std::is_sorted(points.crbegin(), points.crend(), coordinate_ordered<C, Point>{}));
   }
 }
 //----------------------------------------------------------------------------------------------
 
 //__Check if Points are Monotonic in One Coordinate_____________________________________________
+template<class Event,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+bool is_monotonic(const Event& points,
+                  const Coordinate c) {
+  return monotonicity(points, c) != Sign::Zero;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Check if Points are Monotonic in One Coordinate_____________________________________________
 template<Coordinate C, class Event,
+  typename Point = typename Event::value_type,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 bool is_monotonic(const Event& points) {
-  if (points.size() <= 2UL)
-    return true;
-
-  if (select_r1(points.front(), C) <= select_r1(points.back(), C)) {
-    return std::is_sorted(points.cbegin(), points.cend(), coordinate_ordered<C, Event>{});
-  } else {
-    return std::is_sorted(points.crbegin(), points.crend(), coordinate_ordered<C, Event>{});
-  }
+  return monotonicity<C>(points) != Sign::Zero;
 }
 //----------------------------------------------------------------------------------------------
 
@@ -139,11 +172,123 @@ template<class A, class B>
 using both = all<A, B>;
 //----------------------------------------------------------------------------------------------
 
+//__Ordered Heuristic Type______________________________________________________________________
+template<Coordinate... Cs>
+struct ordered {
+  template<class Event,
+      typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) { return true; }
+};
+template<Coordinate C, Coordinate... Cs>
+struct ordered<C, Cs...> : ordered<Cs...> {
+  template<class Event,
+      typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    return is_monotonic<C>(points) && ordered<Cs...>::operator()(points);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
 //__Time-Ordered Heuristic Type_________________________________________________________________
-struct time_ordered {
+using time_ordered = ordered<Coordinate::T>;
+//----------------------------------------------------------------------------------------------
+
+//__Parallel Ordered Heuristic Type_____________________________________________________________
+template<Coordinate...>
+struct parallel {};
+//----------------------------------------------------------------------------------------------
+
+//__Ordered 2-Parallel Heuristic Type___________________________________________________________
+template<Coordinate C1, Coordinate C2>
+struct parallel<C1, C2> {
+  template<class Event,
+      typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    const auto m1 = monotonicity<C1>(points);
+    return m1 != Sign::Zero && m1 == monotonicity<C2>(points);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Ordered 3-Parallel Heuristic Type___________________________________________________________
+template<Coordinate C1, Coordinate C2, Coordinate C3>
+struct parallel<C1, C2, C3> {
+  template<class Event,
+      typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    const auto m1 = monotonicity<C1>(points);
+    if (m1 != Sign::Zero) {
+      const auto m2 = monotonicity<C2>(points);
+      return m1 == m2 && m2 == monotonicity<C3>(points);
+    }
+    return false;
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Ordered 4-Parallel Heuristic Type___________________________________________________________
+template<Coordinate C1, Coordinate C2, Coordinate C3, Coordinate C4>
+struct parallel<C1, C2, C3, C4> {
+  template<class Event,
+      typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    const auto m1 = monotonicity<C1>(points);
+    if (m1 != Sign::Zero) {
+      const auto m2 = monotonicity<C2>(points);
+      if (m2 != Sign::Zero) {
+        const auto m3 = monotonicity<C3>(points);
+        return m1 == m2 && m2 == m3 && m3 == monotonicity<C4>(points);
+      }
+    }
+    return false;
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Speed Restriction Heuristic Type____________________________________________________________
+struct speed {
+  real min_rate, max_rate;
+  speed(const real min,
+        const real max=std::numeric_limits<real>::infinity())
+      : min_rate(min), max_rate(max) {}
+
   template<class Event,
     typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
-  bool operator()(const Event& points) { return is_monotonic<Coordinate::T>(points); }
+  bool operator()(const Event& points) {
+    if (!is_monotonic<Coordinate::T>(points)) return false;
+    if (points.size() <= 1UL) return true;
+
+    const auto front = points.front();
+    const auto back = points.back();
+    const auto rate = norm(reduce_to_r3(back) - reduce_to_r3(front)) / std::abs(back.t - front.t);
+    return min_rate <= rate && rate <= max_rate;
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Piecewise Speed Restriction Heuristic Type__________________________________________________
+struct piecewise_speed {
+  real min_rate, max_rate;
+  piecewise_speed(const real min,
+                  const real max=std::numeric_limits<real>::infinity())
+      : min_rate(min), max_rate(max) {}
+
+  template<class Event,
+      typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    if (!is_monotonic<Coordinate::T>(points)) return false;
+    if (points.size() <= 1UL) return true;
+
+    const auto end = points.cend();
+    for (auto iter = points.cbegin(); iter != end - 1; ++iter) {
+      const auto& first = *iter;
+      const auto& second = *(iter + 1);
+      const auto rate = norm(reduce_to_r3(second) - reduce_to_r3(first)) / std::abs(second.t - first.t);
+      if (!(min_rate <= rate && rate <= max_rate))
+        return false;
+    }
+    return true;
+  }
 };
 //----------------------------------------------------------------------------------------------
 
@@ -160,7 +305,8 @@ struct cylinder {
   template<class Event,
     typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
   bool operator()(const Event& points) {
-    if (points.size() <= 2UL) return true;
+    if (points.size() <= 2UL)
+      return true;
     const auto end = points.cend() - 1;
     for (auto iter = points.cbegin() + 1; iter != end; ++iter)
       if (radius > point_line_distance(*iter, points.front(), points.back(), c1, c2, c3))

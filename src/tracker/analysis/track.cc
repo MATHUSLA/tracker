@@ -80,9 +80,9 @@ track::fit_parameters _guess_track(const full_event& points) {
           {first_x, first_x.error, 0, 0},
           {first_y, first_y.error, 0, 0},
           {first_z, first_z.error, 0, 0},
-          {vx, vx.error, 0, 0},
-          {vy, vy.error, 0, 0},
-          {vz, vz.error, 0, 0}};
+          {vx, vx.error,           0, 0},
+          {vy, vy.error,           0, 0},
+          {vz, vz.error,           0, 0}};
 }
 //----------------------------------------------------------------------------------------------
 
@@ -562,7 +562,7 @@ real track::covariance(const track::parameter p,
   switch (_direction) {
     case Coordinate::T: {
       if (p == track::parameter::T0 || q == track::parameter::T0) {
-        return 0;
+        return 0.0L;
       } else {
         const auto p_index = _shift_covariance_index(p)
                            - (p == track::parameter::X0 || p == track::parameter::Y0);
@@ -572,7 +572,7 @@ real track::covariance(const track::parameter p,
       }
     } case Coordinate::X: {
       if (p == track::parameter::X0 || q == track::parameter::X0) {
-        return 0;
+        return 0.0L;
       } else {
         const auto p_index = _shift_covariance_index(p) - (p == track::parameter::Y0);
         const auto q_index = _shift_covariance_index(q) - (q == track::parameter::Y0);
@@ -580,13 +580,13 @@ real track::covariance(const track::parameter p,
       }
     } case Coordinate::Y: {
       if (p == track::parameter::Y0 || q == track::parameter::Y0) {
-        return 0;
+        return 0.0L;
       } else {
         return _covariance[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
       }
    } case Coordinate::Z: {
       if (p == track::parameter::Z0 || q == track::parameter::Z0) {
-        return 0;
+        return 0.0L;
       } else {
         return _covariance[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
       }
@@ -854,6 +854,14 @@ void track::draw_guess(plot::canvas& canvas,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Hash Implementation_________________________________________________________________________
+std::size_t track::hash() const {
+  return util::functional::hash_combine(0x0239bb2d0cULL,
+    _full_event,
+    static_cast<std::size_t>(_direction));
+}
+//----------------------------------------------------------------------------------------------
+
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 //__Print Track Parameters with Units___________________________________________________________
 std::ostream& _print_track_parameters(std::ostream& os,
@@ -983,28 +991,34 @@ track::tree::tree(const std::string& name)
 track::tree::tree(const std::string& name,
                   const std::string& title)
     : analysis::tree(name, title),
-      t0(emplace_branch<branch_value_type>("t0")),
-      x0(emplace_branch<branch_value_type>("x0")),
-      y0(emplace_branch<branch_value_type>("y0")),
-      z0(emplace_branch<branch_value_type>("z0")),
-      vx(emplace_branch<branch_value_type>("vx")),
-      vy(emplace_branch<branch_value_type>("vy")),
-      vz(emplace_branch<branch_value_type>("vz")),
-      t0_error(emplace_branch<branch_value_type>("t0_error")),
-      x0_error(emplace_branch<branch_value_type>("x0_error")),
-      y0_error(emplace_branch<branch_value_type>("y0_error")),
-      z0_error(emplace_branch<branch_value_type>("z0_error")),
-      vx_error(emplace_branch<branch_value_type>("vx_error")),
-      vy_error(emplace_branch<branch_value_type>("vy_error")),
-      vz_error(emplace_branch<branch_value_type>("vz_error")),
-      chi_squared(emplace_branch<branch_value_type>("chi_squared")),
-      chi_squared_per_dof(emplace_branch<branch_value_type>("chi_squared_per_dof")),
-      chi_squared_p_value(emplace_branch<branch_value_type>("chi_squared_p_value")),
-      size(emplace_branch<branch_value_type>("size")),
-      beta(emplace_branch<branch_value_type>("beta")),
-      beta_error(emplace_branch<branch_value_type>("beta_error")),
-      angle(emplace_branch<branch_value_type>("angle")),
-      angle_error(emplace_branch<branch_value_type>("angle_error")),
+      t0(emplace_branch<real_branch_value_type>("t0")),
+      x0(emplace_branch<real_branch_value_type>("x0")),
+      y0(emplace_branch<real_branch_value_type>("y0")),
+      z0(emplace_branch<real_branch_value_type>("z0")),
+      vx(emplace_branch<real_branch_value_type>("vx")),
+      vy(emplace_branch<real_branch_value_type>("vy")),
+      vz(emplace_branch<real_branch_value_type>("vz")),
+      t0_error(emplace_branch<real_branch_value_type>("t0_error")),
+      x0_error(emplace_branch<real_branch_value_type>("x0_error")),
+      y0_error(emplace_branch<real_branch_value_type>("y0_error")),
+      z0_error(emplace_branch<real_branch_value_type>("z0_error")),
+      vx_error(emplace_branch<real_branch_value_type>("vx_error")),
+      vy_error(emplace_branch<real_branch_value_type>("vy_error")),
+      vz_error(emplace_branch<real_branch_value_type>("vz_error")),
+      chi_squared(emplace_branch<real_branch_value_type>("chi_squared")),
+      chi_squared_per_dof(emplace_branch<real_branch_value_type>("chi_squared_per_dof")),
+      chi_squared_p_value(emplace_branch<real_branch_value_type>("chi_squared_p_value")),
+      size(emplace_branch<real_branch_value_type>("size")),
+      beta(emplace_branch<real_branch_value_type>("beta")),
+      beta_error(emplace_branch<real_branch_value_type>("beta_error")),
+      angle(emplace_branch<real_branch_value_type>("angle")),
+      angle_error(emplace_branch<real_branch_value_type>("angle_error")),
+      event_t(emplace_branch<real_branch_value_type>("event_t")),
+      event_x(emplace_branch<real_branch_value_type>("event_x")),
+      event_y(emplace_branch<real_branch_value_type>("event_y")),
+      event_z(emplace_branch<real_branch_value_type>("event_z")),
+      event_detector(emplace_branch<decltype(event_detector)::value_type>("event_detector")),
+      hash(emplace_branch<decltype(hash)::value_type>("hash")),
       _count(emplace_branch<decltype(_count)::value_type>("N")),
       _vector_branches({t0, x0, y0, z0, vx, vy, vz,
                         t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
@@ -1036,6 +1050,14 @@ void track::tree::insert(const track& track) {
   beta_error.get().push_back(track.beta_error());
   angle.get().push_back(track.angle());
   angle_error.get().push_back(track.angle_error());
+  for (const auto& point : track) {
+    event_t.get().push_back(point.t / units::time);
+    event_x.get().push_back(point.x / units::length);
+    event_y.get().push_back(point.y / units::length);
+    event_z.get().push_back(point.z / units::length);
+    event_detector.get().push_back(geometry::volume(reduce_to_r3(point)));
+  }
+  hash.get().push_back(track.hash());
   ++_count;
 }
 //----------------------------------------------------------------------------------------------
@@ -1045,6 +1067,12 @@ void track::tree::clear() {
   _count = 0UL;
   for (auto& entry : _vector_branches)
     entry.get().get().clear();
+  event_t.get().clear();
+  event_x.get().clear();
+  event_y.get().clear();
+  event_z.get().clear();
+  event_detector.get().clear();
+  hash.get().clear();
 }
 //----------------------------------------------------------------------------------------------
 
@@ -1052,16 +1080,7 @@ void track::tree::clear() {
 void track::tree::reserve(std::size_t capacity) {
   for (auto& entry : _vector_branches)
     entry.get().get().reserve(capacity);
-}
-//----------------------------------------------------------------------------------------------
-
-//__Fill Tree With Track Vector_________________________________________________________________
-void track::tree::fill(const track_vector& tracks) {
-  clear();
-  reserve(tracks.size());
-  for (const auto& track : tracks)
-    insert(track);
-  analysis::tree::fill();
+  hash.get().reserve(capacity);
 }
 //----------------------------------------------------------------------------------------------
 

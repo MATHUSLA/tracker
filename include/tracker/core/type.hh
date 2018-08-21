@@ -33,6 +33,7 @@
 #include <vector>
 
 #include <tracker/util/algorithm.hh>
+#include <tracker/util/functional.hh>
 #include <tracker/util/math.hh>
 #include <tracker/util/type.hh>
 
@@ -1639,5 +1640,56 @@ Range coordinate_stable_copy_sort(const Coordinate coordinate,
 } /* namespace type */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace MATHUSLA */
+
+namespace std { ////////////////////////////////////////////////////////////////////////////////
+
+// TODO: finish types
+
+//__Hash Function for R2 Point__________________________________________________________________
+template<>
+struct hash<MATHUSLA::type::r2_point> {
+  std::size_t operator()(const MATHUSLA::type::r2_point& in) const {
+    return MATHUSLA::util::functional::hash_combine(in.x, in.y);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Hash Function for R3 Point__________________________________________________________________
+template<>
+struct hash<MATHUSLA::type::r3_point> {
+  std::size_t operator()(const MATHUSLA::type::r3_point& in) const {
+    return MATHUSLA::util::functional::hash_combine(in.x, in.y, in.z);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Hash Function for R4 Point__________________________________________________________________
+template<>
+struct hash<MATHUSLA::type::r4_point> {
+  std::size_t operator()(const MATHUSLA::type::r4_point& in) const {
+    return MATHUSLA::util::functional::hash_combine(in.t, in.x, in.y, in.z);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Hash Function for Real Array________________________________________________________________
+template<std::size_t N>
+struct hash<MATHUSLA::type::real_array<N>> {
+  std::size_t operator()(const MATHUSLA::type::real_array<N>& in) const {
+    return MATHUSLA::util::functional::hash_combine_range(in);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Hash Function for Real Vector_______________________________________________________________
+template<>
+struct hash<MATHUSLA::type::real_vector> {
+  std::size_t operator()(const MATHUSLA::type::real_vector& in) const {
+    return MATHUSLA::util::functional::hash_combine_range(in);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+} /* namespace std */ //////////////////////////////////////////////////////////////////////////
 
 #endif /* TRACKER__CORE__TYPE_HH */

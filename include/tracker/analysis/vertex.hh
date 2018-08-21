@@ -147,6 +147,8 @@ public:
   bool operator==(const vertex& other) const noexcept { return _tracks == other._tracks; }
   bool operator!=(const vertex& other) const noexcept { return !(*this == other);        }
 
+  std::size_t hash() const;
+
 protected:
   fit_parameters _guess, _final;
   track_vector _tracks;
@@ -181,26 +183,44 @@ using vertex_vector = std::vector<vertex>;
 //__Track Data Tree Specialization______________________________________________________________
 class vertex::tree : public analysis::tree {
 public:
-  using branch_value_type = std::vector<double>;
-  using branch_type = branch<branch_value_type>;
+  using real_branch_value_type = std::vector<double>;
+  using real_branch_type = branch<real_branch_value_type>;
 
   tree(const std::string& name);
   tree(const std::string& name,
        const std::string& title);
 
-  branch_type t, x, y, z,
-              t_error, x_error, y_error, z_error,
-              chi_squared, chi_squared_per_dof, chi_squared_p_value,
-              size;
+  real_branch_type t, x, y, z,
+                   t_error, x_error, y_error, z_error,
+                   chi_squared, chi_squared_per_dof, chi_squared_p_value,
+                   size;
+
+  branch<std::vector<uint_fast64_t>> track_hash, hash;
 
   void insert(const vertex& vertex);
   void clear();
   void reserve(std::size_t capacity);
-  void fill(const vertex_vector& vertices);
+
+  template<class UnaryPredicate>
+  UnaryPredicate fill_if(const vertex_vector& vertices,
+                         UnaryPredicate f) {
+    clear();
+    reserve(vertices.size());
+    for (const auto& vertex : vertices) {
+      if (f(vertex))
+        insert(vertex);
+    }
+    analysis::tree::fill();
+    return std::move(f);
+  }
+
+  void fill(const vertex_vector& vertices) {
+    fill_if(vertices, [](auto) { return true; });
+  }
 
 private:
   branch<uint_fast64_t> _count;
-  std::vector<std::reference_wrapper<branch_type>> _vector_branches;
+  std::vector<std::reference_wrapper<real_branch_type>> _vector_branches;
 };
 //----------------------------------------------------------------------------------------------
 

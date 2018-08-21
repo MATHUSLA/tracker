@@ -23,6 +23,8 @@
 #include <tracker/core/type.hh>
 #include <tracker/core/units.hh>
 
+#include <tracker/util/functional.hh>
+
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
@@ -75,5 +77,64 @@ constexpr bool operator==(const fit_parameter& left,
 } /* namespace analysis */ /////////////////////////////////////////////////////////////////////
 
 } } /* namespace MATHUSLA::TRACKER */
+
+namespace std { ////////////////////////////////////////////////////////////////////////////////
+
+//__Analysis Event Hash Function________________________________________________________________
+template<>
+struct hash<MATHUSLA::TRACKER::analysis::event> {
+  std::size_t operator()(const MATHUSLA::TRACKER::analysis::event& in) const {
+    return MATHUSLA::util::functional::hash_combine_range(in);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Analysis Event Vector Hash Function_________________________________________________________
+template<>
+struct hash<MATHUSLA::TRACKER::analysis::event_vector> {
+  std::size_t operator()(const MATHUSLA::TRACKER::analysis::event_vector& in) const {
+    return MATHUSLA::util::functional::hash_combine_range(in);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Analysis Full Hit Hash Function_____________________________________________________________
+template<>
+struct hash<MATHUSLA::TRACKER::analysis::full_hit> {
+  std::size_t operator()(const MATHUSLA::TRACKER::analysis::full_hit& in) const {
+    return MATHUSLA::util::functional::hash_combine(
+      in.t, in.x, in.y, in.z, in.width.t, in.width.x, in.width.y, in.width.z);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Analysis Full Event Hash Function___________________________________________________________
+template<>
+struct hash<MATHUSLA::TRACKER::analysis::full_event> {
+  std::size_t operator()(const MATHUSLA::TRACKER::analysis::full_event& in) const {
+    return MATHUSLA::util::functional::hash_combine_range(in);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Analysis Full Event Vector Hash Function____________________________________________________
+template<>
+struct hash<MATHUSLA::TRACKER::analysis::full_event_vector> {
+  std::size_t operator()(const MATHUSLA::TRACKER::analysis::full_event_vector& in) const {
+    return MATHUSLA::util::functional::hash_combine_range(in);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+//__Analysis Full Event Vector Hash Function____________________________________________________
+template<>
+struct hash<MATHUSLA::TRACKER::analysis::fit_parameter> {
+  std::size_t operator()(const MATHUSLA::TRACKER::analysis::fit_parameter& in) const {
+    return MATHUSLA::util::functional::hash_combine(in.value, in.error, in.min, in.max);
+  }
+};
+//----------------------------------------------------------------------------------------------
+
+} /* namespace std */ //////////////////////////////////////////////////////////////////////////
 
 #endif /* TRACKER__ANALYSIS__TYPE_HH */
