@@ -10,7 +10,7 @@ simulated-noise-rate:  1e-6
 event-time-window:     300, 900
 layer-axis:            Z
 layer-depth:           10
-line-width:            22
+line-width:            25
 seed-size:             3
 event-density-limit:   0.0001
 

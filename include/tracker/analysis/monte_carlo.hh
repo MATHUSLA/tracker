@@ -435,7 +435,7 @@ const Event add_noise(const Event& points,
   const auto time_width = end_time - begin_time;
   const auto size = points.size();
 
-  const auto add_counts = _get_poisson_vector(size, rate * time_width);
+  const auto add_counts = _get_poisson_vector(rate * time_width, size);
   if (add_counts.empty())
     return points;
 

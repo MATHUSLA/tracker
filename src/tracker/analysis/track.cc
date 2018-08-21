@@ -133,7 +133,7 @@ bool _fit_event_minuit(const full_event& points,
     case Coordinate::Z: minuit.FixParameter(3); break;
   }
 
-  if (points.size() == 2) {
+  if (points.size() == 2UL) {
     if (execute(minuit, _gaussian_nll_two_hit_track) == error::diverged)
       return false;
   } else {
@@ -146,7 +146,7 @@ bool _fit_event_minuit(const full_event& points,
   get_parameters(minuit, t0, x0, y0, z0, vx, vy);
   get_covariance<track::free_parameter_count>(minuit, covariance_matrix);
 
-  if (points.size() == 2) {
+  if (points.size() == 2UL) {
     vz.value = _vz_from_c(vx.value, vy.value);
 
     for (std::size_t i{}; i < 5UL; ++i) {
@@ -155,9 +155,9 @@ bool _fit_event_minuit(const full_event& points,
     }
 
     vz.error = stat::error::propagate(
-      real_array<2>{-vx.value / vz.value, -vy.value / vz.value},
-      real_array<4>{vx.error * vx.error, covariance_matrix[22UL],
-                    covariance_matrix[22UL], vy.error * vy.error});
+      real_array<2UL>{-vx.value / vz.value, -vy.value / vz.value},
+      real_array<4UL>{vx.error * vx.error, covariance_matrix[22UL],
+                      covariance_matrix[22UL], vy.error * vy.error});
     covariance_matrix[35UL] = vz.error * vz.error;
   }
 
@@ -288,10 +288,10 @@ const r4_point track::at(const Coordinate c,
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Get 3x3 Submatrix of Covariance Matrix______________________________________________________
-const real_array<9> _3x3_covariance(const track& t,
-                                    const track::parameter p1,
-                                    const track::parameter p2,
-                                    const track::parameter p3) {
+const real_array<9UL> _3x3_covariance(const track& t,
+                                      const track::parameter p1,
+                                      const track::parameter p2,
+                                      const track::parameter p3) {
   return {t.variance(p1),       t.covariance(p1, p2), t.covariance(p1, p3),
           t.covariance(p1, p2), t.variance(p2),       t.covariance(p2, p3),
           t.covariance(p1, p3), t.covariance(p2, p3), t.variance(p3)};
@@ -299,11 +299,11 @@ const real_array<9> _3x3_covariance(const track& t,
 //----------------------------------------------------------------------------------------------
 
 //__Get 4x4 Submatrix of Covariance Matrix______________________________________________________
-const real_array<16> _4x4_covariance(const track& t,
-                                     const track::parameter p1,
-                                     const track::parameter p2,
-                                     const track::parameter p3,
-                                     const track::parameter p4) {
+const real_array<16UL> _4x4_covariance(const track& t,
+                                       const track::parameter p1,
+                                       const track::parameter p2,
+                                       const track::parameter p3,
+                                       const track::parameter p4) {
   return {t.variance(p1),       t.covariance(p1, p2), t.covariance(p1, p3), t.covariance(p1, p4),
           t.covariance(p1, p2), t.variance(p2),       t.covariance(p2, p3), t.covariance(p2, p4),
           t.covariance(p1, p3), t.covariance(p2, p3), t.variance(p3),       t.covariance(p3, p4),
@@ -318,9 +318,9 @@ const r4_point track::error_at_t(const real t) const {
   using tp = track::parameter;
   const auto dt = t - _final.t0.value;
 
-  const real_array<3> x_gradient{-_final.vx.value, 1.0L, dt};
-  const real_array<3> y_gradient{-_final.vy.value, 1.0L, dt};
-  const real_array<3> z_gradient{-_final.vz.value, 1.0L, dt};
+  const real_array<3UL> x_gradient{-_final.vx.value, 1.0L, dt};
+  const real_array<3UL> y_gradient{-_final.vy.value, 1.0L, dt};
+  const real_array<3UL> z_gradient{-_final.vz.value, 1.0L, dt};
 
   return {0.0L,
           stat::error::propagate(x_gradient, _3x3_covariance(*this, tp::T0, tp::X0, tp::VX)),
@@ -335,13 +335,13 @@ const r4_point track::error_at_x(const real x) const {
   const auto vx_inv = 1.0L / _final.vx.value;
   const auto dt = (x - _final.x0.value) * vx_inv;
 
-  const real_array<3> t_gradient{1.0L, -vx_inv, -vx_inv * dt};
+  const real_array<3UL> t_gradient{1.0L, -vx_inv, -vx_inv * dt};
 
   const auto vy_by_vx = _final.vy.value * vx_inv;
-  const real_array<4> y_gradient{-vy_by_vx, 1.0L, -vy_by_vx * dt, dt};
+  const real_array<4UL> y_gradient{-vy_by_vx, 1.0L, -vy_by_vx * dt, dt};
 
   const auto vz_by_vx = _final.vz.value * vx_inv;
-  const real_array<4> z_gradient{-vz_by_vx, 1.0L, -vz_by_vx * dt, dt};
+  const real_array<4UL> z_gradient{-vz_by_vx, 1.0L, -vz_by_vx * dt, dt};
 
   return {stat::error::propagate(t_gradient, _3x3_covariance(*this, tp::T0, tp::X0, tp::VX)),
           0.0L,
@@ -356,13 +356,13 @@ const r4_point track::error_at_y(const real y) const {
   const auto vy_inv = 1.0L / _final.vy.value;
   const auto dt = (y - _final.y0.value) * vy_inv;
 
-  const real_array<3> t_gradient{1.0L, -vy_inv, -vy_inv * dt};
+  const real_array<3UL> t_gradient{1.0L, -vy_inv, -vy_inv * dt};
 
   const auto vx_by_vy = _final.vx.value * vy_inv;
-  const real_array<4> x_gradient{-vx_by_vy, 1.0L, -vx_by_vy * dt, dt};
+  const real_array<4UL> x_gradient{-vx_by_vy, 1.0L, -vx_by_vy * dt, dt};
 
   const auto vz_by_vy = _final.vz.value * vy_inv;
-  const real_array<4> z_gradient{-vz_by_vy, 1.0L, -vz_by_vy * dt, dt};
+  const real_array<4UL> z_gradient{-vz_by_vy, 1.0L, -vz_by_vy * dt, dt};
 
   return {stat::error::propagate(t_gradient, _3x3_covariance(*this, tp::T0, tp::Y0, tp::VY)),
           stat::error::propagate(x_gradient, _4x4_covariance(*this, tp::X0, tp::Y0, tp::VX, tp::VY)),
@@ -377,13 +377,13 @@ const r4_point track::error_at_z(const real z) const {
   const auto vz_inv = 1.0L / _final.vz.value;
   const auto dt = (z - _final.z0.value) * vz_inv;
 
-  const real_array<3> t_gradient{1.0L, -vz_inv, -vz_inv * dt};
+  const real_array<3UL> t_gradient{1.0L, -vz_inv, -vz_inv * dt};
 
   const auto vx_by_vz = _final.vx.value * vz_inv;
-  const real_array<4> x_gradient{-vx_by_vz, 1.0L, -vx_by_vz * dt, dt};
+  const real_array<4UL> x_gradient{-vx_by_vz, 1.0L, -vx_by_vz * dt, dt};
 
   const auto vz_by_vy = _final.vz.value * vz_inv;
-  const real_array<4> y_gradient{-vz_by_vy, 1.0L, -vz_by_vy * dt, dt};
+  const real_array<4UL> y_gradient{-vz_by_vy, 1.0L, -vz_by_vy * dt, dt};
 
   return {stat::error::propagate(t_gradient, _3x3_covariance(*this, tp::T0, tp::Z0, tp::VZ)),
           stat::error::propagate(x_gradient, _4x4_covariance(*this, tp::X0, tp::Z0, tp::VX, tp::VZ)),
@@ -448,7 +448,7 @@ real track::beta_error() const {
   static constexpr const auto c_inv2 = c_inv * c_inv;
   static constexpr const auto twice_c_inv = 2.0L * c_inv;
   const auto covariance = c_inv2 * _3x3_covariance(*this, parameter::VX, parameter::VY, parameter::VZ);
-  const real_array<3> gradient{
+  const real_array<3UL> gradient{
     twice_c_inv * _final.vx.value, twice_c_inv * _final.vy.value, twice_c_inv * _final.vz.value};
   return stat::error::propagate(gradient, covariance);
 }
@@ -468,15 +468,15 @@ const r3_point track::unit_error() const {
   const auto vxvy = _final.vx.value * _final.vy.value;
   const auto vyvz = _final.vy.value * _final.vz.value;
   const auto vzvx = _final.vz.value * _final.vx.value;
-  const real_array<3> x_gradient{
+  const real_array<3UL> x_gradient{
     base * util::math::sum_squares(_final.vy.value, _final.vz.value),
     base * -vxvy,
     base * -vzvx};
-  const real_array<3> y_gradient{
+  const real_array<3UL> y_gradient{
     base * -vxvy,
     base * util::math::sum_squares(_final.vz.value, _final.vx.value),
     base * -vyvz};
-  const real_array<3> z_gradient{
+  const real_array<3UL> z_gradient{
     base * -vzvx,
     base * -vyvz,
     base * util::math::sum_squares(_final.vx.value, _final.vy.value)};
@@ -544,13 +544,13 @@ namespace { ////////////////////////////////////////////////////////////////////
 //__Get Shift Index of Track Parameters for Covariance Matrix___________________________________
 constexpr std::size_t _shift_covariance_index(const track::parameter p) {
   switch (p) {
-    case track::parameter::T0: return 0;
-    case track::parameter::X0: return 1;
-    case track::parameter::Y0: return 2;
-    case track::parameter::Z0: return 2;
-    case track::parameter::VX: return 3;
-    case track::parameter::VY: return 4;
-    case track::parameter::VZ: return 5;
+    case track::parameter::T0: return 0UL;
+    case track::parameter::X0: return 1UL;
+    case track::parameter::Y0: return 2UL;
+    case track::parameter::Z0: return 2UL;
+    case track::parameter::VX: return 3UL;
+    case track::parameter::VY: return 4UL;
+    case track::parameter::VZ: return 5UL;
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -568,7 +568,7 @@ real track::covariance(const track::parameter p,
                            - (p == track::parameter::X0 || p == track::parameter::Y0);
         const auto q_index = _shift_covariance_index(q)
                            - (q == track::parameter::X0 || q == track::parameter::Y0);
-        return _covariance[6 * p_index + q_index];
+        return _covariance[6UL * p_index + q_index];
       }
     } case Coordinate::X: {
       if (p == track::parameter::X0 || q == track::parameter::X0) {
@@ -576,19 +576,19 @@ real track::covariance(const track::parameter p,
       } else {
         const auto p_index = _shift_covariance_index(p) - (p == track::parameter::Y0);
         const auto q_index = _shift_covariance_index(q) - (q == track::parameter::Y0);
-        return _covariance[6 * p_index + q_index];
+        return _covariance[6UL * p_index + q_index];
       }
     } case Coordinate::Y: {
       if (p == track::parameter::Y0 || q == track::parameter::Y0) {
         return 0.0L;
       } else {
-        return _covariance[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+        return _covariance[6UL * _shift_covariance_index(p) + _shift_covariance_index(q)];
       }
    } case Coordinate::Z: {
       if (p == track::parameter::Z0 || q == track::parameter::Z0) {
         return 0.0L;
       } else {
-        return _covariance[6 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+        return _covariance[6UL * _shift_covariance_index(p) + _shift_covariance_index(q)];
       }
     }
   }
@@ -643,7 +643,7 @@ std::size_t track::reset(const analysis::full_event& points) {
   _delta_chi2.clear();
   _delta_chi2.reserve(new_size);
 
-  if (new_size > 1) {
+  if (new_size > 1UL) {
     _guess = _guess_track(_full_event);
     _final = _guess;
     if (_fit_event_minuit(_full_event, _direction, _final, _covariance)) {
@@ -736,7 +736,7 @@ std::size_t track::remove(const std::size_t index) {
     return s;
 
   analysis::full_event saved_hits;
-  saved_hits.reserve(s - 1);
+  saved_hits.reserve(s - 1UL);
   const auto begin = _full_event.cbegin();
   const auto end = _full_event.cend();
   saved_hits.insert(saved_hits.cend(), begin, begin + index);
@@ -911,20 +911,20 @@ std::ostream& operator<<(std::ostream& os,
 
     os << "* Track Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n"
        << "* Guess Parameters: \n";
-    _print_track_parameters(os, track.guess_fit(), 4);
+    _print_track_parameters(os, track.guess_fit(), 4UL);
 
     os << "* Event: \n";
     const auto points = track.event();
     const auto& detectors = track.detectors();
     const auto size = points.size();
-    for (size_t i = 0; i < size; ++i)
+    for (std::size_t i{}; i < size; ++i)
       os << "    " << detectors[i] << " " << units::scale_r4_length(points[i]) << "\n";
 
   } else {
 
     os << "* Track Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n"
        << "* Parameters: \n";
-    _print_track_parameters(os, track.final_fit(), 4);
+    _print_track_parameters(os, track.final_fit(), 4UL);
 
     os << "* Event: \n";
     os << "    front: " << units::scale_r4_length(track.front()) << "\n\n";
@@ -944,18 +944,18 @@ std::ostream& operator<<(std::ostream& os,
        << "    cov mat:  | ";
     const auto matrix = track.covariance_matrix();
     os << std::right;
-    for (size_t i = 0; i < 6; ++i) {
-      if (i > 0) os << "              | ";
-      for (size_t j = 0; j < 6; ++j) {
-        const auto cell = matrix[6*i+j];
+    for (std::size_t i{}; i < 6UL; ++i) {
+      if (i > 0UL) os << "              | ";
+      for (std::size_t j{}; j < 6UL; ++j) {
+        const auto cell = matrix[6UL*i+j];
         real cell_unit{1.0L};
 
-        if (i == 0) cell_unit *= units::time;
-        else if (i > 2) cell_unit *= units::velocity;
+        if (i == 0UL) cell_unit *= units::time;
+        else if (i > 2UL) cell_unit *= units::velocity;
         else cell_unit *= units::length;
 
-        if (j == 0) cell_unit *= units::time;
-        else if (j > 2) cell_unit *= units::velocity;
+        if (j == 0UL) cell_unit *= units::time;
+        else if (j > 2UL) cell_unit *= units::velocity;
         else cell_unit *= units::length;
 
         if (i == j) {
@@ -1253,10 +1253,10 @@ const Event non_tracked_points(const Event& points,
                                const track_vector& tracks,
                                const bool ignore_diverged) {
   const auto size = points.size();
-  if (size == 0)
+  if (size == 0UL)
     return Event{};
 
-  util::bit_vector save_list(size);
+  util::bit_vector save_list{size};
 
   for (const auto& track : tracks) {
     if (ignore_diverged && track.fit_diverged())
