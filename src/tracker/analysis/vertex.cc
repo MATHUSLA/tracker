@@ -614,18 +614,18 @@ vertex::tree::tree(const std::string& name)
 vertex::tree::tree(const std::string& name,
                    const std::string& title)
     : analysis::tree(name, title),
-      t(emplace_branch<branch_value_type>("t")),
-      x(emplace_branch<branch_value_type>("x")),
-      y(emplace_branch<branch_value_type>("y")),
-      z(emplace_branch<branch_value_type>("z")),
-      t_error(emplace_branch<branch_value_type>("t_error")),
-      x_error(emplace_branch<branch_value_type>("x_error")),
-      y_error(emplace_branch<branch_value_type>("y_error")),
-      z_error(emplace_branch<branch_value_type>("z_error")),
-      chi_squared(emplace_branch<branch_value_type>("chi_squared")),
-      chi_squared_per_dof(emplace_branch<branch_value_type>("chi_squared_per_dof")),
-      chi_squared_p_value(emplace_branch<branch_value_type>("chi_squared_p_value")),
-      size(emplace_branch<branch_value_type>("size")),
+      t(emplace_branch<real_branch_value_type>("t")),
+      x(emplace_branch<real_branch_value_type>("x")),
+      y(emplace_branch<real_branch_value_type>("y")),
+      z(emplace_branch<real_branch_value_type>("z")),
+      t_error(emplace_branch<real_branch_value_type>("t_error")),
+      x_error(emplace_branch<real_branch_value_type>("x_error")),
+      y_error(emplace_branch<real_branch_value_type>("y_error")),
+      z_error(emplace_branch<real_branch_value_type>("z_error")),
+      chi_squared(emplace_branch<real_branch_value_type>("chi_squared")),
+      chi_squared_per_dof(emplace_branch<real_branch_value_type>("chi_squared_per_dof")),
+      chi_squared_p_value(emplace_branch<real_branch_value_type>("chi_squared_p_value")),
+      size(emplace_branch<real_branch_value_type>("size")),
       track_hash(emplace_branch<decltype(track_hash)::value_type>("track_hash")),
       hash(emplace_branch<decltype(hash)::value_type>("hash")),
       _count(emplace_branch<decltype(_count)::value_type>("N")),
@@ -674,22 +674,12 @@ void vertex::tree::reserve(std::size_t capacity) {
 }
 //----------------------------------------------------------------------------------------------
 
-//__Fill Tree With Vertex Vector________________________________________________________________
-void vertex::tree::fill(const vertex_vector& vertices) {
-  clear();
-  reserve(vertices.size());
-  for (const auto& vertex : vertices)
-    insert(vertex);
-  analysis::tree::fill();
-}
-//----------------------------------------------------------------------------------------------
-
 //__Pairwise Fit Tracks to Vertices_____________________________________________________________
 const vertex_vector pairwise_fit_tracks(const track_vector& tracks) {
   const auto size = tracks.size();
-  if (size == 0)
+  if (size == 0UL)
     return vertex_vector{};
-  if (size <= 2)
+  if (size <= 2UL)
     return vertex_vector{vertex{tracks}};
 
   vertex_vector out;

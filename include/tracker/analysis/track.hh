@@ -146,7 +146,7 @@ public:
     geometry::structure_vector out;
     out.reserve(size());
     util::algorithm::back_insert_transform(_full_event, out,
-      [](const auto point) { return geometry::custom::volume<Geometry>(reduce_to_r3(point)); });
+      [](const auto& point) { return geometry::custom::volume<Geometry>(reduce_to_r3(point)); });
     return out;
   }
 
@@ -260,18 +260,20 @@ using track_vector = std::vector<track>;
 //__Track Data Tree Specialization______________________________________________________________
 class track::tree : public analysis::tree {
 public:
-  using branch_value_type = std::vector<double>;
-  using branch_type = branch<branch_value_type>;
+  using real_branch_value_type = std::vector<double>;
+  using real_branch_type = branch<real_branch_value_type>;
 
   tree(const std::string& name);
   tree(const std::string& name,
        const std::string& title);
 
-  branch_type t0, x0, y0, z0, vx, vy, vz,
-              t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
-              chi_squared, chi_squared_per_dof, chi_squared_p_value,
-              size, beta, beta_error, angle, angle_error,
-              event_t, event_x, event_y, event_z;
+  real_branch_type t0, x0, y0, z0, vx, vy, vz,
+                   t0_error, x0_error, y0_error, z0_error, vx_error, vy_error, vz_error,
+                   chi_squared, chi_squared_per_dof, chi_squared_p_value,
+                   size, beta, beta_error, angle, angle_error,
+                   event_t, event_x, event_y, event_z;
+
+  branch<std::vector<std::string>> event_detector;
 
   branch<std::vector<uint_fast64_t>> hash;
 
@@ -279,11 +281,26 @@ public:
   void clear();
   void reserve(std::size_t capacity);
 
-  void fill(const track_vector& tracks);
+  template<class UnaryPredicate>
+  UnaryPredicate fill_if(const track_vector& tracks,
+                         UnaryPredicate f) {
+    clear();
+    reserve(tracks.size());
+    for (const auto& track : tracks) {
+      if (f(track))
+        insert(track);
+    }
+    analysis::tree::fill();
+    return std::move(f);
+  }
+
+  void fill(const track_vector& tracks) {
+    fill_if(tracks, [](auto) { return true; });
+  }
 
 private:
   branch<uint_fast64_t> _count;
-  std::vector<std::reference_wrapper<branch_type>> _vector_branches;
+  std::vector<std::reference_wrapper<real_branch_type>> _vector_branches;
 };
 //----------------------------------------------------------------------------------------------
 

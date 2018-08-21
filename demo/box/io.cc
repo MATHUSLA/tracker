@@ -164,7 +164,7 @@ void save_tracks(const analysis::track_vector& tracks,
     if (options.draw_events)
       draw_track(canvas, track);
   }
-  tree.fill(tracks);
+  tree.fill_if(tracks, [](const auto& track) { return track.fit_converged(); });
 }
 //----------------------------------------------------------------------------------------------
 
@@ -179,7 +179,7 @@ void save_vertices(const analysis::vertex_vector& vertices,
     if (options.draw_events)
       draw_vertex_and_guess(canvas, vertex);
   }
-  tree.fill(vertices);
+  tree.fill_if(vertices, [](const auto& vertex) { return vertex.fit_converged(); });
 }
 //----------------------------------------------------------------------------------------------
 

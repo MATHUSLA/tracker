@@ -63,17 +63,15 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
   const auto seeds = analysis::seed(
     options.seed_size,
     layers,
-    ash::all<ash::double_cone, ash::speed>{
+    ash::all<ash::double_cone, ash::piecewise_speed>{
       {options.line_width},
       {0.95L * units::speed_of_light}});
 
-  /*
   for (const auto& seed : seeds) {
-    for (std::size_t i{}; i < seed.size() - 1; ++i) {
-      canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i+1]), 1, plot::color::BLACK);
+    for (std::size_t i{}; i < seed.size() - 1UL; ++i) {
+      canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i + 1UL]), 1, plot::color::BLACK);
     }
   }
-  */
 
   const auto joined = analysis::join_all(seeds);
   auto first_tracks = analysis::independent_fit_seeds(joined, options.layer_axis);
@@ -105,6 +103,8 @@ void track_event_bundle(const script::path_vector& paths,
 
   analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
   analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
+
+  std::cout << "Event Count: " << import_size << "\n";
 
   for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
     const auto event = analysis::add_width<box::geometry>(imported_events[event_counter]);

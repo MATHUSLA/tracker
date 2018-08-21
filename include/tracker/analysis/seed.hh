@@ -266,6 +266,32 @@ struct speed {
 };
 //----------------------------------------------------------------------------------------------
 
+//__Piecewise Speed Restriction Heuristic Type__________________________________________________
+struct piecewise_speed {
+  real min_rate, max_rate;
+  piecewise_speed(const real min,
+                  const real max=std::numeric_limits<real>::infinity())
+      : min_rate(min), max_rate(max) {}
+
+  template<class Event,
+      typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+  bool operator()(const Event& points) {
+    if (!is_monotonic<Coordinate::T>(points)) return false;
+    if (points.size() <= 1UL) return true;
+
+    const auto end = points.cend();
+    for (auto iter = points.cbegin(); iter != end - 1; ++iter) {
+      const auto& first = *iter;
+      const auto& second = *(iter + 1);
+      const auto rate = norm(reduce_to_r3(second) - reduce_to_r3(first)) / std::abs(second.t - first.t);
+      if (!(min_rate <= rate && rate <= max_rate))
+        return false;
+    }
+    return true;
+  }
+};
+//----------------------------------------------------------------------------------------------
+
 //__Cylinder Heuristic Type_____________________________________________________________________
 struct cylinder {
   real radius;
