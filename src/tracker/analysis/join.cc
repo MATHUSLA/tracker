@@ -243,7 +243,7 @@ bool _sequential_partial_join(EventVector& seed_buffer,
                               EventVector& out) {
   const auto size = indices.size();
 
-  if (size > 1) {
+  if (size > 1UL) {
     util::bit_vector join_list(size);
     util::index_vector<> to_joined, to_singular;
     to_joined.reserve(size);
@@ -305,7 +305,7 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<typename EventVector::value_type::value_type>>>
 const EventVector sequential_join_all(const EventVector& seeds) {
   const auto size = seeds.size();
-  if (size == 1)
+  if (size <= 1UL)
     return seeds;
 
   EventVector out;
@@ -315,7 +315,7 @@ const EventVector sequential_join_all(const EventVector& seeds) {
   joined.emplace(size);
 
   auto seed_buffer = seeds;
-  _sequential_full_join(seed_buffer, 1, joined, singular, out);
+  _sequential_full_join(seed_buffer, 1UL, joined, singular, out);
   out.shrink_to_fit();
   return out;
 }
@@ -334,7 +334,7 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<Point>>>
 const EventVector subset_join_all(const EventVector& seeds) {
   const auto size = seeds.size();
-  if (size == 1)
+  if (size <= 1UL)
     return seeds;
 
   EventVector out;
@@ -343,25 +343,25 @@ const EventVector subset_join_all(const EventVector& seeds) {
   const auto sorted = util::algorithm::copy_sort_range(seeds, util::type::size_greater<Event>{});
   util::bit_vector joined_list(size);
 
-  size_t top_index = 0, bottom_index = 1;
+  std::size_t top_index{}, bottom_index{1UL};
   while (top_index < size) {
     bottom_index = joined_list.first_unset(bottom_index);
     const auto& top_seed = sorted[top_index];
     if (bottom_index == size) {
       out.push_back(top_seed);
       joined_list.set(top_index);
-      top_index = joined_list.first_unset(1 + top_index);
-      bottom_index = 1 + top_index;
+      top_index = joined_list.first_unset(1UL + top_index);
+      bottom_index = 1UL + top_index;
       continue;
     }
     const auto& bottom_seed = sorted[bottom_index];
     if (util::algorithm::range_includes(top_seed, bottom_seed, t_ordered<Point>{})) {
       joined_list.set(bottom_index);
       // FIXME: check this line vvvvvvvvvvvvvvvvvvvvvvvvv
-      top_index = joined_list.first_unset(1 + top_index);
-      bottom_index = 1 + top_index;
+      top_index = joined_list.first_unset(1UL + top_index);
+      bottom_index = 1UL + top_index;
     } else {
-      bottom_index = joined_list.first_unset(1 + bottom_index);
+      bottom_index = joined_list.first_unset(1UL + bottom_index);
     }
   }
 
@@ -398,7 +398,7 @@ template<class EventVector,
   typename = std::enable_if_t<is_r4_type_v<Point>>>
 const EventVector loop_join_all(const EventVector& seeds) {
   const auto size = seeds.size();
-  if (size <= 1)
+  if (size <= 1UL)
     return seeds;
 
   EventVector out;
@@ -407,19 +407,19 @@ const EventVector loop_join_all(const EventVector& seeds) {
 
   util::bit_vector join_list(size);
 
-  std::size_t top_rindex{}, bottom_rindex = 1UL;
+  std::size_t top_rindex{}, bottom_rindex{1UL};
   while (top_rindex < seed_buffer.size()) {
-    const auto last_index = seed_buffer.size() - 1;
+    const auto last_index = seed_buffer.size() - 1UL;
     const auto top_index = last_index - top_rindex;
     const auto bottom_index = join_list.last_unset(bottom_rindex);
     bottom_rindex = last_index - bottom_index;
 
     const auto& top_seed = seed_buffer[top_index];
-    if (bottom_index == last_index + 1) {
+    if (bottom_index == last_index + 1UL) {
       out.push_back(top_seed);
       join_list.set(top_index);
-      top_rindex = last_index - join_list.last_unset(1 + top_rindex);
-      bottom_rindex = 1 + top_rindex;
+      top_rindex = last_index - join_list.last_unset(1UL + top_rindex);
+      bottom_rindex = 1UL + top_rindex;
       continue;
     }
     const auto& bottom_seed = seed_buffer[bottom_index];

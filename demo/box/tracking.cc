@@ -63,8 +63,7 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
   const auto seeds = analysis::seed(
     options.seed_size,
     layers,
-    // ash::double_cone{options.line_width});
-    ash::both<ash::double_cone, ash::speed>{
+    ash::all<ash::double_cone, ash::speed>{
       {options.line_width},
       {0.95L * units::speed_of_light}});
 
@@ -76,7 +75,8 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
   }
   */
 
-  auto first_tracks = analysis::independent_fit_seeds(analysis::join_all(seeds), options.layer_axis);
+  const auto joined = analysis::join_all(seeds);
+  auto first_tracks = analysis::independent_fit_seeds(joined, options.layer_axis);
 
   for (auto& track : first_tracks)
     track.prune_on_chi_squared(limit_chi_squared);
@@ -106,7 +106,6 @@ void track_event_bundle(const script::path_vector& paths,
   analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
   analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
 
-  // TODO: fix
   for (std::size_t event_counter{}; event_counter < import_size; ++event_counter) {
     const auto event = analysis::add_width<box::geometry>(imported_events[event_counter]);
     const auto event_size = event.size();
@@ -126,12 +125,18 @@ void track_event_bundle(const script::path_vector& paths,
     if (event_density >= options.event_density_limit)
       continue;
 
-    // FIXME: better name for canvas
-    plot::canvas canvas("event" + event_counter_string, paths[0] + event_counter_string);
+    // FIXME: better title for canvas
+    std::string canvas_title{"event"};
+    for (const auto& path : paths) {
+      canvas_title.push_back(' ');
+      canvas_title.insert(canvas_title.cend(), path.begin(), path.end());
+    }
+
+    plot::canvas canvas("event" + event_counter_string, canvas_title + " | " + event_counter_string);
     if (options.draw_events) {
       box::io::draw_detector(canvas, extension.layer_count);
       box::io::draw_mc_tracks(canvas, mc::convert_events(mc_imported_events[event_counter]));
-      for (const auto hit : altered_event)
+      for (const auto& hit : altered_event)
         canvas.add_point(type::reduce_to_r3(hit), 0.8, plot::color::BLACK);
     }
 
@@ -163,7 +168,7 @@ void track_event_bundle(const script::path_vector& paths,
                  std::back_inserter(converged_tracks),
                  [](const auto& track) { return track.fit_converged(); });
 
-    // box::io::save_vertices(analysis::pairwise_fit_tracks(converged_tracks), canvas, vertex_tree, options);
+    box::io::save_vertices(analysis::pairwise_fit_tracks(converged_tracks), canvas, vertex_tree, options);
 
     canvas.draw();
   }
