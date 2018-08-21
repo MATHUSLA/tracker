@@ -175,7 +175,7 @@ bool _fit_tracks_minuit(const track_vector& tracks,
 
   TMinuit minuit;
   initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
-  execute(minuit, _gaussian_nll)
+  execute(minuit, _gaussian_nll);
   get_parameters(minuit, t, x, y, z);
   get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
 
