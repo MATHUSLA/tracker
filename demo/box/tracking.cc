@@ -65,13 +65,19 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
     layers,
     ash::all<ash::double_cone, ash::piecewise_speed>{
       {options.line_width},
-      {0.95L * units::speed_of_light}});
+      {0.8L * units::speed_of_light}});
 
+  /*
   for (const auto& seed : seeds) {
     for (std::size_t i{}; i < seed.size() - 1UL; ++i) {
       canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i + 1UL]), 1, plot::color::BLACK);
     }
+    for (const auto& point : seed) {
+      std::cout << type::reduce_to_r4(point) << " ";
+    }
+    std::cout << "\n";
   }
+  */
 
   const auto joined = analysis::join_all(seeds);
   auto first_tracks = analysis::independent_fit_seeds(joined, options.layer_axis);

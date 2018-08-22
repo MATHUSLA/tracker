@@ -51,7 +51,7 @@ r3_point _pairwise_track_r3_closest_approach(const track& first,
   // const auto c0 = x0 + (diff * n1 / (v0v0 * v1v1 - v1v0 * v1v0)) * v0;
   // const auto c1 = x1 - (diff * n0 / (v1v1 * v0v0 - v0v1 * v0v1)) * v1;
   return 0.5L * ((x1 - (diff * n0 / (v1v1 * v0v0 - v0v1 * v0v1)) * v1)
-               + (x0 + (diff * n1 / (v0v0 * v1v1 - v1v0 * v1v0)) * v0));
+              +  (x0 + (diff * n1 / (v0v0 * v1v1 - v1v0 * v1v0)) * v0));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -83,17 +83,13 @@ const stat::type::uncertain_real _vertex_track_r3_distance_with_error(const real
   const auto dy_by_D = dy * inverse_distance;
   const auto dz_by_D = dz * inverse_distance;
   const real_array<6UL> gradient{
-    -util::math::fused_product(track.vx_value(), dx_by_D,
-                               track.vy_value(), dy_by_D,
-                               track.vz_value(), dz_by_D),
+    -util::math::fused_product(track.vx_value(), dx_by_D, track.vy_value(), dy_by_D, track.vz_value(), dz_by_D),
     dx_by_D,
     dy_by_D,
     total_dt * dx_by_D,
     total_dt * dy_by_D,
     total_dt * dz_by_D};
-  return stat::type::uncertain_real(
-    distance,
-    stat::error::propagate(gradient, track.covariance_matrix()));
+  return stat::type::uncertain_real(distance, stat::error::propagate(gradient, track.covariance_matrix()));
 }
 //----------------------------------------------------------------------------------------------
 
@@ -158,11 +154,8 @@ void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = std::accumulate(_nll_fit_tracks.cbegin(), _nll_fit_tracks.cend(), 0.0L,
     [&](const auto sum, const auto& track) {
       const auto distance = _vertex_track_r3_distance_with_error(x[0], x[1], x[2], x[3], track);
-      // std::cout << "distance: " << distance.value << " error: " << distance.error << "\n";
       return sum + std::fma(0.5L, _vertex_squared_residual(distance), std::log(distance.error));
     });
-  // std::cout << "(" << x[0] << ", " << x[1] << ", " << x[2] << ", " << x[3] << ")\n";
-  // std::cout << "NLL: " << out << "\n\n";
 }
 //----------------------------------------------------------------------------------------------
 
@@ -182,9 +175,7 @@ bool _fit_tracks_minuit(const track_vector& tracks,
 
   TMinuit minuit;
   initialize(minuit, "T", t, "X", x, "Y", y, "Z", z);
-
   execute(minuit, _gaussian_nll);
-
   get_parameters(minuit, t, x, y, z);
   get_covariance<vertex::free_parameter_count>(minuit, covariance_matrix);
 
@@ -309,10 +300,10 @@ namespace { ////////////////////////////////////////////////////////////////////
 //__Get Shift Index of Vertex Parameters for Covariance Matrix__________________________________
 constexpr std::size_t _shift_covariance_index(const vertex::parameter p) {
   switch (p) {
-    case vertex::parameter::T: return 0;
-    case vertex::parameter::X: return 1;
-    case vertex::parameter::Y: return 2;
-    case vertex::parameter::Z: return 3;
+    case vertex::parameter::T: return 0UL;
+    case vertex::parameter::X: return 1UL;
+    case vertex::parameter::Y: return 2UL;
+    case vertex::parameter::Z: return 3UL;
   }
 }
 //----------------------------------------------------------------------------------------------
@@ -321,7 +312,7 @@ constexpr std::size_t _shift_covariance_index(const vertex::parameter p) {
 //__Get Covariance between Vertex Parameters____________________________________________________
 real vertex::covariance(const vertex::parameter p,
                         const vertex::parameter q) const {
-  return _covariance[4 * _shift_covariance_index(p) + _shift_covariance_index(q)];
+  return _covariance[4UL * _shift_covariance_index(p) + _shift_covariance_index(q)];
 }
 //----------------------------------------------------------------------------------------------
 
@@ -333,7 +324,7 @@ std::size_t vertex::reset(const track_vector& tracks) {
   _delta_chi2.clear();
   _delta_chi2.reserve(new_size);
 
-  if (new_size > 1) {
+  if (new_size > 1UL) {
     _guess = _guess_vertex(_tracks);
     _final = _guess;
     if (_fit_tracks_minuit(_tracks, _final, _covariance)) {
@@ -422,10 +413,9 @@ std::size_t vertex::prune_on_chi_squared(const real max_chi_squared) {
   const auto s = size();
   std::vector<std::size_t> indices;
   indices.reserve(s);
-  for (std::size_t i{}; i < s; ++i) {
+  for (std::size_t i{}; i < s; ++i)
     if (chi_squared_vector()[i] > max_chi_squared)
       indices.push_back(i);
-  }
   return remove(indices);
 }
 //----------------------------------------------------------------------------------------------
@@ -500,7 +490,7 @@ namespace { ////////////////////////////////////////////////////////////////////
 //__Print Vertex Parameters with Units__________________________________________________________
 std::ostream& _print_vertex_parameters(std::ostream& os,
                                        const vertex::fit_parameters& parameters,
-                                       std::size_t prefix_count) {
+                                       const std::size_t prefix_count) {
   return os
     << std::string(prefix_count, ' ')
       << "T: " << std::setw(10) << parameters.t.value / units::time
@@ -533,7 +523,7 @@ std::ostream& operator<<(std::ostream& os,
 
     os << "* Vertex Status: " << util::io::bold << "DIVERGED" << util::io::reset_font << "\n"
        << "* Guess Parameters:\n";
-    _print_vertex_parameters(os, vertex.guess_fit(), 4);
+    _print_vertex_parameters(os, vertex.guess_fit(), 4UL);
 
     os << "* Tracks: \n";
     for (const auto& track : vertex.tracks()) {
@@ -550,7 +540,7 @@ std::ostream& operator<<(std::ostream& os,
 
     os << "* Vertex Status: " << util::io::bold << "CONVERGED" << util::io::reset_font << "\n"
        << "* Parameters:\n";
-    _print_vertex_parameters(os, vertex.final_fit(), 4);
+    _print_vertex_parameters(os, vertex.final_fit(), 4UL);
 
     os << "* Tracks: \n";
     const auto size = vertex.size();
