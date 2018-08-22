@@ -120,6 +120,12 @@ inline const std::string get_key_classname(const TKey* key) {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get TKey Class Object_______________________________________________________________________
+inline TClass* get_key_class(const TKey* key) {
+  return gROOT->GetClass(key->GetClassName());
+}
+//----------------------------------------------------------------------------------------------
+
 //__ROOT File Traverse Keys_____________________________________________________________________
 template<class BinaryFunction>
 BinaryFunction traverse_keys(const std::string& path,
@@ -137,6 +143,13 @@ BinaryFunction traverse_keys(const std::string& path,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get Value from Key__________________________________________________________________________
+inline TObject* get_value(TFile* file,
+                          const TKey* key) {
+  return file && key ? file->Get(key->GetName()) : nullptr;
+}
+//----------------------------------------------------------------------------------------------
+
 namespace tree { ///////////////////////////////////////////////////////////////////////////////
 
 //__Types for ROOT Import_______________________________________________________________________
@@ -148,7 +161,7 @@ using vector_data_type = std::vector<data_type>;
 inline TTree* get_tree(TFile* file,
                        const TKey* key) {
   return (file && key && get_key_classname(key) == "TTree")
-    ? dynamic_cast<TTree*>(file->Get(key->GetName()))
+    ? dynamic_cast<TTree*>(get_value(file, key))
     : nullptr;
 }
 //----------------------------------------------------------------------------------------------
@@ -156,7 +169,7 @@ inline TTree* get_tree(TFile* file,
 //__Get TTree Object From File Without Checking Type____________________________________________
 inline TTree* unchecked_get_tree(TFile* file,
                                  const TKey* key) {
-  return dynamic_cast<TTree*>(file->Get(key->GetName()));
+  return dynamic_cast<TTree*>(get_value(file, key));
 }
 //----------------------------------------------------------------------------------------------
 
