@@ -43,3 +43,4 @@ data-momentum-keys:        E, PX, PY, PZ
 statistics-directory:       .temp/box_stat
 statistics-file-prefix:     statistics
 statistics-file-extension:  root
+merge-input:                true

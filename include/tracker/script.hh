@@ -70,6 +70,7 @@ struct tracking_options {
   path_type    statistics_directory       = "";
   path_type    statistics_file_prefix     = "statistics";
   std::string  statistics_file_extension  = "root";
+  bool         merge_input                = false;
 
   bool         time_smearing              = true;
   real         simulated_efficiency       = 1;
@@ -356,6 +357,8 @@ const tracking_options read(const path_type& path,
         out.statistics_file_prefix = value;
       } else if (key == "statistics-file-extension") {
         out.statistics_file_extension = value;
+      } else if (key == "merge-input") {
+        parse_boolean(key, value, out.merge_input);
       } else if (key == "verbose-output") {
         parse_boolean(key, value, out.verbose_output);
       } else if (key == "draw-events") {

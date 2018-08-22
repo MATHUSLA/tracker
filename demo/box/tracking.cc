@@ -121,15 +121,21 @@ void track_event_bundle(const script::path_vector& paths,
                                                         : mc::compress<box::geometry>(event);
     const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
-    if (event_size == 0UL || compression_size == event_size)
+    if (event_size == 0UL || compression_size == event_size) {
+      track_tree.fill({});
+      vertex_tree.fill({});
       continue;
+    }
 
     const auto altered_event = alter_event(compressed_event, options, extension);
     const auto event_density = box::geometry::event_density(altered_event);
     box::io::print_event_summary(event_counter, altered_event.size(), compression_size, event_density);
 
-    if (event_density >= options.event_density_limit)
+    if (event_density >= options.event_density_limit) {
+      track_tree.fill({});
+      vertex_tree.fill({});
       continue;
+    }
 
     // FIXME: better title for canvas
     std::string canvas_title{"event"};
@@ -189,6 +195,18 @@ void track_event_bundle(const script::path_vector& paths,
     box::geometry::value_tags());
   track_tree.save(save_path);
   vertex_tree.save(save_path);
+
+  // TODO: improve implementation
+  if (options.merge_input) {
+    const auto path_count = paths.size();
+    std::vector<std::string> prefixes;
+    prefixes.reserve(path_count);
+    if (path_count > 1UL) {
+      for (std::size_t i{}; i < path_count; ++i)
+        prefixes.push_back("SIM_" + std::to_string(i) + "_");
+    }
+    reader::root::merge_save(save_path, paths, prefixes);
+  }
 }
 //----------------------------------------------------------------------------------------------
 

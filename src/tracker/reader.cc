@@ -1083,6 +1083,60 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
 }
 //----------------------------------------------------------------------------------------------
 
+//__Merge Save Files____________________________________________________________________________
+void merge_save(const script::path_type& home_path,
+                const script::path_vector& paths,
+                const std::vector<std::string>& prefixes) {
+  const auto path_count = paths.size();
+  if (path_count == 0UL || (path_count != prefixes.size() && !prefixes.empty()))
+    return;
+
+  auto prefixes_copy = prefixes;
+  if (prefixes_copy.empty()) {
+    prefixes_copy.reserve(path_count);
+    prefixes_copy.resize(path_count, "");
+  }
+
+  helper::while_open(home_path, "UPDATE", [&](auto file) {
+    for (std::size_t i{}; i < path_count; ++i) {
+      helper::traverse_keys(paths[i], "READ", [&](auto inner_file, auto key) {
+        auto clazz = helper::get_key_class(key);
+        if (!clazz) return;
+        if (clazz->InheritsFrom("TDirectory")) {
+          /* TODO: implement
+          source->cd(key->GetName());
+          TDirectory *subdir = gDirectory;
+          adir->cd();
+          CopyDir(subdir);
+          adir->cd();
+          */
+        } else if (clazz->InheritsFrom("TTree")) {
+          inner_file->cd();
+          auto tree = helper::tree::unchecked_get_tree(inner_file, key);
+          file->cd();
+          auto new_tree = tree->CloneTree();
+          new_tree->SetName((prefixes_copy[i] + new_tree->GetName()).c_str());
+          new_tree->Write();
+        } else {
+          inner_file->cd();
+          auto obj = key->ReadObj();
+          if (clazz->InheritsFrom("TNamed")) {
+            auto named = dynamic_cast<TNamed*>(obj);
+            named->SetName((prefixes_copy[i] + named->GetName()).c_str());
+            file->cd();
+            named->Write();
+          } else {
+            file->cd();
+            obj->Write();
+          }
+          delete obj;
+        }
+      });
+    }
+  });
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace reader */ ///////////////////////////////////////////////////////////////////////

@@ -251,6 +251,12 @@ const analysis::mc::full_event_vector_bundle import_full_event_mc_bundle(const s
                                                                          const ImportMode mode);
 //----------------------------------------------------------------------------------------------
 
+//__Merge Save Files____________________________________________________________________________
+void merge_save(const script::path_type& home_path,
+                const script::path_vector& paths,
+                const std::vector<std::string>& prefixes={});
+//----------------------------------------------------------------------------------------------
+
 } /* namespace root */ /////////////////////////////////////////////////////////////////////////
 
 } /* namespace reader */ ///////////////////////////////////////////////////////////////////////
