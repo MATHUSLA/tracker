@@ -18,7 +18,14 @@
 
 #include "io.hh"
 
+#include <tracker/reader.hh>
+#include <tracker/util/io.hh>
+
 #include "geometry.hh"
+
+//__Namespace Alias_____________________________________________________________________________
+namespace reader = MATHUSLA::TRACKER::reader;
+//----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
 
@@ -198,6 +205,32 @@ const plot::value_tag_vector data_paths_value_tags(const script::path_vector& pa
                      paths[i] + " with offset " + std::to_string(timing_offsets[i] / units::time)
                                                 + " " + units::time_string);
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Save and Merge Simulation and Tracking Files________________________________________________
+void merge_save_files(const script::path_type& save_path,
+                      const script::path_vector& paths) {
+  const auto path_count = paths.size();
+  std::vector<std::string> prefixes;
+  prefixes.reserve(path_count);
+  if (path_count > 1UL) {
+    for (std::size_t i{}; i < path_count; ++i)
+      prefixes.push_back("SIM_" + std::to_string(i) + "_");
+  }
+  reader::root::merge_save(save_path, paths, prefixes);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Get File Timestamp Path_____________________________________________________________________
+const std::string add_statistics_path(const script::tracking_options& options) {
+  auto directory = options.statistics_directory;
+  util::io::create_directory(directory);
+  directory += "/" + util::time::GetDate();
+  util::io::create_directory(directory);
+  directory += "/" + util::time::GetTime();
+  util::io::create_directory(directory);
+  return directory + "/" + options.statistics_file_prefix;
 }
 //----------------------------------------------------------------------------------------------
 

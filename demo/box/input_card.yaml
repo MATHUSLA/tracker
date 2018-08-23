@@ -1,5 +1,7 @@
 ### MATHUSLA Box TRACKING INPUT CARD ###
 
+# debug-mode: true
+
 verbose-output: true
 draw-events: false
 
@@ -43,4 +45,5 @@ data-momentum-keys:        E, PX, PY, PZ
 statistics-directory:       .temp/box_stat
 statistics-file-prefix:     statistics
 statistics-file-extension:  root
+# merge-output-trees:         true
 merge-input:                true

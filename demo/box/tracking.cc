@@ -122,8 +122,8 @@ void track_event_bundle(const script::path_vector& paths,
     const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
     if (event_size == 0UL || compression_size == event_size) {
-      track_tree.fill({});
-      vertex_tree.fill({});
+      track_tree.fill();
+      vertex_tree.fill();
       continue;
     }
 
@@ -132,8 +132,8 @@ void track_event_bundle(const script::path_vector& paths,
     box::io::print_event_summary(event_counter, altered_event.size(), compression_size, event_density);
 
     if (event_density >= options.event_density_limit) {
-      track_tree.fill({});
-      vertex_tree.fill({});
+      track_tree.fill();
+      vertex_tree.fill();
       continue;
     }
 
@@ -196,17 +196,8 @@ void track_event_bundle(const script::path_vector& paths,
   track_tree.save(save_path);
   vertex_tree.save(save_path);
 
-  // TODO: improve implementation
-  if (options.merge_input) {
-    const auto path_count = paths.size();
-    std::vector<std::string> prefixes;
-    prefixes.reserve(path_count);
-    if (path_count > 1UL) {
-      for (std::size_t i{}; i < path_count; ++i)
-        prefixes.push_back("SIM_" + std::to_string(i) + "_");
-    }
-    reader::root::merge_save(save_path, paths, prefixes);
-  }
+  if (options.merge_input)
+    box::io::merge_save_files(save_path, paths);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -222,14 +213,14 @@ int box_tracking(int argc,
 
   box::io::print_tracking_directories(options.data_directories);
 
-  const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
-
   std::size_t path_counter{};
+  const auto statistics_path_prefix = box::io::add_statistics_path(options);
   for (const auto& paths : reader::root::transpose_search_directories(options.data_directories, options.data_file_extension)) {
     const auto path_counter_string = std::to_string(path_counter++);
     const auto statistics_save_path = statistics_path_prefix
                                     + path_counter_string
-                                    + "." + options.statistics_file_extension;
+                                    + "."
+                                    + options.statistics_file_extension;
 
     box::io::print_bar();
     box::io::print_tracking_paths(paths);

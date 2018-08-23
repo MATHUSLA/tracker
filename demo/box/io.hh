@@ -28,6 +28,8 @@
 #include <tracker/plot.hh>
 #include <tracker/script.hh>
 
+#include <tracker/util/time.hh>
+
 //__Namespace Alias_____________________________________________________________________________
 namespace analysis = MATHUSLA::TRACKER::analysis;
 namespace plot     = MATHUSLA::TRACKER::plot;
@@ -95,6 +97,15 @@ void save_vertices(const analysis::vertex_vector& vertices,
 const plot::value_tag_vector data_paths_value_tags(const script::path_vector& paths,
                                                    const type::real_vector& timing_offsets,
                                                    const std::size_t starting_index=0UL);
+//----------------------------------------------------------------------------------------------
+
+//__Save and Merge Simulation and Tracking Files________________________________________________
+void merge_save_files(const script::path_type& save_path,
+                      const script::path_vector& paths);
+//----------------------------------------------------------------------------------------------
+
+//__Get Statistics File Path and Add Directories________________________________________________
+const std::string add_statistics_path(const script::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
 //__Print Bar___________________________________________________________________________________
