@@ -93,6 +93,10 @@ void save_vertices(const analysis::vertex_vector& vertices,
                    const script::tracking_options& options);
 //----------------------------------------------------------------------------------------------
 
+//__Get Statistics File Path and Add Directories________________________________________________
+const std::string add_statistics_path(const script::tracking_options& options);
+//----------------------------------------------------------------------------------------------
+
 //__Calculate Value Tags for Paths______________________________________________________________
 const plot::value_tag_vector data_paths_value_tags(const script::path_vector& paths,
                                                    const type::real_vector& timing_offsets,
@@ -100,12 +104,11 @@ const plot::value_tag_vector data_paths_value_tags(const script::path_vector& pa
 //----------------------------------------------------------------------------------------------
 
 //__Save and Merge Simulation and Tracking Files________________________________________________
-void merge_save_files(const script::path_type& save_path,
-                      const script::path_vector& paths);
-//----------------------------------------------------------------------------------------------
-
-//__Get Statistics File Path and Add Directories________________________________________________
-const std::string add_statistics_path(const script::tracking_options& options);
+void save_files(const script::path_type& save_path,
+                analysis::track::tree& track_tree,
+                analysis::vertex::tree& vertex_tree,
+                const script::path_vector& paths,
+                const bool merge);
 //----------------------------------------------------------------------------------------------
 
 //__Print Bar___________________________________________________________________________________
@@ -154,8 +157,10 @@ inline void print_event_summary(const std::size_t event_counter,
 //__Print Tracking Summary______________________________________________________________________
 inline void print_tracking_summary(const analysis::full_event& event,
                                    const analysis::track_vector& tracks) {
-  std::cout << "  Track Count: "   << tracks.size() << "\n"
-            << "  Track Density: " << tracks.size() / static_cast<type::real>(event.size())
+  const auto size = std::accumulate(tracks.cbegin(), tracks.cend(), 0UL,
+    [](const auto sum, const auto& track) { return sum + track.fit_converged(); });
+  std::cout << "  Track Count: "   << size << "\n"
+            << "  Track Density: " << size / static_cast<type::real>(event.size())
                                         * 100.0L << " %\n";
 }
 //----------------------------------------------------------------------------------------------

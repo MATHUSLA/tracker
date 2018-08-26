@@ -94,21 +94,87 @@ const tracker_geometry::structure_value geometry::index_triple::name() const {
 }
 //----------------------------------------------------------------------------------------------
 
+namespace { ////////////////////////////////////////////////////////////////////////////////////
+
+//__Insert Volumes into Layers__________________________________________________________________
+void _insert_volumes(const tracker_geometry::structure_value& prefix,
+                     const tracker_geometry::structure_value& suffix,
+                     const std::size_t count,
+                     tracker_geometry::structure_vector& out) {
+  for (std::size_t x{}; x < count; ++x)
+    out.push_back(prefix + std::to_string(x) + suffix);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Create Scintillator Layers__________________________________________________________________
+const tracker_geometry::structure_vector _make_layer(const std::size_t layer_index,
+                                                     const std::size_t x_count,
+                                                     const std::size_t y_count) {
+  tracker_geometry::structure_vector out;
+  out.reserve(x_count * y_count);
+  const auto layer_string = std::to_string(1UL + layer_index);
+  for (std::size_t y{}; y < y_count; ++y)
+    _insert_volumes(layer_string + "_", "_" + std::to_string(y), x_count, out);
+  return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Layers for Full Geometry________________________________________________________________
+void _add_layers(const std::size_t begin,
+                 const std::size_t end,
+                 const std::size_t x_count,
+                 const std::size_t y_count,
+                 std::vector<tracker_geometry::structure_vector>& layers) {
+  for (std::size_t z{}; z < end; ++z)
+    layers.push_back(_make_layer(z + begin, x_count, y_count));
+}
+//----------------------------------------------------------------------------------------------
+
+//__Load Layers into Full Structure_____________________________________________________________
+void _load_layers(const std::size_t begin,
+                  const std::size_t end,
+                  std::vector<tracker_geometry::structure_vector>& layers,
+                  tracker_geometry::structure_vector& out) {
+  for (std::size_t i{begin}; i < end; ++i)
+    for (const auto& volume : layers[i])
+      out.push_back(volume);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Unload Layers from Full Structure___________________________________________________________
+void _unload_layers(const std::size_t count,
+                    const std::size_t x_count,
+                    const std::size_t y_count,
+                    tracker_geometry::structure_vector& out) {
+  out.erase(out.cend() - count * x_count * y_count, out.cend());
+}
+//----------------------------------------------------------------------------------------------
+
+} /* anonymous namespace */ ////////////////////////////////////////////////////////////////////
+
 //__Total Geometry of the Box Detector__________________________________________________________
-const tracker_geometry::structure_vector& geometry::full() {
+const tracker_geometry::structure_vector& geometry::full(const std::size_t count) {
   static tracker_geometry::structure_vector out;
-  if (out.empty()) {
-    out.reserve(total_count());
-    for (std::size_t z{}; z < layer_count; ++z) {
-      const auto z_name = std::to_string(1UL + z);
-      for (std::size_t y{}; y < y_total_count(); ++y) {
-        const auto y_name = std::to_string(y);
-        for (std::size_t x{}; x < x_total_count(); ++x) {
-          out.push_back(z_name + "_" + std::to_string(x) + "_" + y_name);
-        }
-      }
-    }
+  static std::vector<tracker_geometry::structure_vector> layers;
+  static std::size_t current_layer_count{}, current_x_count{}, current_y_count{};
+
+  if (current_x_count != x_total_count() || current_y_count != y_total_count()) {
+    current_x_count = x_total_count();
+    current_y_count = y_total_count();
+    layers.clear();
+    out.clear();
   }
+
+  if (current_layer_count < count) {
+    const auto layers_size = layers.size();
+    if (layers_size < count)
+      _add_layers(layers_size, count - layers_size, current_x_count, current_y_count, layers);
+    _load_layers(current_layer_count, count - current_layer_count, layers, out);
+  } else if (current_layer_count > count) {
+    _unload_layers(current_layer_count - count, current_x_count, current_y_count, out);
+  }
+
+  current_layer_count = count;
   return out;
 }
 //----------------------------------------------------------------------------------------------

@@ -38,18 +38,34 @@ struct tree::impl {
     using TTree::BranchImpRef;
   };
 
+  static TTreeType* to_tree(TObject* obj) {
+    return dynamic_cast<TTreeType*>(obj);
+  }
+
   TTreeType* _tree;
+  TFile* _file = nullptr;
+  bool _connected = false;
+
+  TDirectory* set_directory(TDirectory* d) {
+    _tree->SetDirectory(d);
+    return d;
+  }
+
+  TFile* set_file(TFile* f) {
+    _file = f;
+    return dynamic_cast<TFile*>(set_directory(f));
+  }
 
   impl() = default;
   impl(const std::string& name,
        const std::string& title) : _tree(new TTreeType(name.c_str(), title.c_str())) {}
-  impl(const impl& other) : _tree(dynamic_cast<TTreeType*>(other._tree->CloneTree())) {}
+  impl(const impl& other) : _tree(to_tree(other._tree->CloneTree())) {}
   impl(impl&& other) noexcept = default;
   ~impl() = default;
 
   impl& operator=(const impl& other) {
     if (this != &other)
-      _tree = dynamic_cast<TTreeType*>(other._tree->CloneTree());
+      _tree = to_tree(other._tree->CloneTree());
     return *this;
   }
   impl& operator=(impl&& other) noexcept = default;
@@ -131,7 +147,9 @@ void tree::draw(std::initializer_list<key_type> keys) const {
   if (end == begin)
     return;
 
-  combined_key.reserve(64UL * (end - begin));
+  combined_key.reserve(std::accumulate(begin, end, 0UL,
+    [](const auto sum, const auto& key) { return sum + key.size(); }));
+
   while (begin != end - 1)
     combined_key.append(*begin++ + ":");
   combined_key.append(*begin);
@@ -142,14 +160,8 @@ void tree::draw(std::initializer_list<key_type> keys) const {
 
 //__Save Tree to File___________________________________________________________________________
 bool tree::save(const std::string& path) const {
-  TFile file(path.c_str(), "UPDATE");
-  if (!file.IsZombie()) {
-    file.cd();
-    file.WriteTObject(_impl->_tree->Clone());
-    file.Close();
-    return true;
-  }
-  return false;
+  return root::helper::while_open(path, "UPDATE",
+    [&](auto file) { file->WriteTObject(_impl->_tree); });
 }
 //----------------------------------------------------------------------------------------------
 
@@ -157,15 +169,14 @@ bool tree::save(const std::string& path) const {
 tree tree::load(const std::string& path,
                 const std::string& name) {
   tree out;
-  TFile file(path.c_str(), "READ");
-  if (!file.IsZombie()) {
-    auto test = static_cast<TTree*>(file.Get(name.c_str()));
+  root::helper::while_open(path, "READ", [&](auto file) {
+    auto test = dynamic_cast<TTree*>(file->Get(name.c_str()));
     if (test) {
-      test->SetDirectory(nullptr);
-      out._impl->_tree = static_cast<impl::TTreeType*>(test);
+      out._impl->_tree = impl::to_tree(test->CloneTree());
+      out._impl->set_file(nullptr);
+      out._impl->_connected = false;
     }
-    file.Close();
-  }
+  });
   return out;
 }
 //----------------------------------------------------------------------------------------------
@@ -174,9 +185,7 @@ tree tree::load(const std::string& path,
 void* tree::create_memory_slot(const key_type& key,
                                void* memory,
                                const std::type_info& info) {
-  const auto classtype = TBuffer::GetClass(info);
-  const auto datatype = TDataType::GetType(info);
-  _impl->_tree->BranchImpRef(key.c_str(), classtype, datatype, memory, 32000, 99);
+  _impl->_tree->BranchImpRef(key.c_str(), TBuffer::GetClass(info), TDataType::GetType(info), memory, 32000, 99);
   return memory;
 }
 //----------------------------------------------------------------------------------------------
@@ -205,13 +214,41 @@ std::size_t tree::size() const {
 //__Get Count of Key____________________________________________________________________________
 std::size_t tree::count(const key_type& key) const {
   // TODO: implement
-  return 0;
+  return 0UL;
 }
 //----------------------------------------------------------------------------------------------
 
 //__Fill Tree___________________________________________________________________________________
 void tree::fill() {
   _impl->_tree->Fill();
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Friend to Tree__________________________________________________________________________
+void tree::add_friend(tree& other) {
+  _impl->_tree->AddFriend(other._impl->_tree);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Friend to Tree with Alias_______________________________________________________________
+void tree::add_friend(tree& other,
+                      const std::string& alias) {
+  _impl->_tree->AddFriend(other._impl->_tree, alias.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Friend to Tree From File________________________________________________________________
+void tree::add_friend(const std::string& name,
+                      const std::string& path) {
+  _impl->_tree->AddFriend(name.c_str(), path.c_str());
+}
+//----------------------------------------------------------------------------------------------
+
+//__Add Friend to Tree From File with Alias_____________________________________________________
+void tree::add_friend(const std::string& name,
+                      const std::string& alias,
+                      const std::string& path) {
+  _impl->_tree->AddFriend((name + " = " + alias).c_str(), path.c_str());
 }
 //----------------------------------------------------------------------------------------------
 

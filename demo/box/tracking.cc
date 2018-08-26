@@ -42,12 +42,15 @@ const analysis::full_event alter_event(const analysis::full_event& event,
                                        const script::tracking_options& options,
                                        const box::io::extension_parser& extension) {
   return box::geometry::restrict_layer_count(
-    mc::add_noise<box::geometry>(
-      mc::use_efficiency(event, options.simulated_efficiency),
-      options.simulated_noise_rate,
-      options.event_time_window.begin,
-      options.event_time_window.end),
-    extension.layer_count);
+           mc::use_efficiency(
+             mc::add_noise<box::geometry>(
+               event,
+               options.simulated_noise_rate,
+               options.event_time_window.begin,
+               options.event_time_window.end,
+               box::geometry::full(extension.layer_count)),
+             options.simulated_efficiency),
+           extension.layer_count);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -60,21 +63,19 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
                                          analysis::full_event& non_track_points) {
   namespace ash = analysis::seed_heuristic;
   const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
-  const auto seeds = analysis::seed(
+  const auto seeds = analysis::seed_consecutive(
     options.seed_size,
     layers,
     ash::all<ash::double_cone, ash::piecewise_speed>{
       {options.line_width},
-      {0.8L * units::speed_of_light}});
+      {0.9L * units::speed_of_light}});
 
   /*
   for (const auto& seed : seeds) {
-    for (std::size_t i{}; i < seed.size() - 1UL; ++i) {
+    for (std::size_t i{}; i < seed.size() - 1UL; ++i)
       canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i + 1UL]), 1, plot::color::BLACK);
-    }
-    for (const auto& point : seed) {
+    for (const auto& point : seed)
       std::cout << type::reduce_to_r4(point) << " ";
-    }
     std::cout << "\n";
   }
   */
@@ -109,6 +110,8 @@ void track_event_bundle(const script::path_vector& paths,
 
   analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
   analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
+  track_tree.add_friend(vertex_tree, "vertex");
+  vertex_tree.add_friend(track_tree, "track");
 
   std::cout << "Event Count: " << import_size << "\n";
 
@@ -193,11 +196,8 @@ void track_event_bundle(const script::path_vector& paths,
     plot::value_tag{"EFFICIENCY", std::to_string(options.simulated_efficiency)},
     plot::value_tag{"NOISE", std::to_string(options.simulated_noise_rate * units::time) + " / " + units::time_string},
     box::geometry::value_tags());
-  track_tree.save(save_path);
-  vertex_tree.save(save_path);
 
-  if (options.merge_input)
-    box::io::merge_save_files(save_path, paths);
+  box::io::save_files(save_path, track_tree, vertex_tree, paths, options.merge_input);
 }
 //----------------------------------------------------------------------------------------------
 

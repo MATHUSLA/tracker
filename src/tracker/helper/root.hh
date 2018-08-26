@@ -86,31 +86,31 @@ inline const std::vector<std::string> search_directory(const std::string& path,
 
 //__ROOT File Open______________________________________________________________________________
 template<class UnaryFunction>
-UnaryFunction while_open(const std::string& path,
-                         const std::string& mode,
-                         UnaryFunction f) {
+bool while_open(const std::string& path,
+                const std::string& mode,
+                UnaryFunction&& f) {
   auto file = TFile::Open(path.c_str(), mode.c_str());
   if (file && !file->IsZombie()) {
     file->cd();
     f(file);
     file->Close();
+    return true;
   }
-  return std::move(f);
+  return false;
 }
 //----------------------------------------------------------------------------------------------
 
 //__ROOT File Traverse Keys_____________________________________________________________________
 template<class BinaryFunction>
-BinaryFunction traverse_keys(const std::string& path,
-                             const std::string& mode,
-                             BinaryFunction f) {
-  while_open(path, mode, [&](const auto file) {
-    TIter next(file->GetListOfKeys());
-    TKey* key = nullptr;
-    while ((key = dynamic_cast<TKey*>(next())))
-      f(file, key);
-  });
-  return std::move(f);
+bool traverse_keys(const std::string& path,
+                   const std::string& mode,
+                   BinaryFunction&& f) {
+  return while_open(path, mode, [&](const auto file) {
+           TIter next(file->GetListOfKeys());
+           TKey* key = nullptr;
+           while ((key = dynamic_cast<TKey*>(next())))
+             f(file, key);
+         });
 }
 //----------------------------------------------------------------------------------------------
 

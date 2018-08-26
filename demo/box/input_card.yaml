@@ -8,18 +8,18 @@ draw-events: false
 # Thresholds and Settings
 time-smearing:         true
 simulated-efficiency:  0.9
-simulated-noise-rate:  1e-6
-event-time-window:     300, 900
+simulated-noise-rate:  0 # 1e-6
+event-time-window:     450, 750
 layer-axis:            Z
 layer-depth:           10
 line-width:            25
 seed-size:             3
-event-density-limit:   0.0001
+event-density-limit:   1 # 0.0001
 
 # Geometry Setup
 geometry-file:                demo/box/resources/world.box.gdml
 geometry-default-time-error:  1.5
-layer-count:                  5
+layer-count:                  3
 scintillator_x_width:         10
 scintillator_y_width:         10
 scintillator_height:          1

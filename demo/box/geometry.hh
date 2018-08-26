@@ -104,7 +104,7 @@ struct geometry {
     const tracker_geometry::structure_value name() const;
   };
 
-  static const tracker_geometry::structure_vector& full();
+  static const tracker_geometry::structure_vector& full(const std::size_t count=box::constants::layer_count);
   static type::real event_density(const analysis::full_event& event);
   static const tracker_geometry::structure_value volume(const type::r3_point point);
   static const tracker_geometry::structure_value volume(const type::r4_point point);
