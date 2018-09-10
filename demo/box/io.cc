@@ -210,7 +210,7 @@ const plot::value_tag_vector data_paths_value_tags(const script::path_vector& pa
                                                    const std::size_t starting_index) {
   const auto size = paths.size();
   if (size == 1UL)
-    return plot::value_tag_vector{{"DATAPATH", paths.front()}};
+    return plot::value_tag_vector{{"DATAPATH_0", paths.front()}};
 
   plot::value_tag_vector out;
   out.reserve(size);
@@ -231,10 +231,8 @@ void save_files(const script::path_type& save_path,
   const auto path_count = paths.size();
   std::vector<std::string> prefixes;
   prefixes.reserve(path_count);
-  if (path_count > 1UL) {
-    for (std::size_t i{}; i < path_count; ++i)
-      prefixes.push_back("SIM_" + std::to_string(i) + "_");
-  }
+  for (std::size_t i{}; i < path_count; ++i)
+    prefixes.push_back("SIM_" + std::to_string(i) + "_");
 
   if (merge) {
     reader::root::merge_save(save_path, paths, prefixes);
