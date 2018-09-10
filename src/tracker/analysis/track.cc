@@ -1188,9 +1188,7 @@ template<class Event,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 std::size_t _time_ordered_overlap_size(const Event& first,
                                        const Event& second) {
-  return first.front().t <= second.front().t
-    ? _overlap_size(first, second)
-    : _overlap_size(second, first);
+  return first.front().t <= second.front().t ? _overlap_size(first, second) : _overlap_size(second, first);
 }
 //----------------------------------------------------------------------------------------------
 

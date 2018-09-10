@@ -42,12 +42,15 @@ const analysis::full_event alter_event(const analysis::full_event& event,
                                        const script::tracking_options& options,
                                        const box::io::extension_parser& extension) {
   return box::geometry::restrict_layer_count(
-    mc::add_noise<box::geometry>(
-      mc::use_efficiency(event, options.simulated_efficiency),
-      options.simulated_noise_rate,
-      options.event_time_window.begin,
-      options.event_time_window.end),
-    extension.layer_count);
+           mc::use_efficiency(
+             mc::add_noise<box::geometry>(
+               event,
+               options.simulated_noise_rate,
+               options.event_time_window.begin,
+               options.event_time_window.end,
+               box::geometry::full(extension.layer_count)),
+             options.simulated_efficiency),
+           extension.layer_count);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -60,21 +63,19 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
                                          analysis::full_event& non_track_points) {
   namespace ash = analysis::seed_heuristic;
   const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
-  const auto seeds = analysis::seed(
+  const auto seeds = analysis::seed_consecutive(
     options.seed_size,
     layers,
     ash::all<ash::double_cone, ash::piecewise_speed>{
       {options.line_width},
-      {0.8L * units::speed_of_light}});
+      {0.9L * units::speed_of_light}});
 
   /*
   for (const auto& seed : seeds) {
-    for (std::size_t i{}; i < seed.size() - 1UL; ++i) {
+    for (std::size_t i{}; i < seed.size() - 1UL; ++i)
       canvas.add_line(type::reduce_to_r4(seed[i]), type::reduce_to_r4(seed[i + 1UL]), 1, plot::color::BLACK);
-    }
-    for (const auto& point : seed) {
+    for (const auto& point : seed)
       std::cout << type::reduce_to_r4(point) << " ";
-    }
     std::cout << "\n";
   }
   */
@@ -109,6 +110,8 @@ void track_event_bundle(const script::path_vector& paths,
 
   analysis::track::tree track_tree{"track_tree", "MATHUSLA Track Tree"};
   analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
+  track_tree.add_friend(vertex_tree, "vertex");
+  vertex_tree.add_friend(track_tree, "track");
 
   std::cout << "Event Count: " << import_size << "\n";
 
@@ -122,8 +125,8 @@ void track_event_bundle(const script::path_vector& paths,
     const auto compression_size = event_size / static_cast<type::real>(compressed_event.size());
 
     if (event_size == 0UL || compression_size == event_size) {
-      track_tree.fill({});
-      vertex_tree.fill({});
+      track_tree.fill();
+      vertex_tree.fill();
       continue;
     }
 
@@ -132,8 +135,8 @@ void track_event_bundle(const script::path_vector& paths,
     box::io::print_event_summary(event_counter, altered_event.size(), compression_size, event_density);
 
     if (event_density >= options.event_density_limit) {
-      track_tree.fill({});
-      vertex_tree.fill({});
+      track_tree.fill();
+      vertex_tree.fill();
       continue;
     }
 
@@ -193,20 +196,8 @@ void track_event_bundle(const script::path_vector& paths,
     plot::value_tag{"EFFICIENCY", std::to_string(options.simulated_efficiency)},
     plot::value_tag{"NOISE", std::to_string(options.simulated_noise_rate * units::time) + " / " + units::time_string},
     box::geometry::value_tags());
-  track_tree.save(save_path);
-  vertex_tree.save(save_path);
 
-  // TODO: improve implementation
-  if (options.merge_input) {
-    const auto path_count = paths.size();
-    std::vector<std::string> prefixes;
-    prefixes.reserve(path_count);
-    if (path_count > 1UL) {
-      for (std::size_t i{}; i < path_count; ++i)
-        prefixes.push_back("SIM_" + std::to_string(i) + "_");
-    }
-    reader::root::merge_save(save_path, paths, prefixes);
-  }
+  box::io::save_files(save_path, track_tree, vertex_tree, paths, options.merge_input);
 }
 //----------------------------------------------------------------------------------------------
 
@@ -222,14 +213,14 @@ int box_tracking(int argc,
 
   box::io::print_tracking_directories(options.data_directories);
 
-  const auto statistics_path_prefix = options.statistics_directory + "/" + options.statistics_file_prefix;
-
   std::size_t path_counter{};
+  const auto statistics_path_prefix = box::io::add_statistics_path(options);
   for (const auto& paths : reader::root::transpose_search_directories(options.data_directories, options.data_file_extension)) {
     const auto path_counter_string = std::to_string(path_counter++);
     const auto statistics_save_path = statistics_path_prefix
                                     + path_counter_string
-                                    + "." + options.statistics_file_extension;
+                                    + "."
+                                    + options.statistics_file_extension;
 
     box::io::print_bar();
     box::io::print_tracking_paths(paths);

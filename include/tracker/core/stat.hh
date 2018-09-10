@@ -668,14 +668,14 @@ void set_distribution(const Distribution old_type,
 
 //__Set Distribution Parameter Vector___________________________________________________________
 template<class ParameterType>
-void set_distribution_parameters(ParameterType&& parameters,
+void set_distribution_parameters(const ParameterType& parameters,
                                  distribution_union& distribution,
                                  const Distribution previous_type);
 //----------------------------------------------------------------------------------------------
 
 //__Set Distribution Parameters for Uniform Integer Distribution________________________________
 template<>
-inline void set_distribution_parameters<uniform_int>(uniform_int&& parameters,
+inline void set_distribution_parameters<uniform_int>(const uniform_int& parameters,
                                                      distribution_union& distribution,
                                                      const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.uniform_int,
@@ -685,7 +685,7 @@ inline void set_distribution_parameters<uniform_int>(uniform_int&& parameters,
 
 //__Set Distribution Parameters for Uniform Real Distribution___________________________________
 template<>
-inline void set_distribution_parameters<uniform_real>(uniform_real&& parameters,
+inline void set_distribution_parameters<uniform_real>(const uniform_real& parameters,
                                                       distribution_union& distribution,
                                                       const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.uniform_real,
@@ -695,7 +695,7 @@ inline void set_distribution_parameters<uniform_real>(uniform_real&& parameters,
 
 //__Set Distribution Parameters for Bernoulli Distribution______________________________________
 template<>
-inline void set_distribution_parameters<bernoulli>(bernoulli&& parameters,
+inline void set_distribution_parameters<bernoulli>(const bernoulli& parameters,
                                                    distribution_union& distribution,
                                                    const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.bernoulli,
@@ -705,7 +705,7 @@ inline void set_distribution_parameters<bernoulli>(bernoulli&& parameters,
 
 //__Set Distribution Parameters for Binomial Distribution_______________________________________
 template<>
-inline void set_distribution_parameters<binomial>(binomial&& parameters,
+inline void set_distribution_parameters<binomial>(const binomial& parameters,
                                                   distribution_union& distribution,
                                                   const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.binomial,
@@ -715,7 +715,7 @@ inline void set_distribution_parameters<binomial>(binomial&& parameters,
 
 //__Set Distribution Parameters for Negative Binomial Distribution______________________________
 template<>
-inline void set_distribution_parameters<negative_binomial>(negative_binomial&& parameters,
+inline void set_distribution_parameters<negative_binomial>(const negative_binomial& parameters,
                                                            distribution_union& distribution,
                                                            const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.negative_binomial,
@@ -725,7 +725,7 @@ inline void set_distribution_parameters<negative_binomial>(negative_binomial&& p
 
 //__Set Distribution Parameters for Geometric Distribution______________________________________
 template<>
-inline void set_distribution_parameters<geometric>(geometric&& parameters,
+inline void set_distribution_parameters<geometric>(const geometric& parameters,
                                                    distribution_union& distribution,
                                                    const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.geometric,
@@ -735,7 +735,7 @@ inline void set_distribution_parameters<geometric>(geometric&& parameters,
 
 //__Set Distribution Parameters for Poisson Distribution________________________________________
 template<>
-inline void set_distribution_parameters<poisson>(poisson&& parameters,
+inline void set_distribution_parameters<poisson>(const poisson& parameters,
                                                  distribution_union& distribution,
                                                  const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.poisson,
@@ -745,7 +745,7 @@ inline void set_distribution_parameters<poisson>(poisson&& parameters,
 
 //__Set Distribution Parameters for Exponential Distribution____________________________________
 template<>
-inline void set_distribution_parameters<exponential>(exponential&& parameters,
+inline void set_distribution_parameters<exponential>(const exponential& parameters,
                                                      distribution_union& distribution,
                                                      const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.exponential,
@@ -755,7 +755,7 @@ inline void set_distribution_parameters<exponential>(exponential&& parameters,
 
 //__Set Distribution Parameters for Gamma Distribution__________________________________________
 template<>
-inline void set_distribution_parameters<gamma>(gamma&& parameters,
+inline void set_distribution_parameters<gamma>(const gamma& parameters,
                                                distribution_union& distribution,
                                                const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.gamma,
@@ -765,7 +765,7 @@ inline void set_distribution_parameters<gamma>(gamma&& parameters,
 
 //__Set Distribution Parameters for Weibull Distribution________________________________________
 template<>
-inline void set_distribution_parameters<weibull>(weibull&& parameters,
+inline void set_distribution_parameters<weibull>(const weibull& parameters,
                                                  distribution_union& distribution,
                                                  const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.weibull,
@@ -775,7 +775,7 @@ inline void set_distribution_parameters<weibull>(weibull&& parameters,
 
 //__Set Distribution Parameters for Extreme Value Distribution__________________________________
 template<>
-inline void set_distribution_parameters<extreme_value>(extreme_value&& parameters,
+inline void set_distribution_parameters<extreme_value>(const extreme_value& parameters,
                                                        distribution_union& distribution,
                                                        const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.extreme_value,
@@ -785,7 +785,7 @@ inline void set_distribution_parameters<extreme_value>(extreme_value&& parameter
 
 //__Set Distribution Parameters for Normal Distribution_________________________________________
 template<>
-inline void set_distribution_parameters<normal>(normal&& parameters,
+inline void set_distribution_parameters<normal>(const normal& parameters,
                                                 distribution_union& distribution,
                                                 const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.normal,
@@ -795,7 +795,7 @@ inline void set_distribution_parameters<normal>(normal&& parameters,
 
 //__Set Distribution Parameters for LogNormal Distribution______________________________________
 template<>
-inline void set_distribution_parameters<lognormal>(lognormal&& parameters,
+inline void set_distribution_parameters<lognormal>(const lognormal& parameters,
                                                    distribution_union& distribution,
                                                    const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.lognormal,
@@ -805,7 +805,7 @@ inline void set_distribution_parameters<lognormal>(lognormal&& parameters,
 
 //__Set Distribution Parameters for Chi Squared Distribution____________________________________
 template<>
-inline void set_distribution_parameters<chi_squared>(chi_squared&& parameters,
+inline void set_distribution_parameters<chi_squared>(const chi_squared& parameters,
                                                      distribution_union& distribution,
                                                      const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.chi_squared,
@@ -815,7 +815,7 @@ inline void set_distribution_parameters<chi_squared>(chi_squared&& parameters,
 
 //__Set Distribution Parameters for Cauchy Distribution_________________________________________
 template<>
-inline void set_distribution_parameters<cauchy>(cauchy&& parameters,
+inline void set_distribution_parameters<cauchy>(const cauchy& parameters,
                                                 distribution_union& distribution,
                                                 const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.cauchy,
@@ -825,7 +825,7 @@ inline void set_distribution_parameters<cauchy>(cauchy&& parameters,
 
 //__Set Distribution Parameters for Fisher F Distribution_______________________________________
 template<>
-inline void set_distribution_parameters<fisher_f>(fisher_f&& parameters,
+inline void set_distribution_parameters<fisher_f>(const fisher_f& parameters,
                                                   distribution_union& distribution,
                                                   const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.fisher_f,
@@ -835,7 +835,7 @@ inline void set_distribution_parameters<fisher_f>(fisher_f&& parameters,
 
 //__Set Distribution Parameters for Student T Distribution______________________________________
 template<>
-inline void set_distribution_parameters<student_t>(student_t&& parameters,
+inline void set_distribution_parameters<student_t>(const student_t& parameters,
                                                    distribution_union& distribution,
                                                    const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.student_t,
@@ -843,9 +843,9 @@ inline void set_distribution_parameters<student_t>(student_t&& parameters,
 }
 //----------------------------------------------------------------------------------------------
 
-//__Set Distribution Parameters for Student T Distribution______________________________________
+//__Set Distribution Parameters for Piecewise Constant Distribution_____________________________
 template<>
-inline void set_distribution_parameters<piecewise_constant>(piecewise_constant&& parameters,
+inline void set_distribution_parameters<piecewise_constant>(const piecewise_constant& parameters,
                                                             distribution_union& distribution,
                                                             const Distribution previous_type) {
   set_distribution(previous_type, distribution, distribution.piecewise_constant,

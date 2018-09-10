@@ -23,8 +23,6 @@
 #include <tracker/analysis/event.hh>
 #include <tracker/util/bit_vector.hh>
 
-#include <iostream> // TODO: remove
-
 namespace MATHUSLA { namespace TRACKER {
 
 namespace analysis { ///////////////////////////////////////////////////////////////////////////
@@ -352,13 +350,15 @@ struct double_cone {
 } /* namespace seed_heuristic */ ///////////////////////////////////////////////////////////////
 
 namespace detail { /////////////////////////////////////////////////////////////////////////////
+
 //__Seeding Algorithm___________________________________________________________________________
-template<class SeedHeuristic, class EventPartition,
-  typename EventVector = typename EventPartition::parts,
+template<class Precondition, class SeedHeuristic, class EventPartition,
+  typename EventVector = decltype(EventPartition::parts),
   typename Event = typename EventVector::value_type,
   typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
 const EventVector seed(const std::size_t n,
                        const EventPartition& partition,
+                       Precondition precondition,
                        SeedHeuristic heuristic) {
   if (n <= 1UL)
     return EventVector{};
@@ -377,6 +377,9 @@ const EventVector seed(const std::size_t n,
     layer_sequence.emplace_back(1UL, layer.size());
 
   util::order2_permutations(n, layer_sequence, [&](const auto& chooser) {
+    if (!precondition(chooser))
+      return;
+
     Event tuple;
     tuple.reserve(n);
     for (std::size_t index{}; index < layer_count; ++index)
@@ -390,6 +393,44 @@ const EventVector seed(const std::size_t n,
   return out;
 }
 //----------------------------------------------------------------------------------------------
+
+//__Seeding Algorithm___________________________________________________________________________
+template<class SeedHeuristic, class EventPartition,
+  typename EventVector = decltype(EventPartition::parts),
+  typename Event = typename EventVector::value_type,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const EventVector seed(const std::size_t n,
+                       const EventPartition& partition,
+                       SeedHeuristic heuristic) {
+  return seed<>(n, partition, [](const auto&) { return true; }, heuristic);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Check if Layer Bit Vector has Consecutive Points____________________________________________
+inline bool has_consecutive_layers(const std::size_t count,
+                                   const util::bit_vector& bits) {
+  std::size_t consecutive{};
+  for (std::size_t i{}; i < bits.size(); ++i) {
+    consecutive = bits[i] ? consecutive + 1UL : 0UL;
+    if (consecutive == count)
+      return true;
+  }
+  return false;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Seeding Algorithm___________________________________________________________________________
+template<class SeedHeuristic, class EventPartition,
+  typename EventVector = decltype(EventPartition::parts),
+  typename Event = typename EventVector::value_type,
+  typename = std::enable_if_t<is_r4_type_v<typename Event::value_type>>>
+const EventVector seed_consecutive(const std::size_t n,
+                                   const EventPartition& partition,
+                                   SeedHeuristic heuristic) {
+  return seed<>(n, partition, std::bind(has_consecutive_layers, n, std::placeholders::_1), heuristic);
+}
+//----------------------------------------------------------------------------------------------
+
 } /* namespace detail */ ///////////////////////////////////////////////////////////////////////
 
 //__Seeding Algorithm___________________________________________________________________________
@@ -397,13 +438,25 @@ template<class SeedHeuristic>
 const event_vector seed(const std::size_t n,
                         const event_partition& partition,
                         SeedHeuristic heuristic) {
-  return detail::seed<SeedHeuristic, event_partition, event_vector>(n, partition, heuristic);
+  return detail::seed<>(n, partition, heuristic);
 }
 template<class SeedHeuristic>
 const full_event_vector seed(const std::size_t n,
                              const full_event_partition& partition,
                              SeedHeuristic heuristic) {
-  return detail::seed<SeedHeuristic, full_event_partition, full_event_vector>(n, partition, heuristic);
+  return detail::seed<>(n, partition, heuristic);
+}
+template<class SeedHeuristic>
+const event_vector seed_consecutive(const std::size_t n,
+                                    const event_partition& partition,
+                                    SeedHeuristic heuristic) {
+  return detail::seed_consecutive<>(n, partition, heuristic);
+}
+template<class SeedHeuristic>
+const full_event_vector seed_consecutive(const std::size_t n,
+                                         const full_event_partition& partition,
+                                         SeedHeuristic heuristic) {
+  return detail::seed_consecutive<>(n, partition, heuristic);
 }
 //----------------------------------------------------------------------------------------------
 

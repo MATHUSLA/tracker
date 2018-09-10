@@ -214,7 +214,7 @@ public:
     return std::move(f);
   }
 
-  void fill(const vertex_vector& vertices) {
+  void fill(const vertex_vector& vertices={}) {
     fill_if(vertices, [](auto) { return true; });
   }
 

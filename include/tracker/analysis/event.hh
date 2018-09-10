@@ -74,8 +74,12 @@ const full_event add_width(const event& points) {
 //----------------------------------------------------------------------------------------------
 
 //__Event Partition Type________________________________________________________________________
-struct event_partition { event_vector parts; Coordinate coordinate; real interval; };
-struct full_event_partition { full_event_vector parts; Coordinate coordinate; real interval; };
+struct event_partition {
+  event_vector parts; Coordinate coordinate; real interval;
+};
+struct full_event_partition {
+  full_event_vector parts; Coordinate coordinate; real interval;
+};
 //----------------------------------------------------------------------------------------------
 
 //__Partition Points by Coordinate______________________________________________________________

@@ -33,6 +33,7 @@ namespace analysis { ///////////////////////////////////////////////////////////
 class tree {
 public:
   using key_type = std::string;
+  using reference_wrapper = std::reference_wrapper<tree>;
 
   template<class T>
   class branch;
@@ -58,6 +59,15 @@ public:
 
   void operator[](const std::size_t index) const;
   void fill();
+
+  void add_friend(tree& other);
+  void add_friend(tree& other,
+                  const std::string& alias);
+  void add_friend(const std::string& name,
+                  const std::string& path);
+  void add_friend(const std::string& name,
+                  const std::string& alias,
+                  const std::string& path);
 
   template<class T>
   branch<T> insert_branch(const key_type& key,

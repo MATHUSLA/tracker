@@ -294,7 +294,7 @@ public:
     return std::move(f);
   }
 
-  void fill(const track_vector& tracks) {
+  void fill(const track_vector& tracks={}) {
     fill_if(tracks, [](auto) { return true; });
   }
 

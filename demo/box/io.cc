@@ -18,7 +18,16 @@
 
 #include "io.hh"
 
+#include <tracker/reader.hh>
+#include <tracker/util/io.hh>
+
 #include "geometry.hh"
+
+#include <errno.h> // TODO: remove
+
+//__Namespace Alias_____________________________________________________________________________
+namespace reader = MATHUSLA::TRACKER::reader;
+//----------------------------------------------------------------------------------------------
 
 namespace MATHUSLA {
 
@@ -183,6 +192,18 @@ void save_vertices(const analysis::vertex_vector& vertices,
 }
 //----------------------------------------------------------------------------------------------
 
+//__Get File Timestamp Path_____________________________________________________________________
+const std::string add_statistics_path(const script::tracking_options& options) {
+  auto directory = options.statistics_directory;
+  util::io::create_directory(directory);
+  directory += "/" + util::time::GetDate();
+  util::io::create_directory(directory);
+  directory += "/" + util::time::GetTime();
+  util::io::create_directory(directory);
+  return directory + "/" + options.statistics_file_prefix;
+}
+//----------------------------------------------------------------------------------------------
+
 //__Calculate Value Tags for Paths______________________________________________________________
 const plot::value_tag_vector data_paths_value_tags(const script::path_vector& paths,
                                                    const type::real_vector& timing_offsets,
@@ -198,6 +219,32 @@ const plot::value_tag_vector data_paths_value_tags(const script::path_vector& pa
                      paths[i] + " with offset " + std::to_string(timing_offsets[i] / units::time)
                                                 + " " + units::time_string);
   return out;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Save and Merge Simulation and Tracking Files________________________________________________
+void save_files(const script::path_type& save_path,
+                analysis::track::tree& track_tree,
+                analysis::vertex::tree& vertex_tree,
+                const script::path_vector& paths,
+                const bool merge) {
+  const auto path_count = paths.size();
+  std::vector<std::string> prefixes;
+  prefixes.reserve(path_count);
+  if (path_count > 1UL) {
+    for (std::size_t i{}; i < path_count; ++i)
+      prefixes.push_back("SIM_" + std::to_string(i) + "_");
+  }
+
+  if (merge) {
+    reader::root::merge_save(save_path, paths, prefixes);
+    for (std::size_t i{}; i < path_count; ++i) {
+      track_tree.add_friend(prefixes[i] + "box_run", save_path);
+      vertex_tree.add_friend(prefixes[i] + "box_run", save_path);
+    }
+  }
+  track_tree.save(save_path);
+  vertex_tree.save(save_path);
 }
 //----------------------------------------------------------------------------------------------
 
