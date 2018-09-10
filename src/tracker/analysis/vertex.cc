@@ -648,7 +648,7 @@ void vertex::tree::insert(const vertex& vertex) {
 
 //__Clear Vertex Data Tree______________________________________________________________________
 void vertex::tree::clear() {
-  _count = 0UL;
+  _count = 0ULL;
   for (auto& entry : _vector_branches)
     entry.get().get().clear();
   track_hash.get().clear();
