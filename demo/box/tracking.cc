@@ -63,7 +63,7 @@ const analysis::track_vector find_tracks(const analysis::full_event& event,
                                          analysis::full_event& non_track_points) {
   namespace ash = analysis::seed_heuristic;
   const auto layers = analysis::partition(event, options.layer_axis, options.layer_depth);
-  const auto seeds = analysis::seed_consecutive(
+  const auto seeds = analysis::seed(
     options.seed_size,
     layers,
     ash::all<ash::double_cone, ash::piecewise_speed>{
