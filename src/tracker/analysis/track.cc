@@ -1064,7 +1064,7 @@ void track::tree::insert(const track& track) {
 
 //__Clear Track Data Tree_______________________________________________________________________
 void track::tree::clear() {
-  _count = 0UL;
+  _count = 0ULL;
   for (auto& entry : _vector_branches)
     entry.get().get().clear();
   event_t.get().clear();

@@ -275,7 +275,7 @@ public:
 
   branch<std::vector<std::string>> event_detector;
 
-  branch<std::vector<uint_fast64_t>> hash;
+  branch<std::vector<unsigned long>> hash;
 
   void insert(const track& track);
   void clear();
@@ -299,7 +299,7 @@ public:
   }
 
 private:
-  branch<uint_fast64_t> _count;
+  branch<unsigned long long> _count;
   std::vector<std::reference_wrapper<real_branch_type>> _vector_branches;
 };
 //----------------------------------------------------------------------------------------------
