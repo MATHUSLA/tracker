@@ -190,12 +190,13 @@ void track_event_bundle(const script::path_vector& paths,
 
   plot::save_all(save_path,
     filetype_tag,
+    plot::value_tag{"TIMESTAMP", util::time::GetString("%c %Z")},
     project_tag,
-    box::io::data_paths_value_tags(paths, options.data_timing_offsets),
     plot::value_tag{"EVENTS", std::to_string(import_size)},
     plot::value_tag{"EFFICIENCY", std::to_string(options.simulated_efficiency)},
     plot::value_tag{"NOISE", std::to_string(options.simulated_noise_rate * units::time) + " / " + units::time_string},
-    box::geometry::value_tags());
+    box::geometry::value_tags(),
+    box::io::data_paths_value_tags(paths, options.data_timing_offsets));
 
   box::io::save_files(save_path, track_tree, vertex_tree, paths, options.merge_input);
 }
