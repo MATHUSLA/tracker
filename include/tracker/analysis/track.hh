@@ -274,8 +274,7 @@ public:
                    event_t, event_x, event_y, event_z;
 
   branch<std::vector<std::string>> event_detector;
-
-  branch<std::vector<unsigned long>> hash;
+  branch<std::vector<unsigned long>> unique_detector_count, hash;
 
   void insert(const track& track);
   void clear();

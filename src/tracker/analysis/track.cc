@@ -1018,6 +1018,7 @@ track::tree::tree(const std::string& name,
       event_y(emplace_branch<real_branch_value_type>("event_y")),
       event_z(emplace_branch<real_branch_value_type>("event_z")),
       event_detector(emplace_branch<decltype(event_detector)::value_type>("event_detector")),
+      unique_detector_count(emplace_branch<decltype(unique_detector_count)::value_type>("unique_detector_count")),
       hash(emplace_branch<decltype(hash)::value_type>("hash")),
       _count(emplace_branch<decltype(_count)::value_type>("N")),
       _vector_branches({t0, x0, y0, z0, vx, vy, vz,
@@ -1057,6 +1058,12 @@ void track::tree::insert(const track& track) {
     event_z.get().push_back(point.z / units::length);
     event_detector.get().push_back(geometry::volume(reduce_to_r3(point)));
   }
+
+  geometry::structure_vector unique_geometry;
+  const auto detectors = track.detectors();
+  std::unique_copy(detectors.cbegin(), detectors.cend(), std::back_inserter(unique_geometry));
+  unique_detector_count.get().push_back(unique_geometry.size());
+
   hash.get().push_back(track.hash());
   ++_count;
 }
