@@ -1051,6 +1051,7 @@ void track::tree::insert(const track& track) {
   beta_error.get().push_back(track.beta_error());
   angle.get().push_back(track.angle());
   angle_error.get().push_back(track.angle_error());
+
   for (const auto& point : track) {
     event_t.get().push_back(point.t / units::time);
     event_x.get().push_back(point.x / units::length);
@@ -1079,6 +1080,7 @@ void track::tree::clear() {
   event_y.get().clear();
   event_z.get().clear();
   event_detector.get().clear();
+  unique_detector_count.get().clear();
   hash.get().clear();
 }
 //----------------------------------------------------------------------------------------------
