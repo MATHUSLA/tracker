@@ -61,7 +61,9 @@ fi
 
 cd build
 
-if [[ "$CONFIG_CMAKE" -eq 1 ]]; then cmake .. -DCMAKE_BUILD_TYPE=Release; fi;
+if [[ "$CONFIG_CMAKE" -eq 1 ]]; then
+    cmake .. -DCMAKE_INSTALL_PREFIX=../.temp/tracker-install/ -DCMAKE_BUILD_TYPE=Release
+fi
 if [[ "$CLEAN_BUILD"  -eq 1 ]]; then make clean; fi;
 
 make -j8

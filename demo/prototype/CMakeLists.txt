@@ -25,4 +25,4 @@ target_include_directories(prototype PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
 
-install(TARGETS prototype DESTINATION bin)
+install(TARGETS prototype DESTINATION bin/MATHUSLA)

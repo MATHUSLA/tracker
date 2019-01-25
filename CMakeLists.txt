@@ -71,6 +71,6 @@ target_include_directories(tracker PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
 
-install(TARGETS tracker DESTINATION lib)
+install(TARGETS tracker DESTINATION lib/MATHUSLA)
 
 add_subdirectory(demo)
