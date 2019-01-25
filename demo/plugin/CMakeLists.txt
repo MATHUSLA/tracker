@@ -28,4 +28,4 @@ target_include_directories(plugin PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
 
-install(TARGETS plugin DESTINATION lib)
+install(TARGETS plugin DESTINATION lib/MATHUSLA)

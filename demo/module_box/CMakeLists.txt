@@ -25,4 +25,4 @@ target_include_directories(module_box PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
 
-install(TARGETS module_box DESTINATION bin)
+install(TARGETS module_box DESTINATION bin/MATHUSLA)
