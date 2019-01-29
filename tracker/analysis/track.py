@@ -34,157 +34,82 @@ MATHUSLA Tracker Analysis Library.
 # -------------- External Library -------------- #
 
 from uptrack.track import Track as TrackBase
-from uptrack.fitting import Fitter, ParameterEnumBase, ParameterSetBase
+from uptrack.fitting import CartesianParameterType, ParameterSetBase
 
 # -------------- Tracker  Library -------------- #
 
+from .fitting import MinuitFitter
 from ..util import value_or
 from ..util.math import umath, ThreeVector, FourVector, CartesianCoordinate
 
 
-class TrackFitter(Fitter):
-    """
-    Base TrackFitter Object.
-
-    """
-
-    def track_squared_residual(self, parameters, point):
-        """"""
-        dt = (point.z.n - parameters.z0.n) / parameters.vz.n
-        t_residual = (dt + parameters.t0.n - point.t.n) / point.t.s
-        x_residual = (dt * parameters.vx.n + parameters.x0.n - point.x.n) / point.x.s
-        y_residual = (dt * parameters.vy.n + parameters.y0.n - point.y.n) / point.y.s
-        return t_residual ** 2.0 + 12.0 * x_residual ** 2.0 + 12.0 * y_residual ** 2.0
-
-    def gaussian_nll(self, parameters, points):
-        """"""
-        return 0.5 * sum(self.track_squared_residual(parameters, point) for point in points)
-
-    def fit(self, parameters, data):
-        """Perform Fit."""
+def track_squared_residual(self, t0, x0, y0, z0, vx, vy, vz, point):
+    """Track Squared Residual Definition. (ONLY for Z0 Fixed)."""
+    dt = (point.z.n - z0.n) / vz.n
+    t_residual = (dt + t0.n - point.t.n) / point.t.s
+    x_residual = (dt * vx.n + x0.n - point.x.n) / point.x.s
+    y_residual = (dt * vy.n + y0.n - point.y.n) / point.y.s
+    return t_residual ** 2.0 + 12.0 * x_residual ** 2.0 + 12.0 * y_residual ** 2.0
 
 
-default_track_fitter = TrackFitter()
+def gaussian_nll(self, points, t0, x0, y0, z0, vx, vy, vz):
+    """Gaussian Negative Log Likelihood Track Fit."""
+    residual = partial(track_squared_residual, t0, x0, y0, z0, vx, vy, vz)
+    return 0.5 * sum(map(residual, points))
 
 
-class Track(TrackBase):
+DefaultTrackFitter = partial(MinuitFitter, gaussian_nll)
+DEFAULT_TRACK_FITTER = DefaultTrackFitter()
+
+
+class TrackParameter(CartesianParameterType):
+    """"""
+    T0, X0, Y0, Z0, VX, VY, VZ
+
+
+class TrackParameterSet(ParameterSetBase, parameter_type=TrackParameter):
+    """"""
+
+
+class Track(TrackBase, parameter_set=TrackParameterSet, parameter_properties=True):
     """
     MATHUSLA Track Object.
 
     """
 
-    class Parameter(ParameterEnum):
-        """"""
-        T0 = 0
-        X0, Y0, Z0, VX, VY, VZ
-
-        @classmethod
-        def from_cartesian(cls, coordinate):
-            """Get Parameter from Cartesian Coordinates."""
-            return cls(coordinate.value)
-
-    class ParameterSet(ParameterSetBase, friend=Parameter):
-        """"""
-
     def __init__(self, points, direction, fitter=None, *args, geometry=None, **kwargs):
         """Initialize Fitable Object."""
         super().__init__(self,
                          points,
-                         value_or(fitter, default_track_fitter),
+                         value_or(fitter, DEFAULT_TRACK_FITTER)
                          *args,
                          geometry=geometry,
                          **kwargs)
-        self._fixed_parameter = set(Parameter.from_cartesian(direction))
+        self._fixed_parameter = Parameter.from_cartesian(direction)
 
     @property
     def default_parameters(self):
         """Default Fit Parameters."""
         first = self.front
         dr = self.back - first
-        return first.t,
-               first.x,
-               first.y,
-               first.z,
-               dr.x / dr.t,
-               dr.y / dr.t,
-               dr.z / dr.t
+        return TrackParameterSet(first.t,
+                                 first.x,
+                                 first.y,
+                                 first.z,
+                                 dr.x / dr.t,
+                                 dr.y / dr.t,
+                                 dr.z / dr.t)
 
     @property
-    def parameters(self):
-        """Get Parameters of Fit."""
-        return Parameter.total_set
-
-    @parameters.setter
-    def parameters(self, parameters):
-        """Set Parameters of Fit."""
-        return NotImplemented
-
-    @property
-    def free_parameters(self):
-        """Get Free Parameters of Fit."""
-        return self.parameters - self._fixed_parameter
-
-    @free_parameters.setter
-    def free_parameters(self, free):
-        """Set Free Parameters of Fit."""
-        return NotImplemented
-
-    @property
-    def fixed_parameter(self):
-        """Get Fixed Parameter of Fit."""
-        return self._fixed_parameter
-
-    @fixed_parameter.setter
-    def fixed_parameter(self, fixed):
-        """Set Fixed Parameter of Fit."""
-        self._fixed_parameter = set(fixed)
-
-    @property
-    def fixed_parameters(self):
-        return self.fixed_parameters
-
-    @fixed_parameters.setter
-    def fixed_parameters(self, fixed):
-        self.fixed_parameter = fixed
+    def default_parameter_freedoms(self):
+        """"""
+        freedoms = {parameter: True for parameter in self.parameters}
+        freedoms[TrackParameter.Z0] = False
+        return freedoms
 
     def divergence_response(self):
         """Respond to Divergences in Fit."""
         return NotImplemented
-
-    @property
-    def t0(self):
-        """"""
-        return self.fit_parameters.t0
-
-    @property
-    def x0(self):
-        """"""
-        return self.fit_parameters.x0
-
-    @property
-    def y0(self):
-        """"""
-        return self.fit_parameters.y0
-
-    @property
-    def z0(self):
-        """"""
-        return self.fit_parameters.z0
-
-    @property
-    def vx(self):
-        """"""
-        return self.fit_parameters.vx
-
-    @property
-    def vy(self):
-        """"""
-        return self.fit_parameters.vy
-
-    @property
-    def vz(self):
-        """"""
-        return self.fit_parameters.vz
 
     @property
     def origin(self):
@@ -204,26 +129,26 @@ class Track(TrackBase):
     @property
     def angle(self):
         """"""
-        if Parameter.T0 in self._fixed_parameter:
+        if TrackParameter.T0 == self._fixed_parameter:
             return 0  #FIXME: how to handle T direction parameterization?
-        elif Parameter.X0 in self._fixed_parameter:
+        elif TrackParameter.X0 == self._fixed_parameter:
             return umath.acos(self.unit.x)
-        elif Parameter.Y0 in self._fixed_parameter:
+        elif TrackParameter.Y0 == self._fixed_parameter:
             return umath.acos(self.unit.y)
-        elif Parameter.Z0 in self._fixed_parameter:
+        elif TrackParameter.Z0 == self._fixed_parameter:
             return umath.acos(self.unit.z)
         else:
             raise TypeError('BAD!')
 
     def position(self, parameter):
         """Get Position of Track at Parameter."""
-        if Parameter.T0 in self._fixed_parameter:
+        if TrackParameter.T0 == self._fixed_parameter:
             dt = t - self.t0
-        elif Parameter.X0 in self._fixed_parameter:
+        elif TrackParameter.X0 == self._fixed_parameter:
             dt = (parameter - self.x0) / self.vx
-        elif Parameter.Y0 in self._fixed_parameter:
+        elif TrackParameter.Y0 == self._fixed_parameter:
             dt = (parameter - self.y0) / self.vy
-        elif Parameter.Z0 in self._fixed_parameter:
+        elif TrackParameter.Z0 == self._fixed_parameter:
             dt = (parameter - self.z0) / self.vz
         else:
             raise TypeError('BAD!')

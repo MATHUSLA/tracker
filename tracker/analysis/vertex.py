@@ -34,9 +34,78 @@ MATHUSLA Tracker Analysis Library.
 # -------------- External Library -------------- #
 
 from uptrack.vertex import Vertex as VertexBase
+from uptrack.fitting import CartesianParameterType, ParameterSetBase
 
 # -------------- Tracker  Library -------------- #
 
+from .fitting import MinuitFitter
+from ..util import value_or
 
-class Vertex(VertexBase):
+
+class VertexFitter(MinuitFitter):
     """"""
+
+    def vertex_track_r3_distance(self, parameters, track):
+        """"""
+        track_point = track.at_t(parameters.t)
+        # TODO: hypot function
+        return hypot(track_point.x - parameters.x,
+                     track_point.y - parameters.y,
+                     track_point.z - parameters.z)
+
+    def vertex_track_distances(self, parameters, tracks):
+        """"""
+        for track in tracks:
+            yield self.vertex_track_r3_distance(parameters, track)
+
+    def gaussian_nll(self, parameters, tracks):
+        """"""
+        # TODO: log function
+        return sum(0.5 * distance.n ** 2.0 + log(distance.s)
+                   for distance in self.vertex_track_distances(parameters, tracks))
+
+    def fit(self, parameters, data):
+        """Perform Vertex Fit."""
+
+
+DEFAULT_VERTEX_FITTER = VertexFitter()
+
+
+class VertexParameter(CartesianParameterType):
+    """"""
+    T, X, Y, Z
+
+
+class VertexParameterSet(ParameterSetBase, parameter_type=VertexParameter):
+    """"""
+
+
+class Vertex(VertexBase, parameter_set=VertexParameterSet, parameter_properties=True):
+    """"""
+
+    def __init__(self, tracks, fitter=None, *args, geometry=None, **kwargs):
+        """"""
+        super().__init__(self,
+                         tracks,
+                         value_or(fitter, DEFAULT_VERTEX_FITTER),
+                         *args,
+                         geometry=geometry,
+                         **kwargs)
+
+    @property
+    def default_parameters(self):
+        """Default Fit Parameters."""
+        average_point = sum(track.at_t(track.t0) for track in self.tracks) / len(self.tracks)
+        return VertexParameterSet(average_point.t,
+                                  average_point.x,
+                                  average_point.y,
+                                  average_point.z)
+
+    def divergence_response(self):
+        """Respond to Divergences in Fit."""
+        return NotImplemented
+
+    @property
+    def position(self):
+        """Get Position of Vertex."""
+        return FourVector(self.t, self.x, self.y, self.z)

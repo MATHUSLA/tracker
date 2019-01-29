@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
+ipykernel = "*"
 
 [packages]
 uptrack = "*"
@@ -13,6 +14,8 @@ pint = "*"
 unyt = "*"
 aenum = "*"
 uncertainties = "*"
+uproot = "*"
+iminuit = "*"
 
 [requires]
 python_version = "3.7"

@@ -37,8 +37,8 @@ from aenum import Enum
 # import numpy as np
 # import sympy as sym
 # import glorentz as glo
-# import uncertainties.umath as umath
-# from uncertainties import ufloat, unumpy
+from uncertainties import ufloat, unumpy, nominal_value, std_dev
+import uncertainties.umath as umath
 
 # -------------- Tracker  Library -------------- #
 

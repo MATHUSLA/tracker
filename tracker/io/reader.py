@@ -31,21 +31,25 @@ MATHUSLA Tracker Reader IO.
 
 """
 
-# -------------- External Library -------------- #
+# -------------- Standard Library -------------- #
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import Iterator
 from contextlib import contextmanager
+
+# -------------- External Library -------------- #
+
+import uproot
 
 # -------------- Tracker  Library -------------- #
 
 
-class AsyncTraversal(AsyncIterator):
+class Traversal(Iterator):
     """"""
 
-    def __init__(self, path, *, collect=False, default_storage=list):
+    def __init__(self, obj, *, collect=False, default_storage=list):
         """"""
-        self.path = path
+        self.obj = obj
         self.collect = collect
         self.store = default_storage()
         self.started = False
@@ -60,35 +64,35 @@ class AsyncTraversal(AsyncIterator):
         self.started = False
 
     @abstractmethod
-    async def start(self):
+    def start(self):
         """"""
 
     @abstractmethod
-    async def next_item(self):
+    def next_item(self):
         """"""
 
-    async def start_loop(self):
+    def start_loop(self):
         """"""
         while not self.started:
-            self.started = await self.start()
+            self.started = self.start()
 
-    async def __anext__(self):
+    def __next__(self):
         """"""
-        await self.start_loop()
-        item = await self.next_item()
+        self.start_loop()
+        item = self.next_item()
         if self.collect:
             self.store.append(item)
         return item
 
-    async def collect_all(self, *, reset_first=False):
+    def collect_all(self, *, reset_first=False):
         """"""
         if reset_first:
             self.reset()
-        await self.start_loop()
+        self.start_loop()
         while True:
             try:
-                self.store.append(await self.next_item())
-            except StopAsyncIteration:
+                self.store.append(self.next_item())
+            except StopIteration:
                 break
         return self.store
 
@@ -101,20 +105,20 @@ class Reader(ABC):
     """"""
 
     @abstractmethod
-    await def open(self, path, *args, **kwargs):
+    def open(self, path, *args, **kwargs):
         """"""
 
     @abstractmethod
-    await def close(self):
+    def close(self):
         """"""
 
-    @asynccontextmanager
-    await def load(self, path, *args, **kwargs):
+    @contextmanager
+    def load(self, path, *args, **kwargs):
         """"""
         try:
-            await self.open(path, *args, **kwargs)
+            yield self.open(path, *args, **kwargs)
         finally:
-            return await self.close()
+            return self.close()
 
 
 class EventReader(Reader):
@@ -123,3 +127,15 @@ class EventReader(Reader):
 
 class ROOTEventReader(EventReader):
     """"""
+
+    def open(self, path, name=None):
+        """"""
+        obj = uproot.open(path)
+        if name:
+            obj = obj[name]
+        self.stored_object = obj
+        return EventTraversal(obj)
+
+    def close(self):
+        """"""
+        del self.stored_object
