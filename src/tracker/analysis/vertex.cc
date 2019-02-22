@@ -268,7 +268,8 @@ real_vector vertex::distance_errors() const {
 
 //__Chi-Squared Test Statistic__________________________________________________________________
 real vertex::chi_squared() const {
-  return std::accumulate(_delta_chi2.cbegin(), _delta_chi2.cend(), 0.0L);
+  const auto chi2 = std::accumulate(_delta_chi2.cbegin(), _delta_chi2.cend(), 0.0L);
+  return chi2 > 0 ? chi2 : -1.0;
 }
 //----------------------------------------------------------------------------------------------
 

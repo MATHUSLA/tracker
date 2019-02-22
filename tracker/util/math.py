@@ -34,7 +34,7 @@ MATHUSLA Tracker Math Utilities.
 # -------------- External Library -------------- #
 
 from aenum import Enum
-# import numpy as np
+import numpy as np
 # import sympy as sym
 # import glorentz as glo
 from uncertainties import ufloat, unumpy, nominal_value, std_dev

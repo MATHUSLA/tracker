@@ -1,0 +1,42 @@
+### MATHUSLA Prototype TRACKING INPUT CARD ###
+
+verbose-output: true
+draw-events: false
+
+# Thresholds and Settings
+time-smearing:        true
+layer-axis:           Z
+layer-depth:          5
+line-width:           21
+seed-size:            3
+event-overload-limit: 2   # unused
+event-density-limit:  0.22
+track-density-limit:  0.5 # unused
+
+# add keys:
+# default-length-unit: cm
+# default-time-unit: ns
+# default-energy-unit: MeV
+
+# Data Setup
+data-directory:           .temp/root_data
+data-file-extension:      root
+data-position-keys:       Time, X, Y, Z
+data-position-error-keys: dT, dX, dY, dZ
+data-detector-key:        Detector
+data-track-id-key:        Track
+data-parent-id-key:       Parent
+data-momentum-keys:       E, PX, PY, PZ
+
+# Statistics Setup
+statistics-directory:      .temp/root_data_stat
+statistics-file-prefix:    statistics
+statistics-file-extension: root
+# TODO: add stat keys
+
+# Geometry Setup
+geometry-file:               demo/prototype/resources/world.prototype.gdml
+geometry-map-file:           demo/prototype/resources/detector_map.txt
+geometry-default-time-error: 2
+# geometry-time-error-map: ...
+# geometry-map:

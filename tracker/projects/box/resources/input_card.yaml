@@ -7,14 +7,14 @@ draw-events: false
 
 # Thresholds and Settings
 time-smearing:         true
-simulated-efficiency:  1
-simulated-noise-rate:  0
+simulated-efficiency:  1 # 0.9
+simulated-noise-rate:  0 # 1e-6
 event-time-window:     450, 750
 layer-axis:            Z
 layer-depth:           10
 line-width:            25
 seed-size:             3
-event-density-limit:   0.00005
+event-density-limit:   0.0001 # 0.0001
 
 # Geometry Setup
 geometry-file:                demo/box/resources/world.box.gdml
@@ -46,4 +46,4 @@ statistics-directory:       .temp/box_stat
 statistics-file-prefix:     statistics
 statistics-file-extension:  root
 # merge-output-trees:         true
-merge-input:                false
+merge-input:                true

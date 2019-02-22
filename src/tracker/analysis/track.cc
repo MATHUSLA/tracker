@@ -37,6 +37,21 @@ namespace analysis { ///////////////////////////////////////////////////////////
 namespace { ////////////////////////////////////////////////////////////////////////////////////
 
 //__Calculate Squared Residual of Track wrt Full Hit____________________________________________
+real _timeless_track_squared_residual(const real x0,
+                                      const real y0,
+                                      const real z0,
+                                      const real vx,
+                                      const real vy,
+                                      const real vz,
+                                      const full_hit& point) {
+  const auto dt = (point.z - z0) / vz;
+  const auto x_res = (std::fma(dt, vx, x0) - point.x) / point.width.x;
+  const auto y_res = (std::fma(dt, vy, y0) - point.y) / point.width.y;
+  return 12.0L*x_res*x_res + 12.0L*y_res*y_res;
+}
+//----------------------------------------------------------------------------------------------
+
+//__Calculate Squared Residual of Track wrt Full Hit____________________________________________
 real _track_squared_residual(const real t0,
                              const real x0,
                              const real y0,
@@ -96,6 +111,16 @@ real _vz_from_c(const real vx,
 
 //__Gaussian Negative Log Likelihood Calculation________________________________________________
 thread_local full_event&& _nll_fit_event = {};
+void _timeless_gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
+  out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
+    [&](const auto sum, const auto& point) {
+      return sum + _timeless_track_squared_residual(x[1], x[2], x[3], x[4], x[5], x[6], point); });
+}
+void _timeless_gaussian_nll_two_hit_track(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
+  out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
+    [&](const auto sum, const auto& point) {
+      return sum + _timeless_track_squared_residual(x[1], x[2], x[3], x[4], x[5], _vz_from_c(x[4], x[5]), point); });
+}
 void _gaussian_nll(Int_t&, Double_t*, Double_t& out, Double_t* x, Int_t) {
   out = 0.5L * std::accumulate(_nll_fit_event.cbegin(), _nll_fit_event.cend(), 0.0L,
     [&](const auto sum, const auto& point) {
@@ -134,11 +159,11 @@ bool _fit_event_minuit(const full_event& points,
   }
 
   if (points.size() == 2UL) {
-    if (execute(minuit, _gaussian_nll_two_hit_track) == error::diverged)
+    if (execute(minuit, _timeless_gaussian_nll_two_hit_track) == error::diverged)
       return false;
   } else {
     set_parameters(minuit, 6UL, "VZ", vz);
-    if (execute(minuit, _gaussian_nll) == error::diverged)
+    if (execute(minuit, _timeless_gaussian_nll) == error::diverged)
       return false;
     get_parameters(minuit, 6UL, vz);
   }
@@ -511,7 +536,8 @@ real track::angle_error() const {
 
 //__Chi-Squared Test Statistic__________________________________________________________________
 real track::chi_squared() const {
-  return std::accumulate(_delta_chi2.cbegin(), _delta_chi2.cend(), 0.0L);
+  const auto chi2 = std::accumulate(_delta_chi2.cbegin(), _delta_chi2.cend(), 0.0L);
+  return chi2 > 0 ? chi2 : -1.0;
 }
 //----------------------------------------------------------------------------------------------
 
