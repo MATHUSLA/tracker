@@ -34,6 +34,7 @@ Core Utilities.
 # -------------- Standard Library -------------- #
 
 import operator
+from functools import partial
 
 # -------------- UpTrack  Library -------------- #
 

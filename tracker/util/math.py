@@ -52,3 +52,5 @@ class CartesianCoordinate(Enum):
     X = 1
     Y = 2
     Z = 3
+
+ThreeVector = FourVector = None

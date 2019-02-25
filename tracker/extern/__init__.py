@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*- #
 #
-# tracker/geometry.py
+# tracker/extern/__init__.py
 #
 #
 # MIT License
 #
-# Copyright (c) 2018 Brandon Gomes
+# Copyright (c) 2018-2019 Brandon Gomes
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,6 @@
 #
 
 """
-MATHUSLA Tracking Geometry.
+Plugins for External Libraries.
 
 """
-
-# -------------- Tracker  Library -------------- #
-
-from .extern.gdml import GDMLGeometry as Geometry
-from .extern.gdml import GDMLVolume as Volume

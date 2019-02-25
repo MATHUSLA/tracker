@@ -34,41 +34,37 @@ MATHUSLA Tracker Analysis Library.
 # -------------- External Library -------------- #
 
 from uptrack.vertex import Vertex as VertexBase
-from uptrack.fitting import CartesianParameterType, ParameterSetBase
+from uptrack.fitting import ParameterSetBase
 
 # -------------- Tracker  Library -------------- #
 
-from .fitting import MinuitFitter
-from ..util import value_or
+from .fitting import CartesianParameterType, MinuitFitter
+from ..util import value_or, partial
 
 
-class VertexFitter(MinuitFitter):
+def vertex_track_r3_distance(self, parameters, track):
     """"""
+    track_point = track.at_t(parameters.t)
+    # TODO: hypot function
+    return hypot(track_point.x - parameters.x,
+                 track_point.y - parameters.y,
+                 track_point.z - parameters.z)
 
-    def vertex_track_r3_distance(self, parameters, track):
-        """"""
-        track_point = track.at_t(parameters.t)
-        # TODO: hypot function
-        return hypot(track_point.x - parameters.x,
-                     track_point.y - parameters.y,
-                     track_point.z - parameters.z)
-
-    def vertex_track_distances(self, parameters, tracks):
-        """"""
-        for track in tracks:
-            yield self.vertex_track_r3_distance(parameters, track)
-
-    def gaussian_nll(self, parameters, tracks):
-        """"""
-        # TODO: log function
-        return sum(0.5 * distance.n ** 2.0 + log(distance.s)
-                   for distance in self.vertex_track_distances(parameters, tracks))
-
-    def fit(self, parameters, data):
-        """Perform Vertex Fit."""
+def vertex_track_distances(self, parameters, tracks):
+    """"""
+    for track in tracks:
+        yield vertex_track_r3_distance(parameters, track)
 
 
-DEFAULT_VERTEX_FITTER = VertexFitter()
+def gaussian_nll(self, parameters, tracks):
+    """"""
+    # TODO: log function
+    return sum(0.5 * distance.n ** 2.0 + log(distance.s)
+               for distance in vertex_track_distances(parameters, tracks))
+
+
+DefaultVertexFitter = partial(MinuitFitter, gaussian_nll)
+DEFAULT_TRACK_FITTER = DefaultVertexFitter()
 
 
 class VertexParameter(CartesianParameterType):

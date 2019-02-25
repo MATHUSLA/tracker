@@ -34,12 +34,12 @@ MATHUSLA Tracker Analysis Library.
 # -------------- External Library -------------- #
 
 from uptrack.track import Track as TrackBase
-from uptrack.fitting import CartesianParameterType, ParameterSetBase
+from uptrack.fitting import ParameterSetBase
 
 # -------------- Tracker  Library -------------- #
 
-from .fitting import MinuitFitter
-from ..util import value_or
+from .fitting import CartesianParameterType, MinuitFitter
+from ..util import value_or, partial
 from ..util.math import umath, ThreeVector, FourVector, CartesianCoordinate
 
 

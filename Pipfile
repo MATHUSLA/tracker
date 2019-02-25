@@ -8,7 +8,6 @@ pytest = "*"
 ipykernel = "*"
 
 [packages]
-uptrack = "*"
 scikit-hep = "*"
 pint = "*"
 unyt = "*"
@@ -16,6 +15,9 @@ aenum = "*"
 uncertainties = "*"
 uproot = "*"
 iminuit = "*"
+lxml = "*"
+uptrack = "*"
+path-py = "*"
 
 [requires]
 python_version = "3.7"

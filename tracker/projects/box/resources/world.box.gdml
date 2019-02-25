@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+<!-- xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd" -->
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <define>
     <matrix coldim="2" name="RINDEX0x7fe7f0cf1f10" values="3.1e-06 1.58"/>
@@ -184,35 +185,35 @@
   </materials>
 
   <solids>
-    <box lunit="mm" name="0x7fe7f0cf2630" x="99998" y="99998" z="8"/>
-    <box lunit="mm" name="0x7fe7f0cf25c0" x="100000" y="100000" z="10"/>
+    <box lunit="mm" name="_0x7fe7f0cf2630" x="99998" y="99998" z="8"/>
+    <box lunit="mm" name="_0x7fe7f0cf25c0" x="100000" y="100000" z="10"/>
     <subtraction name="S1_C0x7fe7f0cf26a0">
-      <first ref="0x7fe7f0cf25c0"/>
-      <second ref="0x7fe7f0cf2630"/>
+      <first ref="_0x7fe7f0cf25c0"/>
+      <second ref="_0x7fe7f0cf2630"/>
     </subtraction>
-    <box lunit="mm" name="0x7fe7f0cf2ce0" x="99998" y="99998" z="8"/>
-    <box lunit="mm" name="0x7fe7f0cf2c70" x="100000" y="100000" z="10"/>
+    <box lunit="mm" name="_0x7fe7f0cf2ce0" x="99998" y="99998" z="8"/>
+    <box lunit="mm" name="_0x7fe7f0cf2c70" x="100000" y="100000" z="10"/>
     <subtraction name="S2_C0x7fe7f0cf2d50">
-      <first ref="0x7fe7f0cf2c70"/>
-      <second ref="0x7fe7f0cf2ce0"/>
+      <first ref="_0x7fe7f0cf2c70"/>
+      <second ref="_0x7fe7f0cf2ce0"/>
     </subtraction>
-    <box lunit="mm" name="0x7fe7f0cf33e0" x="99998" y="99998" z="8"/>
-    <box lunit="mm" name="0x7fe7f0cf3370" x="100000" y="100000" z="10"/>
+    <box lunit="mm" name="_0x7fe7f0cf33e0" x="99998" y="99998" z="8"/>
+    <box lunit="mm" name="_0x7fe7f0cf3370" x="100000" y="100000" z="10"/>
     <subtraction name="S3_C0x7fe7f0cf3450">
-      <first ref="0x7fe7f0cf3370"/>
-      <second ref="0x7fe7f0cf33e0"/>
+      <first ref="_0x7fe7f0cf3370"/>
+      <second ref="_0x7fe7f0cf33e0"/>
     </subtraction>
-    <box lunit="mm" name="0x7fe7f0cf3b10" x="99998" y="99998" z="8"/>
-    <box lunit="mm" name="0x7fe7f0cf3aa0" x="100000" y="100000" z="10"/>
+    <box lunit="mm" name="_0x7fe7f0cf3b10" x="99998" y="99998" z="8"/>
+    <box lunit="mm" name="_0x7fe7f0cf3aa0" x="100000" y="100000" z="10"/>
     <subtraction name="S4_C0x7fe7f0cf3b80">
-      <first ref="0x7fe7f0cf3aa0"/>
-      <second ref="0x7fe7f0cf3b10"/>
+      <first ref="_0x7fe7f0cf3aa0"/>
+      <second ref="_0x7fe7f0cf3b10"/>
     </subtraction>
-    <box lunit="mm" name="0x7fe7f0cf41f0" x="99998" y="99998" z="8"/>
-    <box lunit="mm" name="0x7fe7f0cf4180" x="100000" y="100000" z="10"/>
+    <box lunit="mm" name="_0x7fe7f0cf41f0" x="99998" y="99998" z="8"/>
+    <box lunit="mm" name="_0x7fe7f0cf4180" x="100000" y="100000" z="10"/>
     <subtraction name="S5_C0x7fe7f0cf4260">
-      <first ref="0x7fe7f0cf4180"/>
-      <second ref="0x7fe7f0cf41f0"/>
+      <first ref="_0x7fe7f0cf4180"/>
+      <second ref="_0x7fe7f0cf41f0"/>
     </subtraction>
     <box lunit="mm" name="SteelPlate0x7fe7f0cf4890" x="100000" y="100000" z="30"/>
     <box lunit="mm" name="Box0x7fe7f0cf23f0" x="100000" y="100000" z="6080"/>
@@ -230,9 +231,9 @@
   </solids>
 
   <structure>
-    <volume name="0x7fe7f0cf2870">
+    <volume name="_0x7fe7f0cf2870">
       <materialref ref="Scintillator0x7fe7f0cf12a0"/>
-      <solidref ref="0x7fe7f0cf2630"/>
+      <solidref ref="_0x7fe7f0cf2630"/>
     </volume>
     <volume name="S1_C0x7fe7f0cf2a00">
       <materialref ref="G4_Al0x7fe7f0f19630"/>
@@ -240,17 +241,17 @@
     </volume>
     <volume name="S10x7fe7f0cf2740">
       <materialref ref="G4_AIR0x7fe7f0f19000"/>
-      <solidref ref="0x7fe7f0cf25c0"/>
+      <solidref ref="_0x7fe7f0cf25c0"/>
       <physvol name="S10x7fe7f0cf29b0">
-        <volumeref ref="0x7fe7f0cf2870"/>
+        <volumeref ref="_0x7fe7f0cf2870"/>
       </physvol>
       <physvol name="S1_C0x7fe7f0cf2b40">
         <volumeref ref="S1_C0x7fe7f0cf2a00"/>
       </physvol>
     </volume>
-    <volume name="0x7fe7f0cf2f30">
+    <volume name="_0x7fe7f0cf2f30">
       <materialref ref="Scintillator0x7fe7f0cf12a0"/>
-      <solidref ref="0x7fe7f0cf2ce0"/>
+      <solidref ref="_0x7fe7f0cf2ce0"/>
     </volume>
     <volume name="S2_C0x7fe7f0cf30f0">
       <materialref ref="G4_Al0x7fe7f0f19630"/>
@@ -258,17 +259,17 @@
     </volume>
     <volume name="S20x7fe7f0cf2df0">
       <materialref ref="G4_AIR0x7fe7f0f19000"/>
-      <solidref ref="0x7fe7f0cf2c70"/>
+      <solidref ref="_0x7fe7f0cf2c70"/>
       <physvol name="S20x7fe7f0cf3070">
-        <volumeref ref="0x7fe7f0cf2f30"/>
+        <volumeref ref="_0x7fe7f0cf2f30"/>
       </physvol>
       <physvol name="S2_C0x7fe7f0cf3230">
         <volumeref ref="S2_C0x7fe7f0cf30f0"/>
       </physvol>
     </volume>
-    <volume name="0x7fe7f0cf3630">
+    <volume name="_0x7fe7f0cf3630">
       <materialref ref="Scintillator0x7fe7f0cf12a0"/>
-      <solidref ref="0x7fe7f0cf33e0"/>
+      <solidref ref="_0x7fe7f0cf33e0"/>
     </volume>
     <volume name="S3_C0x7fe7f0cf37e0">
       <materialref ref="G4_Al0x7fe7f0f19630"/>
@@ -276,17 +277,17 @@
     </volume>
     <volume name="S30x7fe7f0cf34f0">
       <materialref ref="G4_AIR0x7fe7f0f19000"/>
-      <solidref ref="0x7fe7f0cf3370"/>
+      <solidref ref="_0x7fe7f0cf3370"/>
       <physvol name="S30x7fe7f0cf3770">
-        <volumeref ref="0x7fe7f0cf3630"/>
+        <volumeref ref="_0x7fe7f0cf3630"/>
       </physvol>
       <physvol name="S3_C0x7fe7f0cf3920">
         <volumeref ref="S3_C0x7fe7f0cf37e0"/>
       </physvol>
     </volume>
-    <volume name="0x7fe7f0cf3d60">
+    <volume name="_0x7fe7f0cf3d60">
       <materialref ref="Scintillator0x7fe7f0cf12a0"/>
-      <solidref ref="0x7fe7f0cf3b10"/>
+      <solidref ref="_0x7fe7f0cf3b10"/>
     </volume>
     <volume name="S4_C0x7fe7f0cf3f10">
       <materialref ref="G4_Al0x7fe7f0f19630"/>
@@ -294,17 +295,17 @@
     </volume>
     <volume name="S40x7fe7f0cf3c20">
       <materialref ref="G4_AIR0x7fe7f0f19000"/>
-      <solidref ref="0x7fe7f0cf3aa0"/>
+      <solidref ref="_0x7fe7f0cf3aa0"/>
       <physvol name="S40x7fe7f0cf3ea0">
-        <volumeref ref="0x7fe7f0cf3d60"/>
+        <volumeref ref="_0x7fe7f0cf3d60"/>
       </physvol>
       <physvol name="S4_C0x7fe7f0cf4050">
         <volumeref ref="S4_C0x7fe7f0cf3f10"/>
       </physvol>
     </volume>
-    <volume name="0x7fe7f0cf4440">
+    <volume name="_0x7fe7f0cf4440">
       <materialref ref="Scintillator0x7fe7f0cf12a0"/>
-      <solidref ref="0x7fe7f0cf41f0"/>
+      <solidref ref="_0x7fe7f0cf41f0"/>
     </volume>
     <volume name="S5_C0x7fe7f0cf45f0">
       <materialref ref="G4_Al0x7fe7f0f19630"/>
@@ -312,9 +313,9 @@
     </volume>
     <volume name="S50x7fe7f0cf4300">
       <materialref ref="G4_AIR0x7fe7f0f19000"/>
-      <solidref ref="0x7fe7f0cf4180"/>
+      <solidref ref="_0x7fe7f0cf4180"/>
       <physvol name="S50x7fe7f0cf4580">
-        <volumeref ref="0x7fe7f0cf4440"/>
+        <volumeref ref="_0x7fe7f0cf4440"/>
       </physvol>
       <physvol name="S5_C0x7fe7f0cf4730">
         <volumeref ref="S5_C0x7fe7f0cf45f0"/>

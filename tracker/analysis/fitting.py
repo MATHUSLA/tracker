@@ -38,7 +38,7 @@ from contextlib import contextmanager
 # -------------- External Library -------------- #
 
 from iminuit import Minuit
-from uptrack.fitting import Fitter
+from uptrack.fitting import ParameterEnumBase, Fitter
 
 # -------------- Tracker  Library -------------- #
 

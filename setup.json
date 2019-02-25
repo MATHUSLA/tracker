@@ -18,7 +18,10 @@
         "pint",
         "unyt",
         "uncertainties",
-        "aenum"
+        "aenum",
+        "uproot",
+        "iminuit",
+        "lxml"
     ],
     "include_package_data": true,
     "license": "MIT",
