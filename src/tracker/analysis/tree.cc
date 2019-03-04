@@ -224,6 +224,18 @@ void tree::fill() {
 }
 //----------------------------------------------------------------------------------------------
 
+//__Set AutoSave Tree___________________________________________________________________________
+void tree::set_auto_save(const std::size_t bytes) {
+  _impl->_tree->SetAutoSave(bytes);
+}
+//----------------------------------------------------------------------------------------------
+
+//__Set Directory for Tree______________________________________________________________________
+void tree::set_directory(const std::string& path, const std::string& name) {
+  _impl->set_directory(new TDirectory(name.c_str(), path.c_str()));
+}
+//----------------------------------------------------------------------------------------------
+
 //__Add Friend to Tree__________________________________________________________________________
 void tree::add_friend(tree& other) {
   _impl->_tree->AddFriend(other._impl->_tree);
