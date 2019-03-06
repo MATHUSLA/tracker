@@ -112,8 +112,8 @@ void track_event_bundle(const script::path_vector& paths,
   analysis::vertex::tree vertex_tree{"vertex_tree", "MATHUSLA Vertex Tree"};
   track_tree.set_auto_save(1000000);
   vertex_tree.set_auto_save(1000000);
-  track_tree.set_directory(save_path);
-  vertex_tree.set_directory(save_path);
+  track_tree.set_file(save_path);
+  vertex_tree.set_file(save_path);
   track_tree.add_friend(vertex_tree, "vertex");
   vertex_tree.add_friend(track_tree, "track");
 
