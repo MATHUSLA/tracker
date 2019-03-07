@@ -238,7 +238,9 @@ void tree::set_directory(const std::string& path, const std::string& name) {
 
 //__Set Fire for Tree___________________________________________________________________________
 void tree::set_file(const std::string& path, const std::string& mode) {
-  _impl->set_file(TFile::Open(path.c_str(), mode.c_str()));
+  auto file = TFile::Open(path.c_str(), mode.c_str());
+  file->Close();
+  set_directory(path);
 }
 //----------------------------------------------------------------------------------------------
 

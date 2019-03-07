@@ -119,7 +119,7 @@ void track_event_bundle(const script::path_vector& paths,
 
   std::cout << "Event Count: " << import_size << "\n";
 
-  for (std::size_t event_counter{}; event_counter < std::min(import_size, 20000UL); ++event_counter) {
+  for (std::size_t event_counter{}; event_counter < std::min(import_size, 1000UL); ++event_counter) {
     const auto event = analysis::add_width<box::geometry>(imported_events[event_counter]);
     const auto event_size = event.size();
     const auto event_counter_string = std::to_string(event_counter);
