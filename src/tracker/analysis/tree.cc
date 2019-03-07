@@ -225,7 +225,7 @@ void tree::fill() {
 //----------------------------------------------------------------------------------------------
 
 //__Set AutoSave Tree___________________________________________________________________________
-void tree::set_auto_save(const std::size_t bytes) {
+void tree::set_auto_save(const long long bytes) {
   _impl->_tree->SetAutoSave(bytes);
 }
 //----------------------------------------------------------------------------------------------
@@ -239,7 +239,7 @@ void tree::set_directory(const std::string& path, const std::string& name) {
 //__Set Fire for Tree___________________________________________________________________________
 void tree::set_file(const std::string& path, const std::string& mode) {
   auto file = TFile::Open(path.c_str(), mode.c_str());
-  file->Close();
+  file->cd();
   set_directory(path);
 }
 //----------------------------------------------------------------------------------------------

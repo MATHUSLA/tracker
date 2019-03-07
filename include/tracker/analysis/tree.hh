@@ -60,7 +60,7 @@ public:
   void operator[](const std::size_t index) const;
   void fill();
 
-  void set_auto_save(const std::size_t bytes);
+  void set_auto_save(const long long bytes);
   void set_directory(const std::string& path,
                      const std::string& name="_");
   void set_file(const std::string& path,
