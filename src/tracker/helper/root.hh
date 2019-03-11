@@ -49,8 +49,8 @@ inline void set_batch_mode(const bool mode) {
 inline void init(const bool interactive=false) {
   static bool initialized = false;
   if (!initialized) {
-    gErrorIgnoreLevel = kFatal;
-    SetErrorHandler(error::empty_handler);
+    // gErrorIgnoreLevel = kFatal;
+    // SetErrorHandler(error::empty_handler);
     set_batch_mode(!interactive);
     initialized = true;
   }
