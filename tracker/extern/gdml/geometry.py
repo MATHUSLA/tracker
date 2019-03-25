@@ -39,6 +39,12 @@ from uptrack.geometry import Volume as VolumeBase
 # -------------- UpTrack  Library -------------- #
 
 
+__all__ = (
+    'GDMLGeometry',
+    'GDMLVolume'
+)
+
+
 class GDMLGeometry(GeometryBase):
     """
     GDML Base Geometry Object.

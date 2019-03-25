@@ -1,0 +1,29 @@
+sudo: false
+language: python
+dist: xenial
+
+matrix:
+  include:
+  - python: 3.5
+  - python: 3.6
+  - python: 3.7
+
+before_install:
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+
+install:
+  - conda create -n travis_environment python=$TRAVIS_PYTHON_VERSION pip
+  - source activate travis_environment
+  - conda env update -n travis_environment -f environment.yml
+
+script:
+  - pytest tests -svx
+
+# after_script:
+#  - codecov

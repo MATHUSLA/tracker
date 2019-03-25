@@ -42,6 +42,17 @@ from .fitting import CartesianParameterType, MinuitFitter
 from ..util import value_or, partial
 
 
+__all__ = (
+    'vertex_track_r3_distance',
+    'vertex_track_distances',
+    'gaussian_nll',
+    'DefaultFitter',
+    'DEFAULT_FITTER',
+    'VertexParameterSet',
+    'Vertex'
+)
+
+
 def vertex_track_r3_distance(self, parameters, track):
     """"""
     track_point = track.at_t(parameters.t)
@@ -63,8 +74,8 @@ def gaussian_nll(self, parameters, tracks):
                for distance in vertex_track_distances(parameters, tracks))
 
 
-DefaultVertexFitter = partial(MinuitFitter, gaussian_nll)
-DEFAULT_TRACK_FITTER = DefaultVertexFitter()
+DefaultFitter = partial(MinuitFitter, gaussian_nll)
+DEFAULT_FITTER = DefaultFitter()
 
 
 class VertexParameter(CartesianParameterType):
@@ -83,7 +94,7 @@ class Vertex(VertexBase, parameter_set=VertexParameterSet, parameter_properties=
         """"""
         super().__init__(self,
                          tracks,
-                         value_or(fitter, DEFAULT_VERTEX_FITTER),
+                         value_or(fitter, DEFAULT_FITTER),
                          *args,
                          geometry=geometry,
                          **kwargs)

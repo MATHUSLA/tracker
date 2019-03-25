@@ -44,14 +44,23 @@ import uproot
 # -------------- Tracker  Library -------------- #
 
 
+__all__ = (
+    'Traversal',
+    'EventTraversal',
+    'Reader',
+    'EventReader',
+    'ROOTEventReader'
+)
+
+
 class Traversal(Iterator):
     """"""
 
-    def __init__(self, obj, *, collect=False, default_storage=list):
+    def __init__(self, obj, *, collect=False, storage_factory=list):
         """"""
         self.obj = obj
         self.collect = collect
-        self.store = default_storage()
+        self.store = storage_factory()
         self.started = False
 
     def clear(self):
@@ -97,7 +106,7 @@ class Traversal(Iterator):
         return self.store
 
 
-class EventTraversal(AsyncTraversal):
+class EventTraversal(Traversal):
     """"""
 
 

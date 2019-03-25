@@ -31,16 +31,38 @@ MATHUSLA Tracking Canvas.
 
 """
 
+# -------------- Standard Library -------------- #
+
+from collections import defaultdict
+
 # -------------- External Library -------------- #
 
-from uptrack.ui import CanvasBase
-from ROOT import TCanvas
+from uptrack.ui import CanvasBase, NamedColor
+from rootpy import ROOT
+from rootpy.ROOT import TCanvas, TPolyLine3D, TPolyMarker3D, TView, TView3D, TColor
+from rootpy.io import root_open
 
 # -------------- Tracker  Library -------------- #
 
+from ..util import classproperty
+
+
+__all__ = (
+    'ROOTCanvas',
+    'MPLCanvas'
+)
+
+
+def _to_TColor_id(color):
+    """Conver Color to ROOT Color."""
+    return TColor.GetColor(*color.rgb)
+
 
 class ROOTCanvas(CanvasBase):
-    """"""
+    """
+    ROOT Canvas.
+
+    """
 
     @classproperty
     def default_width(cls):
@@ -54,40 +76,86 @@ class ROOTCanvas(CanvasBase):
 
     def __post_init__(self):
         """Post-Initialize ROOT Canvas."""
+        super().__post_init__()
         self._canvas = TCanvas(self.name, self.title, self.width, self.height)
-        self._point_set = set()
+        self._view = TView.CreateView()
+        self._point_map = defaultdict(list)
         self._line_set = set()
+        self._has_updated = False
 
     def add_point(self, point, size=1, color=NamedColor.Black):
         """Add Point To Canvas."""
-        return NotImplemented
+        self._point_set[(color, size)].append(point)
 
     def add_line(self, start, end, width=1, color=NamedColor.Black):
         """Add Line To Canvas."""
-        return NotImplemented
+        poly_line = TPolyLine3D()
+        poly_line.SetNextPoint(start.x, start.y, start.z)
+        poly_line.SetNextPoint(end.x, end.y, end.z)
+        poly_line.SetLineWidth(width)
+        poly_line.SetLineColor(_to_TColor_id(color))
 
     @property
-    @abstractmethod
     def is_empty(self):
         """Check if Canvas is Empty."""
         return not self._point_set and not self._line_set
 
     def draw(self):
-        """"""
-        return NotImplemented
+        """Draw Canvas."""
+        self._canvas.cd()
+
+        for (color, size), points in self._point_map.items():
+            polymarker = TPolyMarker3D(len(points), 20)
+            for point in points:
+                polymarker.SetNextPoint(point.x, point.y, point.z)
+            polymarker.SetMarkerColor(_to_TColor_id(color))
+            polymarker.SetMarkerSize(size)
+            polymarker.Draw()
+
+        for poly_line in self._line_set:
+            poly_line.Draw()
+
+        if not self._has_updated:
+            self._view.ShowAxis()
+            self._canvas.cd()
+            axis = TAxis3D.GetPadAxis()
+            if axis:
+                axis.SetLabelColor(ROOT.kBlack)
+                axis.SetAxisColor(ROOT.kBlack)
+                axis.SetTitleOffset(2)
+                axis.SetXTitle('X ()')
+                axis.SetYTitle('Y ()')
+                axis.SetZTitle('Z ()')
+
+        self._canvas.Modified()
+        self._canvas.Update()
+        self._has_updated = True
 
     def clear(self):
-        """"""
-        return NotImplemented
+        """Clear the Canvas."""
+        if self._has_updated:
+            self._canvas.cd()
+            self._canvas.Clear()
+            self._canvas.Modified()
+            self._canvas.Update()
+            self._reset_view()
+            self._point_set.clear()
+            self._line_set.clear()
+            self._has_updated = False
 
     def save(self, path):
-        """"""
-        return NotImplemented
+        """Save Canvas to ROOT File."""
+        with root_open(path, 'UPDATE') as file:
+            file.cd()
+            file.WriteTObject(self._canvas.Clone())
 
     def load(self, path, name):
-        """"""
+        """Load Canvas from ROOT File."""
         return NotImplemented
 
 
 class MPLCanvas(CanvasBase):
-    """"""
+    """
+    Matplotlib Canvas.
+
+    """

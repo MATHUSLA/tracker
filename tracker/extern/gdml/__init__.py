@@ -34,13 +34,21 @@ GDML Parsing Library.
 # -------------- External Library -------------- #
 
 from lxml import etree
+from path import Path
 
 # -------------- UpTrack  Library -------------- #
 
 from .geometry import *
 
 
-GDML_SCHEMA = etree.XMLSchema(file='schema/gdml.xsd')
+__all__ = (
+    'GDML_SCHEMA',
+    'GDMLStore',
+    'parse_gdml'
+)
+
+
+GDML_SCHEMA = etree.XMLSchema(file=Path(__file__).parent / 'schema/gdml.xsd')
 
 
 def _clear_return(element, *return_values):

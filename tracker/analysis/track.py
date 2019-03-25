@@ -43,6 +43,17 @@ from ..util import value_or, partial
 from ..util.math import umath, ThreeVector, FourVector, CartesianCoordinate
 
 
+__all__ = (
+    'track_squared_residual',
+    'gaussian_nll',
+    'DefaultFitter',
+    'DEFAULT_FITTER',
+    'TrackParameter',
+    'TrackParameterSet',
+    'Track'
+)
+
+
 def track_squared_residual(self, t0, x0, y0, z0, vx, vy, vz, point):
     """Track Squared Residual Definition. (ONLY for Z0 Fixed)."""
     dt = (point.z.n - z0.n) / vz.n
@@ -58,8 +69,8 @@ def gaussian_nll(self, points, t0, x0, y0, z0, vx, vy, vz):
     return 0.5 * sum(map(residual, points))
 
 
-DefaultTrackFitter = partial(MinuitFitter, gaussian_nll)
-DEFAULT_TRACK_FITTER = DefaultTrackFitter()
+DefaultFitter = partial(MinuitFitter, gaussian_nll)
+DEFAULT_FITTER = DefaultFitter()
 
 
 class TrackParameter(CartesianParameterType):
@@ -81,7 +92,7 @@ class Track(TrackBase, parameter_set=TrackParameterSet, parameter_properties=Tru
         """Initialize Fitable Object."""
         super().__init__(self,
                          points,
-                         value_or(fitter, DEFAULT_TRACK_FITTER)
+                         value_or(fitter, DEFAULT_FITTER)
                          *args,
                          geometry=geometry,
                          **kwargs)
