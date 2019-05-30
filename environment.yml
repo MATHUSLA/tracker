@@ -1,0 +1,27 @@
+name: mathusla.tracker
+channels:
+  - conda-forge
+dependencies:
+  - ipython
+  - ipykernel
+  - pytest
+  - pytest-cov
+  - coverage
+  - coveralls
+  - pylint
+  - black
+  - cython
+  - path.py
+  - aenum
+  - lxml
+  - pint
+  - unyt
+  - uncertainties
+  - uproot
+  - iminuit
+  - pip
+  - pip:
+      - uptrack
+      - scikit-hep
+      - histbook
+      - rootpy

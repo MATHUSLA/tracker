@@ -1,0 +1,41 @@
+{
+    "name": "mathusla-tracker",
+    "version_file": "tracker/_version.py",
+    "description": "MATHUSLA Tracking Algorithm",
+    "long_description_file": "README.md",
+    "long_description_content_type": "text/markdown",
+    "author": "Brandon Gomes",
+    "author_email": "bhgomes.github@gmail.com",
+    "url": "https://github.com/MATHUSLA/tracker",
+    "packages": {
+        "exclude": ["tests"]
+    },
+    "python_requires": ">=3.7.0",
+    "install_requires": [
+        "pytest",
+        "uptrack",
+        "scikit-hep",
+        "pint",
+        "unyt",
+        "uncertainties",
+        "aenum",
+        "uproot",
+        "iminuit",
+        "lxml"
+    ],
+    "include_package_data": true,
+    "license": "MIT",
+    "classifiers": [
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.7",
+        "Development Status :: 1 - Planning",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Physics",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Utilities"
+    ]
+}

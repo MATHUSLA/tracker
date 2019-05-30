@@ -55,7 +55,8 @@ const Event sequential_join(const Event& first,
   }
 
   // FIXME: index -= difference instead ?
-  for (; index < size; ++index) out.push_back(second[index - difference]);
+  for (; index < size; ++index)
+    out.push_back(second[index - difference]);
 
   return out;
 }

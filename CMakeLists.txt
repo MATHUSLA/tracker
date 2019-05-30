@@ -48,7 +48,7 @@ add_library(tracker SHARED
     src/tracker/util/command_line_parser.cc
 )
 
-target_compile_features(tracker PUBLIC cxx_std_14)
+target_compile_features(tracker PUBLIC cxx_std_17)
 target_compile_options(tracker PUBLIC -Wno-unknown-warning-option
                                       -Wno-missing-braces
                                       -Wunused-function
@@ -64,6 +64,7 @@ target_link_libraries(tracker PUBLIC
     ${ROOT_LIBRARIES})
 
 target_include_directories(tracker PUBLIC
+    ${Geant4_INCLUDE_DIR}/..
     ${Geant4_INCLUDE_DIRS}
     ${ROOT_INCLUDE_DIRS})
 
